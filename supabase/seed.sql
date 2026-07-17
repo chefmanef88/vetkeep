@@ -1,0 +1,1 @@
+-- Intentionally empty. Development data must be synthetic and created by explicit test fixtures.

@@ -1,0 +1,38 @@
+{
+  "name": "@vetkeep/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start --dev-client",
+    "build": "expo export --platform android --output-dir dist/android --max-workers 2",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.110.2",
+    "@vetkeep/database": "*",
+    "@vetkeep/domain": "*",
+    "@vetkeep/observability": "*",
+    "@vetkeep/validation": "*",
+    "expo": "57.0.4",
+    "expo-application": "57.0.0",
+    "expo-crypto": "57.0.0",
+    "expo-device": "57.0.0",
+    "expo-linking": "57.0.2",
+    "expo-local-authentication": "57.0.0",
+    "expo-router": "57.0.4",
+    "expo-secure-store": "57.0.0",
+    "expo-splash-screen": "57.0.2",
+    "expo-status-bar": "57.0.0",
+    "react": "19.2.3",
+    "react-native": "0.86.0",
+    "react-native-safe-area-context": "5.7.0",
+    "react-native-screens": "4.25.2",
+    "react-native-url-polyfill": "3.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "typescript": "5.9.3"
+  }
+}
