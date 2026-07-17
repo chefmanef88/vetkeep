@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "VetKeep",
+    "slug": "vetkeep",
+    "scheme": "vetkeep",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vetkeep.mobile",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "VetKeep uses Face ID to protect locally cached veterinary records."
+      }
+    },
+    "android": {
+      "package": "com.vetkeep.mobile",
+      "allowBackup": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "Allow VetKeep to use Face ID to protect veterinary records."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow VetKeep to use Face ID to unlock the app."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
