@@ -414,3 +414,60 @@ h3 {
     gap: 0.4rem;
   }
 }
+
+.warning {
+  background: #fdf6ea;
+  border-left: 4px solid #c2760a;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin: 0;
+  color: #7c4a03;
+}
+
+.stock-ok,
+.stock-low {
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* Low stock is carried by weight and a label, not by colour alone. */
+.stock-low {
+  color: #8a5209;
+}
+
+.stock-low::after {
+  content: " · low";
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.batch-list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0 0 0 0.9rem;
+  border-left: 2px solid #e3eae5;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.batch-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: baseline;
+  font-size: 0.88rem;
+}
+
+.batch-expired {
+  opacity: 0.65;
+}
+
+.batch-expired::after {
+  content: "expired";
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8f1d1d;
+}

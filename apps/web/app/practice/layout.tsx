@@ -14,6 +14,7 @@ export default async function PracticeLayout({
         <Link href="/practice/today">Today</Link>
         <Link href="/practice/clients">Clients</Link>
         <Link href="/practice/appointments">Appointments</Link>
+        <Link href="/practice/inventory">Stock</Link>
         <Link href="/dashboard">Account</Link>
       </nav>
       {children}
