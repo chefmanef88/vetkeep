@@ -15,7 +15,7 @@
     "@vetkeep/database": "*",
     "@vetkeep/observability": "*",
     "@vetkeep/validation": "*",
-    "next": "16.2.10",
+    "next": "16.2.12",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "zod": "4.4.3"
