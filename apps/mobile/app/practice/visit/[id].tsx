@@ -5,6 +5,7 @@ import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
 import { SyncBanner } from "@/sync/sync-banner";
+import { AttachmentsSection } from "@/features/practice/attachments-section";
 import { useQuery } from "@/features/practice/use-query";
 import {
   draftFromVisit,
@@ -435,6 +436,8 @@ export default function VisitScreen() {
           />
         ) : null}
       </Card>
+
+      <AttachmentsSection visitId={visit.id} patientId={visit.patient_id} editable={isDraft} />
 
       <StockSection
         visitId={visit.id}

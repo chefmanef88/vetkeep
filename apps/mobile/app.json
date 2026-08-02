@@ -32,6 +32,13 @@
         {
           "faceIDPermission": "Allow VetKeep to use Face ID to unlock the app."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow VetKeep to take clinical photographs during a consultation.",
+          "photosPermission": "Allow VetKeep to attach an existing photograph to a patient record."
+        }
       ]
     ],
     "experiments": {
