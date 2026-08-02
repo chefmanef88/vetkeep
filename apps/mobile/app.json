@@ -39,7 +39,9 @@
           "cameraPermission": "Allow VetKeep to take clinical photographs during a consultation.",
           "photosPermission": "Allow VetKeep to attach an existing photograph to a patient record."
         }
-      ]
+      ],
+      "expo-splash-screen",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true

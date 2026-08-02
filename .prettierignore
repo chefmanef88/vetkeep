@@ -5,5 +5,6 @@ coverage
 .expo
 pnpm-lock.yaml
 packages/database/src/database.types.ts
+apps/mobile/expo-env.d.ts
 
 .turbo
