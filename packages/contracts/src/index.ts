@@ -1,5 +1,13 @@
 import type { AccountStatus, DevicePlatform } from "@vetkeep/domain";
 
+export {
+  definedArgs,
+  formatPesewas,
+  optionalNumber,
+  optionalText,
+  parseCedisToPesewas
+} from "./rpc-args";
+
 export interface VetProfile {
   id: string;
   authUserId: string;

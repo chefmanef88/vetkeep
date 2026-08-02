@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { registerCurrentDevice } from "@/device/device-registry";
 import { supabase } from "@/lib/supabase";
@@ -6,6 +7,7 @@ import { useSession } from "@/auth/session-provider";
 
 export function HomeScreen() {
   const { profile } = useSession();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -16,7 +18,8 @@ export function HomeScreen() {
       <Body>Licence verification: {profile?.license_verified ? "verified" : "pending"}</Body>
       {error ? <ErrorText>{error}</ErrorText> : null}
       {message ? <Body>{message}</Body> : null}
-      <PrimaryButton
+      <PrimaryButton label="Start work" onPress={() => router.push("/practice/today")} />
+      <SecondaryButton
         label="Register or refresh this device"
         onPress={() => {
           setError(null);
