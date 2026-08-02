@@ -3,6 +3,8 @@ import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
+import { useSync } from "@/sync/sync-provider";
+import { SyncBanner } from "@/sync/sync-banner";
 import { useQuery } from "@/features/practice/use-query";
 import {
   draftFromVisit,
@@ -41,6 +43,7 @@ type Loaded = {
 export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { record } = useSync();
   const [draft, setDraft] = useState<DraftForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export default function VisitScreen() {
         .maybeSingle(),
       supabase
         .from("physical_exam_findings")
-        .select("id, system_name, status, remarks")
+        .select("id, system_name, status, remarks, server_version")
         .eq("visit_id", visitId)
         .order("system_name", { ascending: true }),
       supabase
@@ -120,56 +123,85 @@ export default function VisitScreen() {
     setSaving(true);
     setActionError(null);
     setStatus(null);
-    const { error: rpcError } = await supabase.rpc(
-      "update_visit_draft",
-      definedArgs({
-        p_id: visit.id,
-        p_visit_date: visit.visit_date,
-        p_visit_type: visit.visit_type,
-        p_chief_complaint: optionalText(draft!.chiefComplaint),
-        p_history_of_complaint: optionalText(draft!.historyOfComplaint),
-        p_past_medical_history: optionalText(draft!.pastMedicalHistory),
-        p_current_medications: optionalText(draft!.currentMedications),
-        p_temperature_c: optionalNumber(draft!.temperatureC),
-        p_heart_rate_bpm: optionalNumber(draft!.heartRateBpm),
-        p_respiratory_rate_bpm: optionalNumber(draft!.respiratoryRateBpm),
-        p_weight_value: optionalNumber(draft!.weightValue),
-        p_body_condition_score: optionalText(draft!.bodyConditionScore),
-        p_pain_score: optionalText(draft!.painScore),
-        p_problem_list: optionalText(draft!.problemList),
-        p_differential_diagnoses: optionalText(draft!.differentialDiagnoses),
-        p_tentative_diagnosis: optionalText(draft!.tentativeDiagnosis),
-        p_definitive_diagnosis: optionalText(draft!.definitiveDiagnosis),
-        p_treatment_plan: optionalText(draft!.treatmentPlan),
-        p_prescriptions: optionalText(draft!.prescriptions),
-        p_follow_up_plan: optionalText(draft!.followUpPlan),
-        p_next_review_date: optionalText(draft!.nextReviewDate)
-      })
-    );
-    setSaving(false);
-    if (rpcError) {
-      setActionError(rpcError.message);
-      return;
+
+    try {
+      // Queued rather than sent directly. The vet is often standing in a yard
+      // with no signal, and the note has to survive that.
+      const { sentNow } = await record({
+        // One id per visit draft, so repeated saves replace the queued write
+        // instead of stacking a dozen copies of the same consultation.
+        mutationId: `visit_draft:${visit.id}`,
+        entityType: "visit_draft",
+        entityId: visit.id,
+        operation: "update",
+        rpcName: "update_visit_draft",
+        baseServerVersion: visit.server_version,
+        payload: definedArgs({
+          p_id: visit.id,
+          p_visit_date: visit.visit_date,
+          p_visit_type: visit.visit_type,
+          p_chief_complaint: optionalText(draft!.chiefComplaint),
+          p_history_of_complaint: optionalText(draft!.historyOfComplaint),
+          p_past_medical_history: optionalText(draft!.pastMedicalHistory),
+          p_current_medications: optionalText(draft!.currentMedications),
+          p_temperature_c: optionalNumber(draft!.temperatureC),
+          p_heart_rate_bpm: optionalNumber(draft!.heartRateBpm),
+          p_respiratory_rate_bpm: optionalNumber(draft!.respiratoryRateBpm),
+          p_weight_value: optionalNumber(draft!.weightValue),
+          p_body_condition_score: optionalText(draft!.bodyConditionScore),
+          p_pain_score: optionalText(draft!.painScore),
+          p_problem_list: optionalText(draft!.problemList),
+          p_differential_diagnoses: optionalText(draft!.differentialDiagnoses),
+          p_tentative_diagnosis: optionalText(draft!.tentativeDiagnosis),
+          p_definitive_diagnosis: optionalText(draft!.definitiveDiagnosis),
+          p_treatment_plan: optionalText(draft!.treatmentPlan),
+          p_prescriptions: optionalText(draft!.prescriptions),
+          p_follow_up_plan: optionalText(draft!.followUpPlan),
+          p_next_review_date: optionalText(draft!.nextReviewDate),
+          p_base_server_version: visit.server_version
+        }) as Record<string, unknown>
+      });
+
+      // Never just "Saved" when it is only on the phone: the vet decides
+      // differently about leaving a compound if the record has not left with them.
+      setStatus(
+        sentNow ? "Saved and sent." : "Saved on this phone. It will send when you have signal."
+      );
+      if (sentNow) reload();
+    } catch (thrown: unknown) {
+      setActionError(thrown instanceof Error ? thrown.message : "Could not save.");
+    } finally {
+      setSaving(false);
     }
-    setStatus("Saved.");
   }
 
-  async function setFinding(systemName: string, nextStatus: string, remarks: string | null) {
+  async function setFinding(
+    systemName: string,
+    nextStatus: string,
+    remarks: string | null,
+    baseServerVersion: number
+  ) {
     setActionError(null);
-    const { error: rpcError } = await supabase.rpc(
-      "set_exam_finding",
-      definedArgs({
-        p_visit_id: visit.id,
-        p_system_name: systemName,
-        p_status: nextStatus,
-        p_remarks: optionalText(remarks)
-      })
-    );
-    if (rpcError) {
-      setActionError(rpcError.message);
-      return;
+    try {
+      const { sentNow } = await record({
+        mutationId: `exam_finding:${visit.id}:${systemName}`,
+        entityType: "exam_finding",
+        entityId: visit.id,
+        operation: "update",
+        rpcName: "set_exam_finding",
+        baseServerVersion,
+        payload: definedArgs({
+          p_visit_id: visit.id,
+          p_system_name: systemName,
+          p_status: nextStatus,
+          p_remarks: optionalText(remarks),
+          p_base_server_version: baseServerVersion
+        }) as Record<string, unknown>
+      });
+      if (sentNow) reload();
+    } catch (thrown: unknown) {
+      setActionError(thrown instanceof Error ? thrown.message : "Could not record the finding.");
     }
-    reload();
   }
 
   async function markRemainingNormal() {
@@ -198,6 +230,7 @@ export default function VisitScreen() {
 
   return (
     <ScrollScreen>
+      <SyncBanner />
       <Card>
         <View style={styles.headRow}>
           <SectionTitle>{visit.patients?.name ?? "Visit"}</SectionTitle>
@@ -390,7 +423,9 @@ export default function VisitScreen() {
             key={finding.id}
             finding={finding}
             editable={isDraft}
-            onChange={(next, remarks) => void setFinding(finding.system_name, next, remarks)}
+            onChange={(next, remarks) =>
+              void setFinding(finding.system_name, next, remarks, finding.server_version)
+            }
           />
         ))}
         {isDraft && notExamined > 0 ? (

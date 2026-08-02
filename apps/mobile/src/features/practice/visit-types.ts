@@ -1,5 +1,7 @@
 export type VisitRow = {
   id: string;
+  /** Carried so an edit can tell the server which version it was based on. */
+  server_version: number;
   patient_id: string;
   visit_date: string;
   visit_type: string;
@@ -29,6 +31,7 @@ export type VisitRow = {
 
 export type ExamFinding = {
   id: string;
+  server_version: number;
   system_name: string;
   status: string;
   remarks: string | null;

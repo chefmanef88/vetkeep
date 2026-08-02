@@ -31,6 +31,7 @@ const EDITABLE_COLUMNS = [
 function baseVisit(overrides: Partial<VisitRow> = {}): VisitRow {
   return {
     id: "11111111-1111-1111-1111-111111111111",
+    server_version: 1,
     patient_id: "22222222-2222-2222-2222-222222222222",
     visit_date: "2026-08-02T10:00:00.000Z",
     visit_type: "home_call",

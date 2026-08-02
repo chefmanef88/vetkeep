@@ -12,6 +12,7 @@ import {
   palette
 } from "@/ui/practice-components";
 import { ErrorText, PrimaryButton, SecondaryButton } from "@/ui/components";
+import { SyncBanner } from "@/sync/sync-banner";
 
 type Stop = {
   id: string;
@@ -71,6 +72,7 @@ export default function TodayScreen() {
 
   return (
     <ScrollScreen>
+      <SyncBanner />
       <Card>
         <SectionTitle>
           {new Date().toLocaleDateString(undefined, {
