@@ -34,21 +34,15 @@
 - Local Supabase start and migration application: passed on the Windows development machine.
 - pgTAP database/RLS suite: 22/22 passed on the Windows development machine.
 - Generated database types compile against both web and mobile RPC call sites.
-
-## Remaining acceptance gate
-
-The local browser smoke test still needs to pass for:
-
-1. Account signup.
-2. Local confirmation email.
-3. Email confirmation callback.
-4. MFA enrollment.
-5. MFA challenge after sign-in.
-6. Veterinarian onboarding.
-7. Dashboard access.
-8. Sign-out and sign-in again.
-
-Phase 1 should be considered accepted only after this flow passes without console errors or database-policy failures.
+- Local browser smoke test (2 August 2026): passed without console errors or database-policy failures —
+  1. Account signup.
+  2. Local confirmation email.
+  3. Email confirmation callback.
+  4. MFA enrollment.
+  5. MFA challenge after sign-in.
+  6. Veterinarian onboarding.
+  7. Dashboard access.
+  8. Sign-out and sign-in again.
 
 ## Intentional boundaries
 
@@ -62,4 +56,4 @@ Phase 1 should be considered accepted only after this flow passes without consol
 
 ## Phase 1 exit decision
 
-The code, database security suite, generated types, unit tests, builds, and dependency audit now pass. Complete the local browser smoke test before pushing to GitHub or starting Phase 2.
+The code, database security suite, generated types, unit tests, builds, dependency audit, and the local browser smoke test all pass. **Phase 1 is accepted as of 2 August 2026.** Phase 2 scope is defined in `docs/product/vetkeep-developer-brief-revised.md`.
