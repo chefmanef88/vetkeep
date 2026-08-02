@@ -105,3 +105,312 @@ button.danger {
 button.danger:hover:not(:disabled) {
   background: #701616;
 }
+
+/* ---------------------------------------------------------------------------
+   Practice workspace
+   --------------------------------------------------------------------------- */
+
+textarea,
+select {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #b9c4bb;
+  border-radius: 0.65rem;
+  font: inherit;
+  background: #fff;
+}
+
+textarea {
+  resize: vertical;
+}
+
+h3 {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  color: #3d4f44;
+}
+
+.practice-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.practice-nav a {
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.65rem;
+  background: #e8eee9;
+  color: #173c2b;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.practice-nav a:hover {
+  background: #d8e2da;
+}
+
+.code {
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  color: #3d4f44;
+  letter-spacing: 0.02em;
+}
+
+.code-line {
+  margin: 0;
+}
+
+.record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.record-list li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid #e3eae5;
+}
+
+.record-list li:last-child {
+  border-bottom: none;
+}
+
+.record-list a {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: #174d35;
+}
+
+.record-list a:hover strong {
+  text-decoration: underline;
+}
+
+.row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pill {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e8eee9;
+  color: #3d4f44;
+  text-transform: lowercase;
+}
+
+.pill-confirmed,
+.pill-paid,
+.pill-completed {
+  background: #d6ede0;
+  color: #14532d;
+}
+
+.pill-requested,
+.pill-draft,
+.pill-partial {
+  background: #fdf0d5;
+  color: #7c4a03;
+}
+
+.pill-abnormal,
+.pill-voided,
+.pill-cancelled,
+.pill-declined,
+.pill-no_show {
+  background: #fbe0e0;
+  color: #8f1d1d;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
+.actions button,
+.actions .button {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-weight: 400;
+}
+
+.checkbox input {
+  width: auto;
+  margin-top: 0.15rem;
+}
+
+.exam-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.exam-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(8rem, auto) 2fr;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
+  border-left: 3px solid #d9e2dc;
+  background: #f8faf8;
+}
+
+.exam-row select,
+.exam-row input {
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.exam-system {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+/* Abnormal findings carry a colour and a border weight, never colour alone. */
+.exam-abnormal {
+  border-left-color: #c2760a;
+  border-left-width: 5px;
+  background: #fdf6ea;
+}
+
+.exam-normal {
+  border-left-color: #2f7a52;
+}
+
+.exam-not_examined {
+  border-left-color: #b9c4bb;
+  border-left-style: dashed;
+}
+
+.route-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.route-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem;
+  align-items: start;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid #e3eae5;
+}
+
+.route-list li:last-child {
+  border-bottom: none;
+}
+
+.stop-index {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  background: #174d35;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.stop-body {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.record-field {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.record-field p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #617067;
+}
+
+.vitals-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.vitals-row span {
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  padding: 0.3rem 0.65rem;
+  background: #eef3ef;
+  border-radius: 0.45rem;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.totals div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.totals dt {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #617067;
+  font-weight: 700;
+}
+
+.totals dd {
+  margin: 0;
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.outstanding-amount {
+  color: #8f1d1d;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .exam-row {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+}

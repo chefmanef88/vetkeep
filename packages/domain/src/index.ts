@@ -1,3 +1,13 @@
+export {
+  CLIENT_CODE_PATTERN,
+  CLIENT_CODE_PREFIX,
+  PATIENT_CODE_PATTERN,
+  PATIENT_CODE_PREFIX,
+  generateClientCode,
+  generatePatientCode,
+  normalizeRecordCode
+} from "./codes";
+
 export const ACCOUNT_STATUSES = ["active", "suspended", "closed"] as const;
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 

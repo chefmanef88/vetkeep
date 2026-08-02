@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireMfa } from "@/lib/auth/require-mfa";
 import { SignOutButton } from "./sign-out-button";
@@ -31,7 +32,12 @@ export default async function DashboardPage() {
           Licence: {profile.license_number ?? "Not supplied"} —{" "}
           {profile.license_verified ? "verified" : "verification pending"}
         </p>
-        <SignOutButton />
+        <div className="actions">
+          <Link className="button" href="/practice/today">
+            Open practice
+          </Link>
+          <SignOutButton />
+        </div>
       </section>
       <section className="card stack">
         <h2>Registered mobile devices</h2>
