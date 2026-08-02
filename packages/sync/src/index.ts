@@ -39,3 +39,16 @@ export {
   type FieldSpec,
   type Resolution
 } from "./diff";
+
+export {
+  MAX_UPLOAD_ATTEMPTS,
+  applyUploadEvent,
+  canDeleteLocalFile,
+  createUpload,
+  nextUploadAction,
+  remainingBytes,
+  type AttachmentUpload,
+  type UploadAction,
+  type UploadEvent,
+  type UploadState
+} from "./attachments";

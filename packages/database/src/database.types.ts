@@ -170,6 +170,114 @@ export type Database = {
           },
         ]
       }
+      attachments: {
+        Row: {
+          attachment_type: string
+          captured_at: string | null
+          checksum_sha256: string | null
+          created_at: string
+          created_by_device_id: string | null
+          deleted_at: string | null
+          failure_reason: string | null
+          id: string
+          last_modified_by_device_id: string | null
+          mime_type: string
+          original_filename: string
+          patient_id: string | null
+          server_version: number
+          size_bytes: number
+          storage_bucket: string
+          storage_path: string
+          updated_at: string
+          upload_status: string
+          uploaded_at: string | null
+          vet_id: string
+          visit_id: string | null
+        }
+        Insert: {
+          attachment_type: string
+          captured_at?: string | null
+          checksum_sha256?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          failure_reason?: string | null
+          id: string
+          last_modified_by_device_id?: string | null
+          mime_type: string
+          original_filename: string
+          patient_id?: string | null
+          server_version?: number
+          size_bytes: number
+          storage_bucket?: string
+          storage_path: string
+          updated_at?: string
+          upload_status?: string
+          uploaded_at?: string | null
+          vet_id: string
+          visit_id?: string | null
+        }
+        Update: {
+          attachment_type?: string
+          captured_at?: string | null
+          checksum_sha256?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          last_modified_by_device_id?: string | null
+          mime_type?: string
+          original_filename?: string
+          patient_id?: string | null
+          server_version?: number
+          size_bytes?: number
+          storage_bucket?: string
+          storage_path?: string
+          updated_at?: string
+          upload_status?: string
+          uploaded_at?: string | null
+          vet_id?: string
+          visit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_last_modified_by_device_id_fkey"
+            columns: ["last_modified_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_events: {
         Row: {
           action: string
@@ -1609,6 +1717,10 @@ export type Database = {
         Args: { p_device_id?: string; p_visit_id: string }
         Returns: undefined
       }
+      confirm_attachment_upload: {
+        Args: { p_checksum_sha256: string; p_device_id?: string; p_id: string }
+        Returns: undefined
+      }
       create_appointment: {
         Args: {
           p_appointment_type: string
@@ -1750,6 +1862,14 @@ export type Database = {
         Args: { p_device_id?: string; p_due_at?: string; p_id: string }
         Returns: undefined
       }
+      mark_attachment_failed: {
+        Args: { p_device_id?: string; p_id: string; p_reason: string }
+        Returns: undefined
+      }
+      mark_attachment_uploading: {
+        Args: { p_device_id?: string; p_id: string }
+        Returns: undefined
+      }
       mark_remaining_systems_normal: {
         Args: { p_device_id?: string; p_visit_id: string }
         Returns: number
@@ -1785,6 +1905,20 @@ export type Database = {
           p_notes?: string
           p_paid_at?: string
           p_reference?: string
+        }
+        Returns: string
+      }
+      register_attachment: {
+        Args: {
+          p_attachment_type: string
+          p_captured_at?: string
+          p_device_id?: string
+          p_id: string
+          p_mime_type: string
+          p_original_filename: string
+          p_patient_id?: string
+          p_size_bytes: number
+          p_visit_id?: string
         }
         Returns: string
       }
