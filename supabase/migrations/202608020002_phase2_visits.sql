@@ -509,11 +509,9 @@ begin
   on conflict (id) do nothing;
 
   if not found then
+    -- A replayed sync changed nothing, so it writes no audit event. This matches
+    -- every other Phase 2 module and keeps the audit trail to real state changes.
     if exists (select 1 from public.visits where id = p_id and vet_id = v_vet_id) then
-      perform app_private.insert_audit_event(
-        v_vet_id, 'visit.created', 'visit', p_id, null,
-        jsonb_build_object('idempotent_retry', true)
-      );
       return p_id;
     end if;
     raise exception 'Visit ID is unavailable' using errcode = '42501';
@@ -675,12 +673,9 @@ begin
     raise exception 'Visit not found' using errcode = 'P0002';
   end if;
 
-  -- A retried offline sync must not fail on an already-signed record.
+  -- A retried offline sync must not fail on an already-signed record. The replay
+  -- changed nothing, so it writes no audit event.
   if v_status = 'completed' then
-    perform app_private.insert_audit_event(
-      v_vet_id, 'visit.completed', 'visit', p_visit_id, null,
-      jsonb_build_object('idempotent_retry', true)
-    );
     return;
   end if;
 
@@ -745,11 +740,8 @@ begin
   end if;
 
   -- Voiding is terminal and idempotent; the original reason is never rewritten.
+  -- The replay changed nothing, so it writes no audit event.
   if v_status = 'voided' then
-    perform app_private.insert_audit_event(
-      v_vet_id, 'visit.void_retried', 'visit', p_visit_id, trim(p_reason),
-      jsonb_build_object('idempotent_retry', true)
-    );
     return;
   end if;
 
@@ -947,11 +939,8 @@ begin
   on conflict (id) do nothing;
 
   if not found then
+    -- A replayed sync changed nothing, so it writes no audit event.
     if exists (select 1 from public.visit_amendments where id = p_id and vet_id = v_vet_id) then
-      perform app_private.insert_audit_event(
-        v_vet_id, 'visit.amended', 'visit_amendment', p_id, null,
-        jsonb_build_object('idempotent_retry', true)
-      );
       return p_id;
     end if;
     raise exception 'Amendment ID is unavailable' using errcode = '42501';

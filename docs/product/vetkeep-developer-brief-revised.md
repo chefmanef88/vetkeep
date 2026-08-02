@@ -915,7 +915,11 @@ confirmed -> rescheduled
 confirmed -> completed
 confirmed -> cancelled
 confirmed -> no_show
+rescheduled -> confirmed
+rescheduled -> cancelled
 ```
+
+`rescheduled` is a transient state, not a terminal one. A moved appointment returns to `confirmed` once a new time is agreed, on the same row, so the patient timeline stays contiguous and a reschedule does not fragment into two appointment records. A client who cannot agree a new time cancels instead.
 
 ```sql
 create table appointments (
@@ -1181,7 +1185,7 @@ create table visit_invoices (
   discount_pesewas bigint not null default 0,
   total_pesewas bigint not null default 0,
   amount_paid_pesewas bigint not null default 0,
-  status text not null default 'unpaid'
+  status text not null default 'draft'
     check (status in ('draft', 'unpaid', 'partial', 'paid', 'voided')),
   issued_at timestamptz,
   due_at timestamptz,
@@ -1227,6 +1231,14 @@ create table invoice_payments (
 ```
 
 Invoice totals and status must be recalculated by trusted domain logic, not accepted directly from the client without validation.
+
+### 14.2 Invoice lifecycle
+
+An invoice is created as `draft` so the veterinarian can assemble line items during the visit, as charges accrue, without the partial invoice counting toward outstanding balances. Issuing it moves `draft -> unpaid`, at which point it becomes a real receivable. Payments then move it to `partial` or `paid`.
+
+Voiding is permitted even when payments have already been recorded. The payment rows are preserved and the amount paid is captured in the audit metadata. VetKeep does not process this money and provides no reversal or refund operation, so blocking the void would leave the veterinarian holding an uncorrectable invoice with no path forward. The void reason is mandatory and forms the written record of how the money was handled.
+
+Completed invoices and payment records are never hard-deleted by the tenant application, per §8.2.
 
 ---
 

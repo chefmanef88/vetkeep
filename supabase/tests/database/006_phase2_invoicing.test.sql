@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(88);
+select plan(93);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -785,6 +785,84 @@ select is(
    where id = 'e1000000-0000-0000-0000-000000000001'),
   'bigint',
   'Invoice money is stored as integer pesewas, never floating point'
+);
+
+-- ---------------------------------------------------------------------------
+-- Visit-linked invoices (assertions 89-93)
+-- These paths were unreachable when this file was first written, because
+-- public.visits did not yet exist. They cover the FK, the create_invoice
+-- ownership check, and the enforce_invoice_tenant trigger's visit branch.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'a1000000-0000-0000-0000-000000000001', true);
+select set_config('request.jwt.claims', '{"sub":"a1000000-0000-0000-0000-000000000001","role":"authenticated","aal":"aal2"}', true);
+
+select public.create_patient(
+  'f1000000-0000-0000-0000-000000000001', 'VK-P-4Q8T6R', 'Invoice Patient A', 'Dog', 'female'
+);
+select public.create_visit(
+  'f1000000-0000-0000-0000-000000000002',
+  'f1000000-0000-0000-0000-000000000001',
+  now(),
+  'home_call'
+);
+
+-- 89
+select lives_ok(
+  $$select public.create_invoice(
+      'f1000000-0000-0000-0000-000000000003',
+      'd1000000-0000-0000-0000-000000000001',
+      'INV-VISIT-001',
+      'f1000000-0000-0000-0000-000000000002'
+    )$$,
+  'An invoice can be linked to a visit owned by the same veterinarian'
+);
+-- 90
+select is(
+  (select visit_id from public.visit_invoices
+   where id = 'f1000000-0000-0000-0000-000000000003'),
+  'f1000000-0000-0000-0000-000000000002'::uuid,
+  'The visit link is stored on the invoice'
+);
+-- 91
+select throws_ok(
+  $$select public.create_invoice(
+      gen_random_uuid(),
+      'd1000000-0000-0000-0000-000000000001',
+      'INV-VISIT-404',
+      '00000000-0000-0000-0000-0000000000ff'
+    )$$,
+  'P0002',
+  'Visit not found',
+  'An invoice cannot reference a visit that does not exist'
+);
+
+-- Vet B must not be able to bill against Vet A's visit.
+select set_config('request.jwt.claim.sub', 'a1000000-0000-0000-0000-000000000002', true);
+select set_config('request.jwt.claims', '{"sub":"a1000000-0000-0000-0000-000000000002","role":"authenticated","aal":"aal2"}', true);
+select public.create_client(
+  'f1000000-0000-0000-0000-000000000004', 'VK-C-7H2K9M', 'Vet B Invoice Client',
+  '024 000 0099', '+233240000099'
+);
+
+-- 92
+select throws_ok(
+  $$select public.create_invoice(
+      gen_random_uuid(),
+      'f1000000-0000-0000-0000-000000000004',
+      'INV-VISIT-XT1',
+      'f1000000-0000-0000-0000-000000000002'
+    )$$,
+  'P0002',
+  'Visit not found',
+  'Vet B cannot invoice against Vet A visit, and is not told it exists'
+);
+-- 93
+select is(
+  (select count(*)::integer from public.visit_invoices
+   where visit_id = 'f1000000-0000-0000-0000-000000000002'),
+  0,
+  'Vet B cannot see the invoice linked to Vet A visit'
 );
 
 select * from finish();

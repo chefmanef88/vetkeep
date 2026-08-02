@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(82);
+select plan(87);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -806,6 +806,62 @@ select ok(
        and conname = 'daily_route_stops_route_sequence_key'
   ),
   'daily_route_stops enforces unique (route_id, sequence_number)'
+);
+
+-- ---------------------------------------------------------------------------
+-- Reschedule cycle (assertions 83-87)
+-- `rescheduled` is transient, not terminal: a moved appointment must be able to
+-- return to `confirmed` once a new time is agreed, on the same row.
+-- Earlier sections leave the session at aal1 and reset the role, so restore an
+-- authenticated aal2 session for Vet A before exercising the RPCs.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '90000000-0000-0000-0000-000000000001', true);
+select set_config('request.jwt.claims', '{"sub":"90000000-0000-0000-0000-000000000001","role":"authenticated","aal":"aal2"}', true);
+
+select public.create_appointment(
+  'c0000000-0000-0000-0000-000000000009', 'home_call',
+  'b0000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
+  '2026-09-05 09:00:00+00', '2026-09-05 10:00:00+00', 'Reschedule cycle'
+);
+select public.transition_appointment_status('c0000000-0000-0000-0000-000000000009', 'confirmed');
+
+-- 83
+select lives_ok(
+  $$select public.transition_appointment_status(
+      'c0000000-0000-0000-0000-000000000009', 'rescheduled', 'confirmed', null,
+      '2026-09-06 09:00:00+00', '2026-09-06 10:00:00+00'
+    )$$,
+  'confirmed -> rescheduled succeeds when a new time is supplied'
+);
+-- 84
+select throws_ok(
+  $$select public.transition_appointment_status(
+      'c0000000-0000-0000-0000-000000000009', 'completed'
+    )$$,
+  '22023',
+  'Appointment status transition is not allowed',
+  'rescheduled -> completed is rejected'
+);
+-- 85
+select lives_ok(
+  $$select public.transition_appointment_status(
+      'c0000000-0000-0000-0000-000000000009', 'confirmed', 'rescheduled'
+    )$$,
+  'rescheduled -> confirmed succeeds, so a moved appointment is not stranded'
+);
+-- 86
+select is(
+  (select status from public.appointments where id = 'c0000000-0000-0000-0000-000000000009'),
+  'confirmed',
+  'The rescheduled appointment is confirmed again on the same row'
+);
+-- 87
+select is(
+  (select count(*)::integer from public.appointments
+    where id = 'c0000000-0000-0000-0000-000000000009'),
+  1,
+  'Rescheduling did not create a second appointment row'
 );
 
 select * from finish();

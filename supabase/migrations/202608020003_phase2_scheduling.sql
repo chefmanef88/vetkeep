@@ -213,8 +213,16 @@ language sql
 immutable
 set search_path = pg_catalog, public
 as $$
-  -- requested -> confirmed | declined
-  -- confirmed -> rescheduled | completed | cancelled | no_show
+  -- requested   -> confirmed | declined
+  -- confirmed   -> rescheduled | completed | cancelled | no_show
+  -- rescheduled -> confirmed | cancelled
+  --
+  -- `rescheduled` is a transient state, not a terminal one: a moved appointment
+  -- returns to `confirmed` once the new time is agreed, keeping one row per
+  -- appointment so the patient timeline stays contiguous. A client who cannot
+  -- agree a new time cancels instead. This extends the brief's §11.1 matrix,
+  -- which listed no outgoing edge and left a rescheduled visit unconfirmable.
+  --
   -- Every other pair, including a repeat of the current status and anything out of
   -- a terminal status, is false. coalesce guards against a null status producing a
   -- null that an `if not ...` caller would fall straight through.
@@ -222,6 +230,7 @@ as $$
     case p_from
       when 'requested' then p_to in ('confirmed', 'declined')
       when 'confirmed' then p_to in ('rescheduled', 'completed', 'cancelled', 'no_show')
+      when 'rescheduled' then p_to in ('confirmed', 'cancelled')
       else false
     end,
     false
