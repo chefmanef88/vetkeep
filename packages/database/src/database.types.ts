@@ -88,6 +88,278 @@ export type Database = {
           },
         ]
       }
+      clients: {
+        Row: {
+          address: string | null
+          client_code: string
+          communication_consent: boolean
+          consent_recorded_at: string | null
+          created_at: string
+          created_by_device_id: string | null
+          deleted_at: string | null
+          email: string | null
+          id: string
+          last_modified_by_device_id: string | null
+          location_latitude: number | null
+          location_longitude: number | null
+          name: string
+          notes: string | null
+          phone_display: string
+          phone_e164: string
+          server_version: number
+          updated_at: string
+          vet_id: string
+          whatsapp_display: string | null
+          whatsapp_e164: string | null
+        }
+        Insert: {
+          address?: string | null
+          client_code: string
+          communication_consent?: boolean
+          consent_recorded_at?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id: string
+          last_modified_by_device_id?: string | null
+          location_latitude?: number | null
+          location_longitude?: number | null
+          name: string
+          notes?: string | null
+          phone_display: string
+          phone_e164: string
+          server_version?: number
+          updated_at?: string
+          vet_id: string
+          whatsapp_display?: string | null
+          whatsapp_e164?: string | null
+        }
+        Update: {
+          address?: string | null
+          client_code?: string
+          communication_consent?: boolean
+          consent_recorded_at?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          last_modified_by_device_id?: string | null
+          location_latitude?: number | null
+          location_longitude?: number | null
+          name?: string
+          notes?: string | null
+          phone_display?: string
+          phone_e164?: string
+          server_version?: number
+          updated_at?: string
+          vet_id?: string
+          whatsapp_display?: string | null
+          whatsapp_e164?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_last_modified_by_device_id_fkey"
+            columns: ["last_modified_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_owners: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by_device_id: string | null
+          deleted_at: string | null
+          id: string
+          is_primary: boolean
+          last_modified_by_device_id: string | null
+          patient_id: string
+          relationship: string
+          server_version: number
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+          vet_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          id: string
+          is_primary?: boolean
+          last_modified_by_device_id?: string | null
+          patient_id: string
+          relationship?: string
+          server_version?: number
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+          vet_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_primary?: boolean
+          last_modified_by_device_id?: string | null
+          patient_id?: string
+          relationship?: string
+          server_version?: number
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+          vet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_owners_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_owners_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_owners_last_modified_by_device_id_fkey"
+            columns: ["last_modified_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_owners_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_owners_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          breed: string | null
+          color_markings: string | null
+          created_at: string
+          created_by_device_id: string | null
+          date_of_birth: string | null
+          date_of_birth_precision: string
+          deceased_at: string | null
+          deleted_at: string | null
+          id: string
+          identification_notes: string | null
+          last_modified_by_device_id: string | null
+          microchip_id: string | null
+          name: string
+          patient_code: string
+          server_version: number
+          sex: string
+          species: string
+          status: string
+          updated_at: string
+          vet_id: string
+        }
+        Insert: {
+          breed?: string | null
+          color_markings?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          date_of_birth?: string | null
+          date_of_birth_precision?: string
+          deceased_at?: string | null
+          deleted_at?: string | null
+          id: string
+          identification_notes?: string | null
+          last_modified_by_device_id?: string | null
+          microchip_id?: string | null
+          name: string
+          patient_code: string
+          server_version?: number
+          sex: string
+          species: string
+          status?: string
+          updated_at?: string
+          vet_id: string
+        }
+        Update: {
+          breed?: string | null
+          color_markings?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          date_of_birth?: string | null
+          date_of_birth_precision?: string
+          deceased_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          identification_notes?: string | null
+          last_modified_by_device_id?: string | null
+          microchip_id?: string | null
+          name?: string
+          patient_code?: string
+          server_version?: number
+          sex?: string
+          species?: string
+          status?: string
+          updated_at?: string
+          vet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patients_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_last_modified_by_device_id_fkey"
+            columns: ["last_modified_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vet_devices: {
         Row: {
           app_version: string | null
@@ -210,6 +482,71 @@ export type Database = {
         }
         Returns: string
       }
+      create_client: {
+        Args: {
+          p_address?: string
+          p_client_code: string
+          p_communication_consent?: boolean
+          p_device_id?: string
+          p_email?: string
+          p_id: string
+          p_location_latitude?: number
+          p_location_longitude?: number
+          p_name: string
+          p_notes?: string
+          p_phone_display: string
+          p_phone_e164: string
+          p_whatsapp_display?: string
+          p_whatsapp_e164?: string
+        }
+        Returns: string
+      }
+      create_patient: {
+        Args: {
+          p_breed?: string
+          p_color_markings?: string
+          p_date_of_birth?: string
+          p_date_of_birth_precision?: string
+          p_device_id?: string
+          p_id: string
+          p_identification_notes?: string
+          p_microchip_id?: string
+          p_name: string
+          p_patient_code: string
+          p_sex: string
+          p_species: string
+        }
+        Returns: string
+      }
+      create_patient_owner: {
+        Args: {
+          p_client_id: string
+          p_device_id?: string
+          p_id: string
+          p_is_primary?: boolean
+          p_patient_id: string
+          p_relationship?: string
+          p_valid_from?: string
+        }
+        Returns: string
+      }
+      delete_client: {
+        Args: { p_device_id?: string; p_id: string; p_reason: string }
+        Returns: undefined
+      }
+      delete_patient: {
+        Args: { p_device_id?: string; p_id: string; p_reason: string }
+        Returns: undefined
+      }
+      end_patient_owner: {
+        Args: {
+          p_device_id?: string
+          p_id: string
+          p_reason?: string
+          p_valid_to: string
+        }
+        Returns: undefined
+      }
       register_current_device: {
         Args: {
           p_app_version?: string
@@ -225,6 +562,42 @@ export type Database = {
       }
       touch_current_device: {
         Args: { p_app_version?: string; p_device_id: string }
+        Returns: undefined
+      }
+      update_client: {
+        Args: {
+          p_address?: string
+          p_communication_consent?: boolean
+          p_device_id?: string
+          p_email?: string
+          p_id: string
+          p_location_latitude?: number
+          p_location_longitude?: number
+          p_name: string
+          p_notes?: string
+          p_phone_display: string
+          p_phone_e164: string
+          p_whatsapp_display?: string
+          p_whatsapp_e164?: string
+        }
+        Returns: undefined
+      }
+      update_patient: {
+        Args: {
+          p_breed?: string
+          p_color_markings?: string
+          p_date_of_birth?: string
+          p_date_of_birth_precision?: string
+          p_deceased_at?: string
+          p_device_id?: string
+          p_id: string
+          p_identification_notes?: string
+          p_microchip_id?: string
+          p_name: string
+          p_sex: string
+          p_species: string
+          p_status?: string
+        }
         Returns: undefined
       }
       update_vet_profile: {
