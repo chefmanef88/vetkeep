@@ -36,6 +36,7 @@ export default function PracticeLayout() {
       <Stack.Screen name="client/[id]" options={{ title: "Client" }} />
       <Stack.Screen name="visit/[id]" options={{ title: "Visit" }} />
       <Stack.Screen name="stock" options={{ title: "Stock" }} />
+      <Stack.Screen name="sync" options={{ title: "Sync" }} />
     </Stack>
   );
 }

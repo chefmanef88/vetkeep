@@ -121,6 +121,7 @@ export default function TodayScreen() {
           label="What I am carrying"
           onPress={() => router.push("/practice/stock")}
         />
+        <SecondaryButton label="Sync" onPress={() => router.push("/practice/sync")} />
         <SecondaryButton label="Back to account" onPress={() => router.replace("/")} />
       </Card>
     </ScrollScreen>

@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSync } from "./sync-provider";
 import { palette } from "@/ui/practice-components";
@@ -12,6 +13,7 @@ import { palette } from "@/ui/practice-components";
  * is.
  */
 export function SyncBanner() {
+  const router = useRouter();
   const { status, pendingCount, conflicts, deadLetters, flush } = useSync();
   const needsAttention = conflicts.length > 0 || deadLetters.length > 0;
 
@@ -22,7 +24,10 @@ export function SyncBanner() {
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => void flush()}
+      onPress={() => {
+        if (needsAttention) router.push("/practice/sync");
+        else void flush();
+      }}
       style={[
         styles.banner,
         tone === "attention" && styles.attention,

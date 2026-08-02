@@ -1754,6 +1754,16 @@ export type Database = {
         Args: { p_device_id?: string; p_visit_id: string }
         Returns: number
       }
+      record_conflict_resolution: {
+        Args: {
+          p_device_id?: string
+          p_entity_id: string
+          p_entity_type: string
+          p_fields?: string[]
+          p_resolution: string
+        }
+        Returns: undefined
+      }
       record_inventory_consumption: {
         Args: {
           p_batch_id: string
