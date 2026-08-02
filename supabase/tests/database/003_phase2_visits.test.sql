@@ -900,12 +900,12 @@ select ok(
 );
 -- 104
 select ok(
-  not has_function_privilege('anon', 'public.set_exam_finding(uuid,text,text,text,uuid)', 'EXECUTE'),
+  not has_function_privilege('anon', 'public.set_exam_finding(uuid,text,text,text,uuid,bigint)', 'EXECUTE'),
   'Anonymous role cannot execute set_exam_finding'
 );
 -- 105
 select ok(
-  has_function_privilege('authenticated', 'public.set_exam_finding(uuid,text,text,text,uuid)', 'EXECUTE'),
+  has_function_privilege('authenticated', 'public.set_exam_finding(uuid,text,text,text,uuid,bigint)', 'EXECUTE'),
   'Authenticated role can execute set_exam_finding'
 );
 -- 106

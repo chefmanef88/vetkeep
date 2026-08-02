@@ -1825,6 +1825,7 @@ export type Database = {
       }
       set_exam_finding: {
         Args: {
+          p_base_server_version?: number
           p_device_id?: string
           p_remarks?: string
           p_status: string
@@ -1873,6 +1874,7 @@ export type Database = {
       update_client: {
         Args: {
           p_address?: string
+          p_base_server_version?: number
           p_communication_consent?: boolean
           p_device_id?: string
           p_email?: string
@@ -1902,6 +1904,7 @@ export type Database = {
       }
       update_patient: {
         Args: {
+          p_base_server_version?: number
           p_breed?: string
           p_color_markings?: string
           p_date_of_birth?: string
@@ -1932,6 +1935,7 @@ export type Database = {
       }
       update_visit_draft: {
         Args: {
+          p_base_server_version?: number
           p_body_condition_score?: string
           p_chief_complaint?: string
           p_current_medications?: string
