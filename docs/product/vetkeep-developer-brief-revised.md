@@ -2,9 +2,17 @@
 
 **Document status:** Technical build specification  
 **Product stage:** Pre-development architecture baseline  
-**Revision date:** 11 July 2026  
+**Revision date:** 11 July 2026 (Phase 2 scope correction applied 2 August 2026)  
 **Primary market:** Independent solo veterinarians in Ghana and West Africa  
 **Primary platforms:** Mobile application for clinical work; web application for account, public passport, and platform workflows
+
+### Revision note — 2 August 2026
+
+Phase 2 scope was corrected and reprioritized after Phase 1 acceptance. Three changes from the original document:
+
+1. **First vertical slice reprioritized.** Phase 2 now front-loads a complete end-to-end workflow — client → patient → house-call request → appointment/route → consultation → treatment/prescription → payment → follow-up — instead of building clinical records in isolation before scheduling and invoicing. This pulls forward elements originally sequenced in Phases 3, 4, and 6. See §24.
+2. **Field inventory added to scope.** Lightweight tracking of drugs and consumables the vet personally carries (batch/expiry, low-stock warnings, per-visit consumption, restocking) is now in scope. This is a single-vet personal-stock feature, not a pharmacy or procurement system. See §7.8 and the updated §21 boundary.
+3. **Future assistant/locum access acknowledged.** The tenant model already isolates data per `vet_id` in a way that could later accommodate a small number of assistant or locum seats without introducing clinic/branch concepts. Not implemented in v1. See §2.
 
 ---
 
@@ -55,7 +63,7 @@ VetKeep v1 is not:
 - A clinic, hospital, or branch-management platform.
 - A multi-vet collaboration product.
 - A client portal or client mobile app.
-- An inventory, pharmacy, payroll, or insurance system.
+- A pharmacy, payroll, or insurance system, or a multi-location inventory system (lightweight personal field-supply tracking is in scope — see §7.8).
 - A herd/flock production-management system.
 
 Group, herd, flock, pen, and production-unit records may be introduced later. In v1, each patient record represents one identifiable animal.
@@ -74,6 +82,8 @@ From a security and data-isolation perspective, VetKeep is still a **single-seat
 - Every private record is owned by exactly one `vet_id`.
 
 This distinction must be preserved in the implementation because cross-account data exposure is a critical security risk even when every account has only one user.
+
+The single-tenant-per-vet model is intentional groundwork for a possible future small-team extension (one assistant or locum per practice), not a permanent restriction. Adding that later should mean adding a bounded staff/role table scoped to an existing `vet_id`, not introducing clinic, branch, or organization concepts. No staff-seat schema exists in v1.
 
 ### 2.1 Internal platform administration
 
@@ -641,6 +651,67 @@ create table vaccinations (
   check (next_due_date is null or next_due_date >= date_given)
 );
 ```
+
+### 7.8 Field inventory
+
+VetKeep tracks only the drugs and consumables a single veterinarian personally carries and uses during house calls. This is not a pharmacy, procurement, or multi-location stock system — see the boundary note in §21.
+
+```sql
+create table inventory_items (
+  id uuid primary key,
+  vet_id uuid not null references vets(id) on delete restrict,
+  item_name text not null,
+  item_type text not null check (item_type in ('drug', 'consumable', 'vaccine', 'other')),
+  unit text not null,
+  reorder_threshold numeric(10,2),
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz,
+  server_version bigint not null default 1,
+  created_by_device_id uuid,
+  last_modified_by_device_id uuid,
+  unique (vet_id, item_name)
+);
+
+create table inventory_batches (
+  id uuid primary key,
+  vet_id uuid not null references vets(id) on delete restrict,
+  item_id uuid not null references inventory_items(id) on delete restrict,
+  batch_lot_number text,
+  expiry_date date,
+  quantity_on_hand numeric(10,2) not null default 0 check (quantity_on_hand >= 0),
+  unit_cost_pesewas bigint,
+  received_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz,
+  server_version bigint not null default 1,
+  created_by_device_id uuid,
+  last_modified_by_device_id uuid
+);
+
+create table inventory_movements (
+  id uuid primary key,
+  vet_id uuid not null references vets(id) on delete restrict,
+  batch_id uuid not null references inventory_batches(id) on delete restrict,
+  visit_id uuid references visits(id) on delete restrict,
+  movement_type text not null
+    check (movement_type in ('restock', 'consumption', 'adjustment', 'expired_writeoff')),
+  quantity numeric(10,2) not null check (quantity <> 0),
+  notes text,
+  created_at timestamptz not null default now(),
+  created_by_device_id uuid
+);
+```
+
+Rules:
+
+- `inventory_movements` is append-only; stock changes are derived from movement rows, not edited in place. A correction is a new `adjustment` movement, not an update to a prior movement.
+- A `consumption` movement created during a visit must reference that `visit_id` and decrement the linked batch's `quantity_on_hand` through a controlled database function, not a direct client update.
+- Low-stock status is derived, not stored: sum `quantity_on_hand` across active, non-expired batches for an item and compare against `reorder_threshold`.
+- Expired batches must be excluded from available quantity even if `quantity_on_hand` is still positive; a scheduled or manual `expired_writeoff` movement reconciles the two.
+- Offline behavior follows §15: `inventory_movements` created during an offline visit sync using the same outbound-mutation and idempotency-key mechanism as other visit data, so a retried sync cannot double-deduct stock.
 
 ---
 
@@ -1544,7 +1615,7 @@ Glass-morphism may be used for visual identity, but heavy blur is not mandatory 
 - Shared record ownership or inter-clinic transfer workflows.
 - Client login, portal, or client mobile application.
 - Herd, flock, group-treatment, or production-management records.
-- Inventory and pharmacy stock control.
+- Pharmacy-grade or multi-location inventory systems. Personal field-supply tracking for a single vet's own carried stock is in scope — see §7.8.
 - Procurement and supplier management.
 - Insurance claims.
 - Payroll and staff scheduling.
@@ -1675,35 +1746,42 @@ Do not manually edit the production schema outside the migration process except 
 8. Backup and restore procedure.
 9. CI/CD pipelines.
 
-### Phase 2 — Core client and clinical records
+### Phase 2 — Core practice workflow (first vertical slice)
 
-1. Clients and normalized search.
-2. Patients and ownership history.
-3. Visit drafts and SOAP sections.
-4. Physical examination checklist with `not_examined` default.
-5. Diagnostics.
-6. Vaccinations.
-7. Attachments.
-8. Visit completion, locking, voiding, and amendments.
+Reprioritized 2 August 2026. Phase 2 now delivers one complete, working workflow end to end rather than clinical records in isolation. It pulls forward the minimum needed from the original Phases 3, 4, and 6 to make that workflow real, and adds field inventory (§7.8), which was not previously scoped.
 
-### Phase 3 — Offline mobile completion
+1. **Veterinarian workspace.** Professional profile, licence verification, service areas, working hours, services offered, pricing and call-out fees (builds on the Phase 1 account/device model).
+2. **Clients and patients.** Owner contact and address, multiple pets per owner, signalment and identification, vaccination/deworming history, allergies and chronic-condition alerts, normalized search (§6).
+3. **House-call scheduling and field operations — basic slice.** Booking requests, visit address/location, travel and call-out fee, appointment confirmation, daily visit list, simple manual route ordering, arrival/consultation/completion status, emergency classification (§11, basic path only — route optimization and advanced ordering stay in Phase 4).
+4. **Mobile medical records.** Presenting complaint and history, exam vitals and the 11-system checklist defaulting to `not_examined`, problem list and differentials, diagnostics and attachments, assessment and treatment, prescriptions, procedures, discharge/home-care instructions, follow-up reminders, visit completion/locking/amendments (§7).
+5. **Payments and records — basic slice.** Service, medication, and call-out charges; cash/mobile-money/card status; receipts; outstanding balances; simple income/expense summary (§14, basic path only — VetKeep's own subscription billing stays in Phase 6).
+6. **Field inventory.** Drugs and consumables carried, batch/expiry tracking, low-stock warnings, per-visit consumption, restocking records (§7.8).
+7. **Communication and follow-up — basic slice.** Appointment confirmations, vaccination/medication reminders, follow-up messages, prescription/discharge-summary sharing, WhatsApp-friendly delivery, communication history (§12, basic path only — delivery-state/callback maturity stays in Phase 4).
+8. **Offline resilience — basic slice.** Draft consultations offline, safe local storage, sync on reconnect, conflict prevention, visible sync status, retry without duplicates (§15, basic path only — full local schema, resumable uploads at scale, and schema-migration-with-unsynced-data testing stay in Phase 3).
 
-1. Full local schema.
-2. Push and pull synchronization.
-3. Mutation idempotency.
-4. Tombstones.
-5. Conflict screen.
-6. Resumable attachment uploads.
-7. Schema migrations with unsynced data.
+**Exit gate — first complete vertical slice:** create a client and patient, schedule a house call, conduct and document the visit on mobile (including any inventory consumed), issue treatment instructions, record payment, and schedule a follow-up — end to end, with basic offline support, before broadening to any other module.
+
+### Phase 3 — Offline mobile hardening
+
+Builds on the basic offline resilience shipped in Phase 2.
+
+1. Full local schema covering every Phase 2 entity, including inventory.
+2. Push and pull synchronization at scale.
+3. Mutation idempotency under retry.
+4. Tombstones and purge policy.
+5. Conflict screen for all record types in §15.6, not just drafts.
+6. Resumable attachment uploads under real network interruption.
+7. Schema migrations with unsynced data present.
 8. Device revocation and recovery testing.
 
-### Phase 4 — Scheduling and communication
+### Phase 4 — Scheduling and communication hardening
 
-1. Appointment workflow.
-2. Route stops and manual ordering.
-3. Reminder outbox.
-4. WhatsApp provider integration.
-5. Callback and delivery-state handling.
+Builds on the basic scheduling and communication shipped in Phase 2.
+
+1. Route optimization beyond manual/nearest-neighbor ordering.
+2. Reminder outbox maturity: exponential retry, dead-letter visibility.
+3. WhatsApp provider integration hardening and callback verification.
+4. Delivery-state handling (sent/delivered/read) and template-version tracking.
 
 ### Phase 5 — Health passport
 
@@ -1714,14 +1792,15 @@ Do not manually edit the production schema outside the migration process except 
 5. QR generation and revocation.
 6. Privacy and accessibility testing.
 
-### Phase 6 — Commercial workflows
+### Phase 6 — Commercial workflows (VetKeep subscription billing)
+
+Client invoicing itself ships in Phase 2; this phase covers VetKeep's own subscription commerce only.
 
 1. Trial and entitlement logic.
 2. Hubtel payment initiation.
 3. Signed webhook processing.
 4. Reconciliation and grace period.
 5. Past-due continuity behavior.
-6. Client invoices, items, and payments.
 
 ### Phase 7 — Production hardening
 
