@@ -16,7 +16,9 @@
     },
     "android": {
       "package": "com.vetkeep.mobile",
-      "allowBackup": false
+      "allowBackup": false,
+      "permissions": ["android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT"],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
     },
     "plugins": [
       "expo-router",
@@ -45,6 +47,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bc683600-8b88-4535-ae4b-8ce8deed85c7"
+      }
     }
   }
 }
