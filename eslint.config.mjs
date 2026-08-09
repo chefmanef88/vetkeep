@@ -35,5 +35,20 @@ export default tseslint.config(
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off"
     }
+  },
+  {
+    // Build scripts run under Node, not in an app runtime, so they legitimately
+    // reach for Buffer, process and console. Declaring the globals keeps the
+    // no-undef rule doing its job everywhere else rather than being disabled
+    // file by file.
+    files: ["**/scripts/**/*.{mjs,js}"],
+    languageOptions: {
+      globals: {
+        Buffer: "readonly",
+        console: "readonly",
+        process: "readonly",
+        __dirname: "readonly"
+      }
+    }
   }
 );
