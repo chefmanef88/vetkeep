@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
@@ -20,13 +21,12 @@ import {
   Card,
   FieldLabel,
   Muted,
-  Pill,
   ScrollScreen,
   SectionTitle,
-  Segmented,
-  palette
+  Segmented
 } from "@/ui/practice-components";
-import { radiusControl } from "@/ui/tokens";
+import { Avatar, CodeChip, Collapsible, ProgressBar } from "@/ui/elements";
+import { fonts, palette, radiusControl, radiusPill, space, type } from "@/ui/tokens";
 
 const EXAM_OPTIONS = [
   { value: "not_examined", label: "Not yet" },
@@ -41,6 +41,11 @@ type Loaded = {
   batches: UsableBatch[];
   consumed: ConsumedMovement[];
 };
+
+/** How many of a set of free-text answers have been given. */
+function filledCount(values: string[]): number {
+  return values.filter((value) => value.trim() !== "").length;
+}
 
 export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -117,6 +122,33 @@ export default function VisitScreen() {
   const { visit, findings, batches, consumed } = data;
   const isDraft = visit.workflow_status === "draft";
   const notExamined = findings.filter((f) => f.status === "not_examined").length;
+  const examined = findings.length - notExamined;
+  const abnormal = findings.filter((f) => f.status === "abnormal").length;
+
+  const historyFilled = filledCount([
+    draft.chiefComplaint,
+    draft.historyOfComplaint,
+    draft.pastMedicalHistory,
+    draft.currentMedications
+  ]);
+  const vitalsFilled = filledCount([
+    draft.temperatureC,
+    draft.heartRateBpm,
+    draft.respiratoryRateBpm,
+    draft.weightValue,
+    draft.bodyConditionScore,
+    draft.painScore
+  ]);
+  const planFilled = filledCount([
+    draft.problemList,
+    draft.differentialDiagnoses,
+    draft.tentativeDiagnosis,
+    draft.definitiveDiagnosis,
+    draft.treatmentPlan,
+    draft.prescriptions,
+    draft.followUpPlan,
+    draft.nextReviewDate
+  ]);
 
   const set = (key: keyof DraftForm, value: string) =>
     setDraft((current) => (current ? { ...current, [key]: value } : current));
@@ -233,32 +265,63 @@ export default function VisitScreen() {
   return (
     <ScrollScreen>
       <SyncBanner />
-      <Card>
-        <View style={styles.headRow}>
-          <SectionTitle>{visit.patients?.name ?? "Visit"}</SectionTitle>
-          <Pill
-            label={visit.workflow_status}
-            tone={
-              visit.workflow_status === "completed"
-                ? "good"
-                : visit.workflow_status === "voided"
-                  ? "bad"
-                  : "neutral"
-            }
-          />
+
+      <View style={styles.header}>
+        <Avatar name={visit.patients?.name ?? "?"} tone={isDraft ? "brand" : "good"} />
+        <View style={styles.headerBody}>
+          <Text style={styles.headerName} numberOfLines={1}>
+            {visit.patients?.name ?? "Visit"}
+          </Text>
+          <Text style={styles.headerMeta} numberOfLines={1}>
+            {visit.patients?.species}
+            {visit.patients?.breed ? ` · ${visit.patients.breed}` : ""}
+          </Text>
         </View>
-        <Muted>
-          {visit.patients?.species}
-          {visit.patients?.breed ? ` · ${visit.patients.breed}` : ""} ·{" "}
-          {visit.patients?.patient_code}
-        </Muted>
-        {!isDraft ? <Muted>This record is signed and can no longer be edited.</Muted> : null}
-      </Card>
+        <View style={[styles.state, isDraft ? styles.stateDraft : styles.stateSigned]}>
+          <Ionicons
+            name={isDraft ? "create-outline" : "lock-closed"}
+            size={12}
+            color={isDraft ? palette.brandInk : palette.green}
+          />
+          <Text style={[styles.stateText, !isDraft && styles.stateTextSigned]}>
+            {isDraft ? "Draft" : visit.workflow_status}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.codeRow}>
+        <CodeChip>{visit.patients?.patient_code ?? "—"}</CodeChip>
+      </View>
+
+      {findings.length > 0 ? (
+        <Card>
+          <ProgressBar
+            label="Systems examined"
+            done={examined}
+            total={findings.length}
+            tone={abnormal > 0 ? "warn" : examined === findings.length ? "good" : "brand"}
+          />
+          {abnormal > 0 ? (
+            <Muted>
+              {abnormal} {abnormal === 1 ? "system is" : "systems are"} abnormal.
+            </Muted>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {!isDraft ? (
+        <Card>
+          <Muted>This record is signed and can no longer be edited.</Muted>
+        </Card>
+      ) : null}
 
       {isDraft ? (
         <>
-          <Card>
-            <SectionTitle>Consultation</SectionTitle>
+          <Collapsible
+            title="History"
+            icon="chatbubble-ellipses"
+            hint={`${historyFilled} of 4 recorded`}
+            initiallyOpen={historyFilled === 0}
+          >
             <FieldLabel>Presenting complaint</FieldLabel>
             <Field
               multiline
@@ -283,10 +346,9 @@ export default function VisitScreen() {
               value={draft.currentMedications}
               onChangeText={(v) => set("currentMedications", v)}
             />
-          </Card>
+          </Collapsible>
 
-          <Card>
-            <SectionTitle>Vitals</SectionTitle>
+          <Collapsible title="Vitals" icon="pulse" hint={`${vitalsFilled} of 6 recorded`}>
             <View style={styles.pairRow}>
               <View style={styles.pairCell}>
                 <FieldLabel>Temp °C</FieldLabel>
@@ -341,66 +403,7 @@ export default function VisitScreen() {
                 />
               </View>
             </View>
-          </Card>
-
-          <Card>
-            <SectionTitle>Assessment and plan</SectionTitle>
-            <FieldLabel>Problem list</FieldLabel>
-            <Field
-              multiline
-              value={draft.problemList}
-              onChangeText={(v) => set("problemList", v)}
-            />
-            <FieldLabel>Differentials</FieldLabel>
-            <Field
-              multiline
-              value={draft.differentialDiagnoses}
-              onChangeText={(v) => set("differentialDiagnoses", v)}
-            />
-            <FieldLabel>Tentative diagnosis</FieldLabel>
-            <Field
-              multiline
-              value={draft.tentativeDiagnosis}
-              onChangeText={(v) => set("tentativeDiagnosis", v)}
-            />
-            <FieldLabel>Diagnosis</FieldLabel>
-            <Field
-              multiline
-              value={draft.definitiveDiagnosis}
-              onChangeText={(v) => set("definitiveDiagnosis", v)}
-            />
-            <FieldLabel>Treatment</FieldLabel>
-            <Field
-              multiline
-              value={draft.treatmentPlan}
-              onChangeText={(v) => set("treatmentPlan", v)}
-            />
-            <FieldLabel>Prescriptions</FieldLabel>
-            <Field
-              multiline
-              value={draft.prescriptions}
-              onChangeText={(v) => set("prescriptions", v)}
-            />
-            <FieldLabel>Home care and follow-up</FieldLabel>
-            <Field
-              multiline
-              value={draft.followUpPlan}
-              onChangeText={(v) => set("followUpPlan", v)}
-            />
-            <FieldLabel>Next review date</FieldLabel>
-            <Field
-              value={draft.nextReviewDate}
-              placeholder="2026-08-09"
-              onChangeText={(v) => set("nextReviewDate", v)}
-            />
-            {actionError ? <ErrorText>{actionError}</ErrorText> : null}
-            {status ? <Body>{status}</Body> : null}
-            <PrimaryButton
-              label={saving ? "Saving…" : "Save"}
-              disabled={saving}
-              onPress={() => void saveDraft()}
-            />
-          </Card>
+          </Collapsible>
         </>
       ) : (
         <Card>
@@ -414,8 +417,16 @@ export default function VisitScreen() {
         </Card>
       )}
 
-      <Card>
-        <SectionTitle>Examination</SectionTitle>
+      <Collapsible
+        title="Examination"
+        icon="body"
+        hint={
+          notExamined === 0
+            ? `All ${findings.length} examined`
+            : `${notExamined} still not examined`
+        }
+        tone={notExamined === 0 ? "good" : "warn"}
+      >
         <Muted>
           Every system starts unexamined. Marking one normal says you looked and found nothing
           wrong.
@@ -436,7 +447,60 @@ export default function VisitScreen() {
             onPress={() => void markRemainingNormal()}
           />
         ) : null}
-      </Card>
+      </Collapsible>
+
+      {isDraft ? (
+        <Collapsible
+          title="Assessment and plan"
+          icon="clipboard"
+          hint={`${planFilled} of 8 recorded`}
+        >
+          <FieldLabel>Problem list</FieldLabel>
+          <Field multiline value={draft.problemList} onChangeText={(v) => set("problemList", v)} />
+          <FieldLabel>Differentials</FieldLabel>
+          <Field
+            multiline
+            value={draft.differentialDiagnoses}
+            onChangeText={(v) => set("differentialDiagnoses", v)}
+          />
+          <FieldLabel>Tentative diagnosis</FieldLabel>
+          <Field
+            multiline
+            value={draft.tentativeDiagnosis}
+            onChangeText={(v) => set("tentativeDiagnosis", v)}
+          />
+          <FieldLabel>Diagnosis</FieldLabel>
+          <Field
+            multiline
+            value={draft.definitiveDiagnosis}
+            onChangeText={(v) => set("definitiveDiagnosis", v)}
+          />
+          <FieldLabel>Treatment</FieldLabel>
+          <Field
+            multiline
+            value={draft.treatmentPlan}
+            onChangeText={(v) => set("treatmentPlan", v)}
+          />
+          <FieldLabel>Prescriptions</FieldLabel>
+          <Field
+            multiline
+            value={draft.prescriptions}
+            onChangeText={(v) => set("prescriptions", v)}
+          />
+          <FieldLabel>Home care and follow-up</FieldLabel>
+          <Field
+            multiline
+            value={draft.followUpPlan}
+            onChangeText={(v) => set("followUpPlan", v)}
+          />
+          <FieldLabel>Next review date</FieldLabel>
+          <Field
+            value={draft.nextReviewDate}
+            placeholder="2026-08-09"
+            onChangeText={(v) => set("nextReviewDate", v)}
+          />
+        </Collapsible>
+      ) : null}
 
       <AttachmentsSection visitId={visit.id} patientId={visit.patient_id} editable={isDraft} />
 
@@ -450,12 +514,19 @@ export default function VisitScreen() {
 
       {isDraft ? (
         <Card>
-          <SectionTitle>Finish</SectionTitle>
-          <Muted>Completing signs the record. After that it cannot be edited, only amended.</Muted>
+          {/* Save lives out here rather than inside a section. The sections
+              collapse, and a save button that can be hidden is a save button
+              that will be missed. */}
           {actionError ? <ErrorText>{actionError}</ErrorText> : null}
+          {status ? <Body>{status}</Body> : null}
           <PrimaryButton
-            label={saving ? "Signing…" : "Complete and sign"}
+            label={saving ? "Saving…" : "Save"}
             disabled={saving}
+            onPress={() => void saveDraft()}
+          />
+          <Muted>Completing signs the record. After that it cannot be edited, only amended.</Muted>
+          <SecondaryButton
+            label={saving ? "Signing…" : "Complete and sign"}
             onPress={() => void complete()}
           />
         </Card>
@@ -481,6 +552,20 @@ function ReadOnly({ label, value }: { label: string; value: string | null }) {
   );
 }
 
+const EXAM_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  normal: "checkmark-circle",
+  abnormal: "alert-circle",
+  not_applicable: "remove-circle",
+  not_examined: "ellipse-outline"
+};
+
+const EXAM_COLOR: Record<string, string> = {
+  normal: palette.green,
+  abnormal: palette.amber,
+  not_applicable: palette.quiet,
+  not_examined: palette.line
+};
+
 function ExamRow({
   finding,
   editable,
@@ -493,20 +578,18 @@ function ExamRow({
   const [remarks, setRemarks] = useState(finding.remarks ?? "");
 
   return (
-    <View
-      style={[
-        styles.examRow,
-        finding.status === "abnormal" && styles.examAbnormal,
-        finding.status === "not_examined" && styles.examPending
-      ]}
-    >
-      <View style={styles.headRow}>
+    <View style={[styles.examRow, finding.status === "abnormal" && styles.examAbnormal]}>
+      <View style={styles.examHead}>
+        {/* An icon as well as the colour, so the state survives sunlight and a
+            colourblind reader. */}
+        <Ionicons
+          name={EXAM_ICON[finding.status] ?? "ellipse-outline"}
+          size={18}
+          color={EXAM_COLOR[finding.status] ?? palette.quiet}
+        />
         <Text style={styles.examSystem}>{finding.system_name}</Text>
         {!editable ? (
-          <Pill
-            label={finding.status.replace("_", " ")}
-            tone={finding.status === "abnormal" ? "warn" : "neutral"}
-          />
+          <Text style={styles.examStatusText}>{finding.status.replace("_", " ")}</Text>
         ) : null}
       </View>
       {editable ? (
@@ -590,20 +673,23 @@ function StockSection({
   }
 
   return (
-    <Card>
-      <SectionTitle>Stock used</SectionTitle>
+    <Collapsible
+      title="Stock used"
+      icon="cube"
+      hint={consumed.length === 0 ? "Nothing taken" : `${consumed.length} recorded`}
+    >
       {consumed.length === 0 ? (
         <Muted>Nothing taken from the vehicle for this visit.</Muted>
       ) : (
         consumed.map((movement) => (
-          <View key={movement.id} style={styles.headRow}>
-            <Text style={styles.examSystem}>
+          <View key={movement.id} style={styles.usedRow}>
+            <Text style={styles.usedName}>
               {movement.inventory_batches?.inventory_items?.item_name ?? "Item"}
             </Text>
-            <Muted>
+            <Text style={styles.usedQty}>
               {Math.abs(Number(movement.quantity))}{" "}
               {movement.inventory_batches?.inventory_items?.unit ?? ""}
-            </Muted>
+            </Text>
           </View>
         ))
       )}
@@ -617,17 +703,39 @@ function StockSection({
         ) : (
           <>
             <FieldLabel>Batch</FieldLabel>
-            {batches.map((batch) => (
-              <SecondaryButton
-                key={batch.id}
-                label={`${batch.inventory_items?.item_name ?? "Item"}${
-                  batch.batch_lot_number ? ` · ${batch.batch_lot_number}` : ""
-                } — ${batch.quantity_on_hand} ${batch.inventory_items?.unit ?? ""} left${
-                  batch.id === batchId ? "  ✓" : ""
-                }`}
-                onPress={() => setBatchId(batch.id)}
-              />
-            ))}
+            {/* Selection reads as a chosen row, not as a list of buttons all
+                shouting equally. */}
+            {batches.map((batch) => {
+              const chosen = batch.id === batchId;
+              return (
+                <Pressable
+                  key={batch.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: chosen }}
+                  style={({ pressed }) => [
+                    styles.batchRow,
+                    chosen && styles.batchChosen,
+                    pressed && styles.batchPressed
+                  ]}
+                  onPress={() => setBatchId(batch.id)}
+                >
+                  <Ionicons
+                    name={chosen ? "radio-button-on" : "radio-button-off"}
+                    size={18}
+                    color={chosen ? palette.brand : palette.quiet}
+                  />
+                  <View style={styles.batchBody}>
+                    <Text style={styles.batchName}>
+                      {batch.inventory_items?.item_name ?? "Item"}
+                    </Text>
+                    <Text style={styles.batchMeta}>
+                      {batch.batch_lot_number ? `${batch.batch_lot_number} · ` : ""}
+                      {batch.quantity_on_hand} {batch.inventory_items?.unit ?? ""} left
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
             <FieldLabel>Quantity used</FieldLabel>
             <Field keyboardType="decimal-pad" value={quantity} onChangeText={setQuantity} />
             {error ? <ErrorText>{error}</ErrorText> : null}
@@ -639,31 +747,74 @@ function StockSection({
           </>
         )
       ) : null}
-    </Card>
+    </Collapsible>
   );
 }
 
 const styles = StyleSheet.create({
-  headRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  pairRow: { flexDirection: "row", gap: 10 },
-  pairCell: { flex: 1, gap: 4 },
-  readOnly: { gap: 2 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    paddingHorizontal: space.xs
+  },
+  headerBody: { flex: 1, gap: 1 },
+  headerName: { ...type.heading, fontSize: 22, color: palette.ink },
+  headerMeta: { ...type.small, color: palette.quiet },
+  codeRow: { paddingHorizontal: space.xs, flexDirection: "row" },
+  state: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    borderRadius: radiusPill,
+    paddingHorizontal: space.md,
+    paddingVertical: 4
+  },
+  stateDraft: { backgroundColor: palette.brandSoft },
+  stateSigned: { backgroundColor: palette.greenSoft },
+  stateText: { fontFamily: fonts.semibold, fontSize: 11, color: palette.brandInk },
+  stateTextSigned: { color: palette.green },
+  pairRow: { flexDirection: "row", gap: space.md },
+  pairCell: { flex: 1, gap: space.xs },
+  readOnly: { gap: space.xs },
   examRow: {
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    gap: space.sm,
+    paddingVertical: space.md,
+    paddingHorizontal: space.md,
     borderRadius: radiusControl,
-
-    borderLeftWidth: 3,
-    borderLeftColor: palette.line,
     backgroundColor: palette.ground
   },
   // Abnormal carries a heavier border and a label, never colour on its own.
   examAbnormal: {
+    borderLeftWidth: 4,
     borderLeftColor: palette.amber,
-    borderLeftWidth: 5,
     backgroundColor: palette.amberSoft
   },
-  examPending: { borderLeftColor: palette.line, borderStyle: "dashed" },
-  examSystem: { fontSize: 15, fontWeight: "700", color: palette.ink }
+  examHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  examSystem: { ...type.strong, fontSize: 15, color: palette.ink, flex: 1 },
+  examStatusText: { fontFamily: fonts.medium, fontSize: 12, color: palette.quiet },
+  usedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.sm,
+    paddingVertical: space.sm
+  },
+  usedName: { ...type.strong, fontSize: 15, color: palette.ink, flex: 1 },
+  usedQty: { fontFamily: fonts.mono, fontSize: 13, color: palette.quiet },
+  batchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radiusControl,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: palette.surface
+  },
+  batchChosen: { borderColor: palette.brand, backgroundColor: palette.brandSoft },
+  batchPressed: { opacity: 0.7 },
+  batchBody: { flex: 1, gap: 1 },
+  batchName: { ...type.strong, fontSize: 15, color: palette.ink },
+  batchMeta: { ...type.small, fontSize: 12, color: palette.quiet }
 });

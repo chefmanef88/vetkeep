@@ -25,16 +25,26 @@ import {
 
 export { palette } from "./tokens";
 
-export function ScrollScreen({ children }: { children: ReactNode }) {
+/**
+ * The practice screens sit under a navigation header, which already accounts
+ * for the status bar, so the top inset is off by default: claiming it there
+ * would indent the first block twice. Screens routed without a header pass
+ * topInset, or their first line hides behind the notch.
+ */
+export function ScrollScreen({
+  children,
+  topInset = false
+}: {
+  children: ReactNode;
+  topInset?: boolean;
+}) {
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[
         styles.scrollContent,
-        // Only the bottom is claimed here. Every screen using this sits under a
-        // navigation header, which already accounts for the status bar; adding
-        // the top inset as well would indent the first block twice.
+        topInset ? { paddingTop: insets.top + space.lg } : null,
         { paddingBottom: insets.bottom + space.xxxl }
       ]}
       keyboardShouldPersistTaps="handled"

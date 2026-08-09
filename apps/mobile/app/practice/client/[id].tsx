@@ -1,20 +1,23 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Linking, StyleSheet, Text, View } from "react-native";
 import { generatePatientCode } from "@vetkeep/domain";
 import { definedArgs, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
+import { resolveDateOfBirth, type DobMode } from "@/features/practice/patient-dob";
+import { Card, FieldLabel, ScrollScreen, Segmented } from "@/ui/practice-components";
 import {
-  Card,
-  FieldLabel,
-  Muted,
-  RowButton,
-  ScrollScreen,
-  SectionTitle,
-  Segmented
-} from "@/ui/practice-components";
+  Avatar,
+  CodeChip,
+  Collapsible,
+  EmptyState,
+  InfoRow,
+  ListHeader,
+  PersonRow
+} from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
+import { fonts, palette, radius, space, type } from "@/ui/tokens";
 
 type Loaded = {
   client: {
@@ -41,6 +44,12 @@ const SEXES = [
   { value: "unknown", label: "?" }
 ];
 
+const DOB_MODES: { value: DobMode; label: string }[] = [
+  { value: "exact", label: "Exact date" },
+  { value: "estimated", label: "About" },
+  { value: "unknown", label: "Unknown" }
+];
+
 export default function ClientScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -48,6 +57,13 @@ export default function ClientScreen() {
   const [species, setSpecies] = useState("");
   const [breed, setBreed] = useState("");
   const [sex, setSex] = useState("unknown");
+  const [dobMode, setDobMode] = useState<DobMode>("unknown");
+  const [dobText, setDobText] = useState("");
+  const [ageYears, setAgeYears] = useState("");
+  const [ageMonths, setAgeMonths] = useState("");
+  const [colorMarkings, setColorMarkings] = useState("");
+  const [microchipId, setMicrochipId] = useState("");
+  const [identificationNotes, setIdentificationNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -82,9 +98,37 @@ export default function ClientScreen() {
     return { client: clientResult.data, patients };
   }, [id]);
 
+  function resetForm() {
+    setName("");
+    setSpecies("");
+    setBreed("");
+    setSex("unknown");
+    setDobMode("unknown");
+    setDobText("");
+    setAgeYears("");
+    setAgeMonths("");
+    setColorMarkings("");
+    setMicrochipId("");
+    setIdentificationNotes("");
+  }
+
   async function addPatient() {
-    setBusy(true);
     setError(null);
+
+    // Resolved before anything is sent, so a bad age is caught here rather than
+    // after the animal is already half-created.
+    const dob = resolveDateOfBirth({
+      mode: dobMode,
+      exactText: dobText,
+      years: ageYears,
+      months: ageMonths
+    });
+    if (!dob.ok) {
+      setError(dob.message);
+      return;
+    }
+
+    setBusy(true);
     const patientId = globalThis.crypto.randomUUID();
 
     const { error: patientError } = await supabase.rpc(
@@ -95,7 +139,14 @@ export default function ClientScreen() {
         p_name: name,
         p_species: species,
         p_sex: sex,
-        p_breed: optionalText(breed)
+        p_breed: optionalText(breed),
+        // Omitted rather than sent as null when the age is unknown, so the
+        // function's own default applies. definedArgs strips the key.
+        p_date_of_birth: dob.date ?? undefined,
+        p_date_of_birth_precision: dob.precision,
+        p_color_markings: optionalText(colorMarkings),
+        p_microchip_id: optionalText(microchipId),
+        p_identification_notes: optionalText(identificationNotes)
       })
     );
     if (patientError) {
@@ -119,10 +170,7 @@ export default function ClientScreen() {
       return;
     }
 
-    setName("");
-    setSpecies("");
-    setBreed("");
-    setSex("unknown");
+    resetForm();
     reload();
   }
 
@@ -143,46 +191,164 @@ export default function ClientScreen() {
     );
   }
 
+  const phone = data.client.phone_display;
+
   return (
     <ScrollScreen>
-      <Card>
-        <SectionTitle>{data.client.name}</SectionTitle>
-        <Muted>
-          {data.client.client_code} · {data.client.phone_display}
-        </Muted>
-        {data.client.address ? <Muted>{data.client.address}</Muted> : null}
-      </Card>
+      <View style={styles.header}>
+        <Avatar name={data.client.name} />
+        <View style={styles.headerBody}>
+          <Text style={styles.headerName}>{data.client.name}</Text>
+          <CodeChip>{data.client.client_code}</CodeChip>
+        </View>
+      </View>
 
       <Card>
-        <SectionTitle>Animals</SectionTitle>
-        {data.patients.length === 0 ? <Muted>No animals recorded yet.</Muted> : null}
-        {data.patients.map((patient) => (
-          <RowButton
-            key={patient.id}
-            title={patient.name}
-            subtitle={`${patient.species}${patient.breed ? ` · ${patient.breed}` : ""} · ${patient.patient_code}`}
-            onPress={() => router.push("/practice/today")}
+        {/* Both are reachable in one tap. On a doorstep the phone number and the
+            address are the two things a vet needs to act on, not just read. */}
+        <InfoRow
+          icon="call-outline"
+          label="Phone"
+          value={phone}
+          tone="brand"
+          onPress={() => void Linking.openURL(`tel:${phone.replace(/\s/g, "")}`)}
+        />
+        {data.client.address ? (
+          <InfoRow
+            icon="location-outline"
+            label="Address"
+            value={data.client.address}
+            tone="brand"
+            onPress={() =>
+              void Linking.openURL(`geo:0,0?q=${encodeURIComponent(data.client.address ?? "")}`)
+            }
           />
-        ))}
+        ) : null}
       </Card>
 
-      <Card>
-        <SectionTitle>Add an animal</SectionTitle>
+      {data.patients.length > 0 ? (
+        <ListHeader title="Animals" count={data.patients.length} />
+      ) : null}
+
+      {data.patients.length > 0 ? (
+        <View style={styles.list}>
+          {data.patients.map((patient) => (
+            <PersonRow
+              key={patient.id}
+              name={patient.name}
+              code={patient.patient_code}
+              meta={`${patient.species}${patient.breed ? ` · ${patient.breed}` : ""}`}
+              tone="good"
+              onPress={() => router.push("/practice/today")}
+            />
+          ))}
+        </View>
+      ) : null}
+
+      {data.patients.length === 0 ? (
+        <EmptyState
+          icon="paw-outline"
+          title="No animals yet"
+          hint="Add the first one below. Everything saves on the device first."
+        />
+      ) : null}
+
+      <Collapsible title="Add an animal" icon="paw">
         <FieldLabel>Name</FieldLabel>
-        <Field value={name} onChangeText={setName} />
+        <Field value={name} onChangeText={setName} placeholder="Called at home" />
+
         <FieldLabel>Species</FieldLabel>
         <Field value={species} onChangeText={setSpecies} placeholder="Dog" />
+
         <FieldLabel>Breed</FieldLabel>
-        <Field value={breed} onChangeText={setBreed} />
+        <Field value={breed} onChangeText={setBreed} placeholder="Optional" />
+
         <FieldLabel>Sex</FieldLabel>
         <Segmented options={SEXES} value={sex} onChange={setSex} accessibilityLabel="Sex" />
+
+        <FieldLabel>Age</FieldLabel>
+        <Segmented
+          options={DOB_MODES}
+          value={dobMode}
+          onChange={setDobMode}
+          accessibilityLabel="How the age is known"
+        />
+        {dobMode === "exact" ? (
+          <Field
+            value={dobText}
+            onChangeText={setDobText}
+            placeholder="2023-04-17"
+            autoCapitalize="none"
+          />
+        ) : null}
+        {dobMode === "estimated" ? (
+          <View style={styles.ageRow}>
+            <View style={styles.ageField}>
+              <Field
+                value={ageYears}
+                onChangeText={setAgeYears}
+                placeholder="0"
+                keyboardType="number-pad"
+              />
+              <Text style={styles.ageUnit}>years</Text>
+            </View>
+            <View style={styles.ageField}>
+              <Field
+                value={ageMonths}
+                onChangeText={setAgeMonths}
+                placeholder="0"
+                keyboardType="number-pad"
+              />
+              <Text style={styles.ageUnit}>months</Text>
+            </View>
+          </View>
+        ) : null}
+
+        <FieldLabel>Colour and markings</FieldLabel>
+        <Field
+          value={colorMarkings}
+          onChangeText={setColorMarkings}
+          placeholder="Tan, white blaze on chest"
+        />
+
+        <FieldLabel>Microchip number</FieldLabel>
+        <Field
+          value={microchipId}
+          onChangeText={setMicrochipId}
+          placeholder="Searchable later"
+          autoCapitalize="none"
+          keyboardType="numbers-and-punctuation"
+        />
+
+        <FieldLabel>Other identifying marks</FieldLabel>
+        <Field
+          value={identificationNotes}
+          onChangeText={setIdentificationNotes}
+          placeholder="Scar, collar tag, torn ear"
+        />
+
         {error ? <ErrorText>{error}</ErrorText> : null}
         <PrimaryButton
           label={busy ? "Saving…" : "Add animal"}
-          disabled={busy}
+          disabled={busy || name.trim() === "" || species.trim() === ""}
           onPress={() => void addPatient()}
         />
-      </Card>
+      </Collapsible>
     </ScrollScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    paddingHorizontal: space.xs
+  },
+  headerBody: { flex: 1, gap: space.xs, alignItems: "flex-start" },
+  headerName: { ...type.heading, fontSize: 24, color: palette.ink },
+  list: { borderRadius: radius, overflow: "hidden" },
+  ageRow: { flexDirection: "row", gap: space.md },
+  ageField: { flex: 1, gap: space.xs },
+  ageUnit: { fontFamily: fonts.regular, fontSize: 12, color: palette.quiet, paddingLeft: space.xs }
+});

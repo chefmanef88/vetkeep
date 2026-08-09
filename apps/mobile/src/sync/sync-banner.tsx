@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useSync } from "./sync-provider";
-import { palette } from "@/ui/practice-components";
+import { fonts, hairline, palette, radius, space, type } from "@/ui/tokens";
 
 /**
  * Visible sync status, required by brief 15.8.
@@ -20,6 +21,7 @@ export function SyncBanner() {
   if (status === "idle" && pendingCount === 0 && !needsAttention) return null;
 
   const tone = needsAttention ? "attention" : status === "offline" ? "offline" : "working";
+  const attentionCount = conflicts.length + deadLetters.length;
 
   return (
     <Pressable
@@ -28,24 +30,37 @@ export function SyncBanner() {
         if (needsAttention) router.push("/practice/sync");
         else void flush();
       }}
-      style={[
+      style={({ pressed }) => [
         styles.banner,
         tone === "attention" && styles.attention,
-        tone === "offline" && styles.offline
+        tone === "offline" && styles.offline,
+        pressed && styles.pressed
       ]}
     >
+      <Ionicons
+        name={
+          needsAttention
+            ? "alert-circle"
+            : status === "syncing"
+              ? "sync"
+              : status === "offline"
+                ? "cloud-offline"
+                : "cloud-upload"
+        }
+        size={20}
+        color={tone === "working" ? palette.green : palette.amber}
+      />
       <View style={styles.body}>
-        <Text style={[styles.title, tone === "attention" && styles.attentionText]}>
+        <Text style={[styles.title, tone !== "working" && styles.attentionText]}>
           {needsAttention
-            ? `${conflicts.length + deadLetters.length} item${
-                conflicts.length + deadLetters.length === 1 ? "" : "s"
-              } need you`
+            ? `${attentionCount} item${attentionCount === 1 ? "" : "s"} need you`
             : status === "syncing"
               ? "Sending…"
               : status === "offline"
                 ? `${pendingCount} waiting to send`
                 : `${pendingCount} saved on this phone`}
         </Text>
+        {/* Tone is carried by the words as well as the colour, never colour alone. */}
         <Text style={styles.detail}>
           {needsAttention
             ? "Open sync to resolve"
@@ -54,6 +69,7 @@ export function SyncBanner() {
               : "Tap to send now"}
         </Text>
       </View>
+      <Ionicons name="chevron-forward" size={16} color={palette.quiet} />
     </Pressable>
   );
 }
@@ -62,18 +78,19 @@ const styles = StyleSheet.create({
   banner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    gap: space.md,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
     backgroundColor: palette.greenSoft,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.line
+    borderRadius: radius,
+    borderWidth: hairline,
+    borderColor: palette.line
   },
-  // Tone is carried by text as well as colour, never colour alone.
   offline: { backgroundColor: palette.amberSoft },
   attention: { backgroundColor: palette.amberSoft },
+  pressed: { opacity: 0.75 },
   body: { flex: 1, gap: 1 },
-  title: { fontSize: 14, fontWeight: "700", color: palette.ink },
+  title: { fontFamily: fonts.semibold, fontSize: 14, color: palette.ink },
   attentionText: { color: palette.amber },
-  detail: { fontSize: 12, color: palette.quiet }
+  detail: { ...type.small, fontSize: 12, color: palette.quiet }
 });

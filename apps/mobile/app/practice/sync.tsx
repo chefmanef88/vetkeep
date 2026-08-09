@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   buildResolvedPayload,
   isFullyResolved,
@@ -10,16 +11,9 @@ import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
 import { describeEntity, loadConflict, type LoadedConflict } from "@/sync/conflict-loader";
 import { Body, ErrorText, PrimaryButton, SecondaryButton } from "@/ui/components";
-import {
-  Card,
-  FieldLabel,
-  Muted,
-  Pill,
-  ScrollScreen,
-  SectionTitle,
-  palette
-} from "@/ui/practice-components";
-import { radiusControl } from "@/ui/tokens";
+import { Card, FieldLabel, Muted, ScrollScreen, SectionTitle } from "@/ui/practice-components";
+import { EmptyState, IconChip, ListHeader, ProgressBar } from "@/ui/elements";
+import { fonts, hairline, palette, radius, radiusControl, space, type } from "@/ui/tokens";
 
 /**
  * The conflict screen required by brief 15.6.
@@ -64,66 +58,95 @@ export default function SyncScreen() {
     );
   }
 
+  const settled = pendingCount === 0 && conflicts.length === 0 && deadLetters.length === 0;
+
   return (
     <ScrollScreen>
-      <Card>
-        <SectionTitle>Sync</SectionTitle>
-        <Muted>
-          {pendingCount === 0
-            ? "Everything on this phone has been sent."
-            : `${pendingCount} item${pendingCount === 1 ? "" : "s"} waiting to send.`}
-        </Muted>
-        {lastSyncAt ? <Muted>Last sent {new Date(lastSyncAt).toLocaleString()}</Muted> : null}
-        {error ? <ErrorText>{error}</ErrorText> : null}
-        {loading ? <ActivityIndicator /> : null}
-        <PrimaryButton label="Send now" onPress={() => void flush()} />
-      </Card>
+      {/* One state, said plainly, before any list. Everything held on the phone
+          is unsent clinical work, so this is the first thing to answer. */}
+      <View style={[styles.state, settled ? styles.stateGood : styles.stateBusy]}>
+        <IconChip
+          name={
+            settled ? "checkmark-circle" : conflicts.length > 0 ? "alert-circle" : "cloud-upload"
+          }
+          tone={settled ? "good" : conflicts.length > 0 ? "warn" : "brand"}
+          size={48}
+        />
+        <View style={styles.stateBody}>
+          <Text style={styles.stateTitle}>
+            {settled
+              ? "Everything is sent"
+              : `${pendingCount} item${pendingCount === 1 ? "" : "s"} waiting to send`}
+          </Text>
+          <Text style={styles.stateDetail}>
+            {lastSyncAt
+              ? `Last sent ${new Date(lastSyncAt).toLocaleString()}`
+              : "Nothing has been sent from this phone yet."}
+          </Text>
+        </View>
+      </View>
 
-      <Card>
-        <SectionTitle>Needs your decision</SectionTitle>
-        {conflicts.length === 0 ? (
-          <Muted>Nothing is in conflict.</Muted>
-        ) : (
+      {error ? <ErrorText>{error}</ErrorText> : null}
+      {loading ? <ActivityIndicator /> : null}
+      <PrimaryButton label="Send now" onPress={() => void flush()} />
+
+      {conflicts.length > 0 ? (
+        <>
+          <ListHeader title="Needs your decision" count={conflicts.length} />
           <Muted>
             Another device changed these while this phone was offline. Nothing is applied until you
             choose.
           </Muted>
-        )}
-        {conflicts.map((mutation) => (
-          <Pressable
-            key={mutation.mutationId}
-            accessibilityRole="button"
-            style={styles.conflictRow}
-            onPress={() => void openConflict(mutation)}
-          >
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>{describeEntity(mutation)}</Text>
-              <Muted>Changed on another device</Muted>
-            </View>
-            <Pill label="review" tone="warn" />
-          </Pressable>
-        ))}
-      </Card>
+          {conflicts.map((mutation) => (
+            <Pressable
+              key={mutation.mutationId}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.conflictRow, pressed && styles.pressed]}
+              onPress={() => void openConflict(mutation)}
+            >
+              <IconChip name="git-compare" tone="warn" size={40} />
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>{describeEntity(mutation)}</Text>
+                <Text style={styles.rowMeta}>Changed on another device</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={palette.amber} />
+            </Pressable>
+          ))}
+        </>
+      ) : null}
 
       {deadLetters.length > 0 ? (
-        <Card>
-          <SectionTitle>Could not be sent</SectionTitle>
+        <>
+          <ListHeader title="Could not be sent" count={deadLetters.length} />
           <Muted>
             The server refused these. They are kept here rather than discarded, so nothing is lost
             without you seeing it.
           </Muted>
           {deadLetters.map((entry) => (
             <View key={entry.mutation.mutationId} style={styles.deadRow}>
-              <Text style={styles.rowTitle}>{describeEntity(entry.mutation)}</Text>
-              <Muted>{entry.reason}</Muted>
-              <Muted>{new Date(entry.failedAt).toLocaleString()}</Muted>
+              <View style={styles.deadHead}>
+                <IconChip name="close-circle" tone="bad" size={36} />
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowTitle}>{describeEntity(entry.mutation)}</Text>
+                  <Text style={styles.rowMeta}>{new Date(entry.failedAt).toLocaleString()}</Text>
+                </View>
+              </View>
+              <Text style={styles.reason}>{entry.reason}</Text>
               <SecondaryButton
                 label="Remove from this list"
                 onPress={() => void dismissDeadLetter(entry.mutation.mutationId)}
               />
             </View>
           ))}
-        </Card>
+        </>
+      ) : null}
+
+      {settled ? (
+        <EmptyState
+          icon="cloud-done-outline"
+          title="Nothing waiting"
+          hint="Work saved in the field appears here until it reaches the server."
+        />
       ) : null}
     </ScrollScreen>
   );
@@ -144,6 +167,7 @@ function ConflictDetail({
   const [error, setError] = useState<string | null>(null);
 
   const complete = isFullyResolved(loaded.conflicts, choices);
+  const decided = Object.keys(choices).length;
 
   async function apply() {
     setBusy(true);
@@ -207,6 +231,14 @@ function ConflictDetail({
           {loaded.serverDeviceName ? ` from ${loaded.serverDeviceName}` : ""}.
         </Muted>
         <Muted>Choose for each field. Nothing is sent until you have decided all of them.</Muted>
+        {loaded.conflicts.length > 0 ? (
+          <ProgressBar
+            label="Decided"
+            done={decided}
+            total={loaded.conflicts.length}
+            tone={complete ? "good" : "warn"}
+          />
+        ) : null}
       </Card>
 
       {loaded.conflicts.length === 0 ? (
@@ -230,7 +262,14 @@ function ConflictDetail({
                 setChoices((current) => ({ ...current, [conflict.field.param]: "keep_local" }))
               }
             >
-              <Text style={styles.optionLabel}>On this phone</Text>
+              <View style={styles.optionHead}>
+                <Ionicons
+                  name={choice === "keep_local" ? "radio-button-on" : "radio-button-off"}
+                  size={16}
+                  color={choice === "keep_local" ? palette.green : palette.quiet}
+                />
+                <Text style={styles.optionLabel}>On this phone</Text>
+              </View>
               <Text style={styles.optionValue}>{conflict.local ?? "(blank)"}</Text>
             </Pressable>
 
@@ -242,7 +281,14 @@ function ConflictDetail({
                 setChoices((current) => ({ ...current, [conflict.field.param]: "keep_server" }))
               }
             >
-              <Text style={styles.optionLabel}>From the other device</Text>
+              <View style={styles.optionHead}>
+                <Ionicons
+                  name={choice === "keep_server" ? "radio-button-on" : "radio-button-off"}
+                  size={16}
+                  color={choice === "keep_server" ? palette.green : palette.quiet}
+                />
+                <Text style={styles.optionLabel}>From the other device</Text>
+              </View>
               <Text style={styles.optionValue}>{conflict.server ?? "(blank)"}</Text>
             </Pressable>
           </Card>
@@ -252,7 +298,7 @@ function ConflictDetail({
       <Card>
         {error ? <ErrorText>{error}</ErrorText> : null}
         {!complete && loaded.conflicts.length > 0 ? (
-          <Muted>{loaded.conflicts.length - Object.keys(choices).length} still to decide.</Muted>
+          <Muted>{loaded.conflicts.length - decided} still to decide.</Muted>
         ) : null}
         <PrimaryButton
           label={busy ? "Applying…" : "Apply my choices"}
@@ -266,40 +312,56 @@ function ConflictDetail({
 }
 
 const styles = StyleSheet.create({
+  state: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    padding: space.lg,
+    borderRadius: radius,
+    borderWidth: hairline
+  },
+  stateGood: { backgroundColor: palette.greenSoft, borderColor: palette.greenSoft },
+  stateBusy: { backgroundColor: palette.surface, borderColor: palette.line },
+  stateBody: { flex: 1, gap: 2 },
+  stateTitle: { ...type.strong, color: palette.ink },
+  stateDetail: { ...type.small, fontSize: 12, color: palette.quiet },
   conflictRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.line,
-    minHeight: 56
+    gap: space.md,
+    padding: space.md,
+    backgroundColor: palette.amberSoft,
+    borderRadius: radius,
+    borderWidth: hairline,
+    borderColor: palette.amber
   },
+  pressed: { opacity: 0.7 },
   deadRow: {
-    gap: 6,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.line
+    gap: space.sm,
+    padding: space.md,
+    backgroundColor: palette.surface,
+    borderRadius: radius,
+    borderWidth: hairline,
+    borderColor: palette.line
   },
+  deadHead: { flexDirection: "row", alignItems: "center", gap: space.md },
+  reason: { ...type.small, fontSize: 12, color: palette.red },
   rowBody: { flex: 1, gap: 2 },
-  rowTitle: { fontSize: 16, fontWeight: "700", color: palette.ink },
+  rowTitle: { ...type.strong, color: palette.ink },
+  rowMeta: { ...type.small, fontSize: 12, color: palette.quiet },
   option: {
-    borderWidth: 1,
+    borderWidth: hairline,
     borderColor: palette.line,
     borderRadius: radiusControl,
-
-    padding: 12,
-    gap: 4,
+    padding: space.md,
+    gap: space.xs,
     minHeight: 60
   },
-  // The chosen side carries a border weight and a filled background, not colour
-  // alone, so the choice is legible to a vet who cannot distinguish them.
+  // The chosen side carries a border weight, a filled background and a marked
+  // radio, not colour alone, so the choice is legible to a vet who cannot
+  // distinguish them.
   optionChosen: { borderColor: palette.green, borderWidth: 3, backgroundColor: palette.greenSoft },
-  optionLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: palette.quiet,
-    textTransform: "uppercase"
-  },
-  optionValue: { fontSize: 15, color: palette.ink, lineHeight: 21 }
+  optionHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  optionLabel: { fontFamily: fonts.semibold, fontSize: 12, color: palette.quiet },
+  optionValue: { ...type.small, fontSize: 15, color: palette.ink, lineHeight: 21 }
 });

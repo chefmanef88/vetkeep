@@ -204,6 +204,140 @@ export function EmptyState({
   );
 }
 
+/** A page title with supporting line, sitting on the ground, not in a box. */
+export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <View style={styles.pageHeader}>
+      <Text style={styles.pageTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.pageSubtitle}>{subtitle}</Text> : null}
+    </View>
+  );
+}
+
+/**
+ * A figure with its name and an icon, on a tinted ground. GentlePaws' StatCard.
+ * Used where a number is the point: visits today, items waiting to sync.
+ */
+export function StatTile({
+  icon,
+  label,
+  value,
+  hint,
+  tone = "brand",
+  onPress
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string | number;
+  hint?: string;
+  tone?: Tone;
+  onPress?: () => void;
+}) {
+  const body = (
+    <>
+      <IconChip name={icon} tone={tone} size={44} />
+      <View style={styles.tileBody}>
+        <Text style={styles.tileLabel} numberOfLines={1}>
+          {label}
+        </Text>
+        <Text style={[styles.tileValue, { color: toneInk[tone] }]}>{value}</Text>
+        {hint ? (
+          <Text style={styles.tileHint} numberOfLines={1}>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
+    </>
+  );
+
+  if (!onPress)
+    return <View style={[styles.tile, { backgroundColor: toneFill[tone] }]}>{body}</View>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.tile,
+        { backgroundColor: toneFill[tone] },
+        pressed && styles.tilePressed
+      ]}
+      onPress={onPress}
+    >
+      {body}
+    </Pressable>
+  );
+}
+
+/** A destination in a grid: icon, name, and an optional count riding on it. */
+export function NavTile({
+  icon,
+  label,
+  badge,
+  onPress
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  badge?: number;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.navTile, pressed && styles.pressed]}
+      onPress={onPress}
+    >
+      <View>
+        <IconChip name={icon} tone="brand" size={40} />
+        {badge !== undefined && badge > 0 ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.navTileLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * One fact with its icon and, where it matters, a tone. Used for the things a
+ * vet needs to see rather than act on: licence state, account standing.
+ */
+export function InfoRow({
+  icon,
+  label,
+  value,
+  tone = "neutral",
+  onPress
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  tone?: Tone;
+  onPress?: () => void;
+}) {
+  const body = (
+    <>
+      <Ionicons name={icon} size={18} color={palette.quiet} />
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={[styles.infoValue, { color: toneInk[tone] }]} numberOfLines={1}>
+        {value}
+      </Text>
+      {onPress ? <Ionicons name="chevron-forward" size={16} color={palette.quiet} /> : null}
+    </>
+  );
+
+  if (!onPress) return <View style={styles.infoRow}>{body}</View>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.infoRow, pressed && styles.pressed]}
+      onPress={onPress}
+    >
+      {body}
+    </Pressable>
+  );
+}
+
 /**
  * A section that stays shut until it is wanted.
  *
@@ -215,11 +349,16 @@ export function Collapsible({
   title,
   icon,
   children,
+  hint,
+  tone = "brand",
   initiallyOpen = false
 }: {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   children: ReactNode;
+  /** What is inside, said on the closed header: "4 of 6", "8 of 11 examined". */
+  hint?: string;
+  tone?: Tone;
   initiallyOpen?: boolean;
 }) {
   const [open, setOpen] = useState(initiallyOpen);
@@ -231,11 +370,55 @@ export function Collapsible({
         style={({ pressed }) => [styles.collapsibleHead, pressed && styles.pressed]}
         onPress={() => setOpen(!open)}
       >
-        <IconChip name={icon} tone="brand" size={38} />
-        <Text style={styles.collapsibleTitle}>{title}</Text>
+        <IconChip name={icon} tone={tone} size={38} />
+        <View style={styles.collapsibleTitles}>
+          <Text style={styles.collapsibleTitle}>{title}</Text>
+          {/* Stated on the closed header so a long consultation can be scanned
+              for what is still outstanding without opening every section. */}
+          {hint ? <Text style={styles.collapsibleHint}>{hint}</Text> : null}
+        </View>
         <Ionicons name={open ? "chevron-up" : "chevron-down"} size={18} color={palette.quiet} />
       </Pressable>
       {open ? <View style={styles.collapsibleBody}>{children}</View> : null}
+    </View>
+  );
+}
+
+/**
+ * How much of something is done, as a bar and as words.
+ *
+ * The bar alone would be decoration; the count is the fact. Used for the
+ * examination, where "3 of 11 examined" is the difference between a record that
+ * can be signed and one that should not be.
+ */
+export function ProgressBar({
+  done,
+  total,
+  label,
+  tone = "brand"
+}: {
+  done: number;
+  total: number;
+  label: string;
+  tone?: Tone;
+}) {
+  const fraction = total === 0 ? 0 : Math.min(1, Math.max(0, done / total));
+  return (
+    <View style={styles.progress}>
+      <View style={styles.progressHead}>
+        <Text style={styles.progressLabel}>{label}</Text>
+        <Text style={[styles.progressCount, { color: toneInk[tone] }]}>
+          {done} of {total}
+        </Text>
+      </View>
+      <View style={styles.progressTrack}>
+        <View
+          style={[
+            styles.progressFill,
+            { width: `${fraction * 100}%`, backgroundColor: toneInk[tone] }
+          ]}
+        />
+      </View>
     </View>
   );
 }
@@ -320,10 +503,76 @@ const styles = StyleSheet.create({
     padding: space.lg,
     minHeight: touchTarget
   },
-  collapsibleTitle: { ...type.strong, color: palette.ink, flex: 1 },
+  collapsibleTitles: { flex: 1, gap: 1 },
+  collapsibleTitle: { ...type.strong, color: palette.ink },
+  collapsibleHint: { fontFamily: fonts.regular, fontSize: 12, color: palette.quiet },
+  progress: { gap: space.sm },
+  progressHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  progressLabel: { ...type.small, color: palette.quiet },
+  progressCount: { fontFamily: fonts.semibold, fontSize: 13 },
+  progressTrack: {
+    height: 6,
+    borderRadius: radiusPill,
+    backgroundColor: palette.line,
+    overflow: "hidden"
+  },
+  progressFill: { height: 6, borderRadius: radiusPill },
   collapsibleBody: {
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
     gap: space.sm
-  }
+  },
+  pageHeader: { gap: space.xs, paddingHorizontal: space.xs, paddingBottom: space.xs },
+  pageTitle: { ...type.display, color: palette.ink },
+  pageSubtitle: { ...type.body, color: palette.quiet },
+  tile: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    padding: space.lg,
+    borderRadius: radius,
+    minHeight: 84
+  },
+  tilePressed: { opacity: 0.75 },
+  tileBody: { flex: 1, gap: 1 },
+  tileLabel: { ...type.small, color: palette.quiet },
+  tileValue: { fontFamily: fonts.bold, fontSize: 24 },
+  tileHint: { fontFamily: fonts.regular, fontSize: 11, color: palette.quiet },
+  navTile: {
+    flex: 1,
+    alignItems: "center",
+    gap: space.sm,
+    paddingVertical: space.lg,
+    paddingHorizontal: space.sm,
+    backgroundColor: palette.surface,
+    borderRadius: radius,
+    borderWidth: hairline,
+    borderColor: palette.line,
+    minHeight: 96,
+    justifyContent: "center",
+    ...shadowCard
+  },
+  navTileLabel: { ...type.label, color: palette.ink, textAlign: "center" },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -8,
+    backgroundColor: palette.red,
+    borderRadius: radiusPill,
+    minWidth: 20,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    alignItems: "center"
+  },
+  badgeText: { fontFamily: fonts.semibold, fontSize: 11, color: palette.surface },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    paddingVertical: space.md,
+    minHeight: touchTarget - space.sm
+  },
+  infoLabel: { ...type.small, color: palette.quiet, flex: 1 },
+  infoValue: { fontFamily: fonts.semibold, fontSize: 14 }
 });
