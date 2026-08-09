@@ -1,51 +1,50 @@
 /**
  * Design tokens for the field interface.
  *
- * These are taken from the GentlePaws app so the two products read as one
- * practice rather than two unrelated tools: the same sky-blue brand ramp, the
- * same Geist typeface, the same soft card treatment. Values below map directly
- * onto that Tailwind theme — brand.500, accent.500, slate neutrals, rounded-2xl,
- * shadow-card — so a change there has an obvious counterpart here.
+ * The shape of the interface follows GentlePaws — Geist, rounded-2xl surfaces,
+ * the soft shadow-card lift, a 4pt spacing scale — so the two products feel
+ * built by the same hand. The colour does not: VetKeep keeps its own deep
+ * green, and the neutrals stay warm to sit under it.
  *
- * Where this diverges, it is for the phone: touch targets are larger than a
- * cursor needs, and contrast is pushed a little harder because this screen gets
- * read outdoors in sun, one-handed, with the other hand on an animal.
+ * Where this diverges further, it is for the phone: touch targets are larger
+ * than a cursor needs, and contrast is pushed a little harder because this
+ * screen gets read outdoors in sun, one-handed, with the other hand on an
+ * animal.
  */
 
 export const palette = {
-  /** slate-50. Cards sit on this, white on near-white, separated by shadow. */
-  ground: "#F8FAFC",
+  /** Warm off-white. Cards sit on this, separated by shadow rather than a rule. */
+  ground: "#F7F8F5",
   surface: "#FFFFFF",
-  /** slate-800, the body colour GentlePaws sets on <body>. */
-  ink: "#1E293B",
-  /** slate-500. */
-  quiet: "#64748B",
-  /** slate-200, a touch stronger than the web's slate-100 border for sunlight. */
-  line: "#E2E8F0",
-
-  /** brand.500 — the primary sky blue. */
-  brand: "#0EA5E9",
-  /** brand.600, for pressed states. */
-  brandPressed: "#0284C7",
-  /** brand.700, for text on pale brand fills. */
-  brandInk: "#0369A1",
-  /** brand.50. */
-  brandSoft: "#F0F9FF",
+  /** Near-black with green in it, so text sits in the same family as the brand. */
+  ink: "#17211B",
+  quiet: "#536159",
+  line: "#DFE5DF",
 
   /**
-   * Kept as `green` because screens already reference it by that name. It is
-   * now accent.600 from GentlePaws rather than the old VetKeep green.
+   * VetKeep's own deep green, carried through from the original palette. The
+   * neutrals above are warm rather than slate for the same reason: a blue-grey
+   * ground under a deep green reads as two unrelated decisions.
    */
-  green: "#16A34A",
-  /** accent.50. */
-  greenSoft: "#F0FDF4",
+  brand: "#174D35",
+  /** Darker, for pressed states. */
+  brandPressed: "#0F3524",
+  /** For text and icons on a pale brand fill. */
+  brandInk: "#174D35",
+  brandSoft: "#E8EEE9",
 
-  /** emergency.yellow / a warmer amber for warnings. */
-  amber: "#CA8A04",
-  amberSoft: "#FEFCE8",
-  /** emergency.red. */
-  red: "#DC2626",
-  redSoft: "#FEF2F2"
+  /**
+   * Success, kept deliberately brighter than the brand. Both are green, so if
+   * they were the same weight a "started" visit and an ordinary one would be
+   * indistinguishable at a glance.
+   */
+  green: "#2F7D4F",
+  greenSoft: "#E6F2EA",
+
+  amber: "#8A5209",
+  amberSoft: "#FDF6EA",
+  red: "#8F1D1D",
+  redSoft: "#FBE0E0"
 } as const;
 
 /** A 4pt grid. Matches Tailwind's spacing scale, which the web app uses. */
