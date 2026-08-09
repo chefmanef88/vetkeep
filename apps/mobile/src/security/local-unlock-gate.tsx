@@ -1,9 +1,20 @@
 import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AppState, Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { DEFAULT_INACTIVITY_LOCK_MS } from "@vetkeep/domain";
 import { useSession } from "@/auth/session-provider";
 import { supabase } from "@/lib/supabase";
+import {
+  hairline,
+  palette,
+  radius,
+  radiusControl,
+  shadowCard,
+  space,
+  touchTarget,
+  type
+} from "@/ui/tokens";
 
 export function LocalUnlockGate({ children }: { children: ReactNode }) {
   const { session } = useSession();
@@ -80,10 +91,13 @@ export function LocalUnlockGate({ children }: { children: ReactNode }) {
       <View style={styles.card}>
         <Text style={styles.title}>VetKeep is locked</Text>
         <Text style={styles.text}>{message ?? "Authenticate to continue."}</Text>
-        <Pressable style={styles.button} onPress={() => void unlock()}>
+        <Pressable accessibilityRole="button" style={styles.button} onPress={() => void unlock()}>
           <Text style={styles.buttonText}>Unlock</Text>
         </Pressable>
-        <Pressable onPress={() => void supabase.auth.signOut({ scope: "local" })}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void supabase.auth.signOut({ scope: "local" })}
+        >
           <Text style={styles.signOut}>Sign out</Text>
         </Pressable>
       </View>
@@ -92,11 +106,30 @@ export function LocalUnlockGate({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f7f8f5", justifyContent: "center", padding: 24 },
-  card: { backgroundColor: "white", borderRadius: 18, padding: 24, gap: 16 },
-  title: { fontSize: 24, fontWeight: "700", color: "#17211b" },
-  text: { fontSize: 16, color: "#536159" },
-  button: { backgroundColor: "#174d35", borderRadius: 12, padding: 14, alignItems: "center" },
-  buttonText: { color: "white", fontWeight: "700" },
-  signOut: { textAlign: "center", color: "#9f1d20", fontWeight: "700" }
+  safe: {
+    flex: 1,
+    backgroundColor: palette.ground,
+    justifyContent: "center",
+    padding: space.xl
+  },
+  card: {
+    backgroundColor: palette.surface,
+    borderRadius: radius,
+    borderWidth: hairline,
+    borderColor: palette.line,
+    padding: space.xl,
+    gap: space.lg,
+    ...shadowCard
+  },
+  title: { ...type.heading, color: palette.ink },
+  text: { ...type.body, color: palette.quiet },
+  button: {
+    backgroundColor: palette.brand,
+    borderRadius: radiusControl,
+    minHeight: touchTarget,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  buttonText: { ...type.action, color: palette.surface },
+  signOut: { ...type.action, textAlign: "center", color: palette.red, paddingVertical: space.sm }
 });

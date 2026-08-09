@@ -19,6 +19,7 @@ import {
   SectionTitle,
   palette
 } from "@/ui/practice-components";
+import { radiusControl } from "@/ui/tokens";
 
 /**
  * The conflict screen required by brief 15.6.
@@ -285,7 +286,8 @@ const styles = StyleSheet.create({
   option: {
     borderWidth: 1,
     borderColor: palette.line,
-    borderRadius: 10,
+    borderRadius: radiusControl,
+
     padding: 12,
     gap: 4,
     minHeight: 60

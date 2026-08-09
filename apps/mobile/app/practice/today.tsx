@@ -11,6 +11,7 @@ import {
   SectionTitle,
   palette
 } from "@/ui/practice-components";
+import { fonts, radiusPill } from "@/ui/tokens";
 import { ErrorText, PrimaryButton, SecondaryButton } from "@/ui/components";
 import { SyncBanner } from "@/sync/sync-banner";
 
@@ -133,12 +134,16 @@ const styles = StyleSheet.create({
   stopIndex: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: radiusPill,
     backgroundColor: palette.green,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 16
   },
-  stopIndexText: { color: "#fff", fontWeight: "800", fontSize: 13 },
+  stopIndexText: {
+    color: palette.surface,
+    fontFamily: fonts.semibold,
+    fontSize: 13
+  },
   stopBody: { flex: 1 }
 });

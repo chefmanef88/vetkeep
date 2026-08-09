@@ -1,10 +1,12 @@
-import { ActivityIndicator, SafeAreaView, StyleSheet } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "@/auth/session-provider";
 import { AuthScreen } from "@/features/auth/auth-screen";
 import { HomeScreen } from "@/features/home/home-screen";
 import { MfaChallengeScreen } from "@/features/mfa/mfa-challenge-screen";
 import { MfaEnrollScreen } from "@/features/mfa/mfa-enroll-screen";
 import { OnboardingScreen } from "@/features/onboarding/onboarding-screen";
+import { palette } from "@/ui/tokens";
 
 export default function IndexPage() {
   const sessionState = useSession();
@@ -24,5 +26,10 @@ export default function IndexPage() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center" }
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.ground
+  }
 });

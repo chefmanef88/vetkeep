@@ -2,6 +2,7 @@ import { ActivityIndicator, View, StyleSheet, Text } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { Card, Muted, Pill, ScrollScreen, SectionTitle, palette } from "@/ui/practice-components";
+import { radiusControl } from "@/ui/tokens";
 import { ErrorText } from "@/ui/components";
 
 type StockRow = {
@@ -90,9 +91,10 @@ export default function StockScreen() {
 const styles = StyleSheet.create({
   warning: {
     backgroundColor: palette.amberSoft,
+    borderRadius: radiusControl,
     borderLeftWidth: 4,
     borderLeftColor: palette.amber,
-    borderRadius: 8,
+
     padding: 12
   },
   warningText: { color: palette.amber, fontWeight: "700" },

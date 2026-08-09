@@ -26,6 +26,7 @@ import {
   Segmented,
   palette
 } from "@/ui/practice-components";
+import { radiusControl } from "@/ui/tokens";
 
 const EXAM_OPTIONS = [
   { value: "not_examined", label: "Not yet" },
@@ -651,7 +652,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 10,
-    borderRadius: 10,
+    borderRadius: radiusControl,
+
     borderLeftWidth: 3,
     borderLeftColor: palette.line,
     backgroundColor: palette.ground

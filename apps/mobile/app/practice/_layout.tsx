@@ -1,6 +1,8 @@
 import { Redirect, Stack } from "expo-router";
-import { ActivityIndicator, SafeAreaView, StyleSheet } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "@/auth/session-provider";
+import { palette, type } from "@/ui/tokens";
 
 /**
  * Every practice screen sits behind the same gate as the rest of the app: a live
@@ -27,8 +29,13 @@ export default function PracticeLayout() {
       screenOptions={{
         headerShown: true,
         headerBackTitle: "Back",
-        headerTintColor: "#174d35",
-        headerStyle: { backgroundColor: "#f7f8f5" }
+        headerTintColor: palette.green,
+        headerStyle: { backgroundColor: palette.ground },
+        // Flat against the page. The hairline under the header does the
+        // separating that a shadow would otherwise do.
+        headerShadowVisible: false,
+        headerTitleStyle: { ...type.heading, color: palette.ink },
+        contentStyle: { backgroundColor: palette.ground }
       }}
     >
       <Stack.Screen name="today" options={{ title: "Today" }} />
@@ -42,5 +49,10 @@ export default function PracticeLayout() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#f7f8f5" }
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.ground
+  }
 });

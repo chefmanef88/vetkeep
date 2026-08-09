@@ -6,6 +6,7 @@ import { attachmentQueue, type QueuedUpload } from "@/sync/attachment-queue";
 import { advanceUpload, releaseLocalCopyIfSafe } from "@/sync/attachment-uploader";
 import { ErrorText, PrimaryButton, SecondaryButton } from "@/ui/components";
 import { Card, Muted, Pill, SectionTitle, palette } from "@/ui/practice-components";
+import { radiusControl } from "@/ui/tokens";
 
 /**
  * Capturing clinical photographs during a consultation.
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: palette.line
   },
-  thumb: { width: 56, height: 56, borderRadius: 8, backgroundColor: palette.greenSoft },
+  thumb: { width: 56, height: 56, borderRadius: radiusControl, backgroundColor: palette.greenSoft },
   rowBody: { flex: 1, gap: 4 },
   name: { fontSize: 15, fontWeight: "700", color: palette.ink },
   statusStack: { gap: 3, alignItems: "flex-start" },

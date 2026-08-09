@@ -1,18 +1,12 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { generateClientCode } from "@vetkeep/domain";
 import { definedArgs, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
-import {
-  Card,
-  Muted,
-  RowButton,
-  ScrollScreen,
-  SectionTitle,
-  FieldLabel
-} from "@/ui/practice-components";
+import { ScrollScreen, FieldLabel } from "@/ui/practice-components";
+import { Collapsible, EmptyState, ListHeader, PersonRow, SearchField } from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
 
 type ClientRow = {
@@ -49,7 +43,8 @@ export default function ClientsScreen() {
   }, []);
 
   const term = search.trim().toLowerCase();
-  const visible = (data ?? []).filter(
+  const all = data ?? [];
+  const visible = all.filter(
     (client) =>
       term === "" ||
       client.name.toLowerCase().includes(term) ||
@@ -87,31 +82,11 @@ export default function ClientsScreen() {
 
   return (
     <ScrollScreen>
-      <Card>
-        <SectionTitle>Find a client</SectionTitle>
-        <Field
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Name, code or phone"
-          autoCapitalize="none"
-        />
-        {loading ? <ActivityIndicator /> : null}
-        {loadError ? <ErrorText>{loadError}</ErrorText> : null}
-        {!loading && visible.length === 0 ? <Muted>Nobody matches that.</Muted> : null}
-        {visible.map((client) => (
-          <RowButton
-            key={client.id}
-            title={client.name}
-            subtitle={`${client.client_code} · ${client.phone_display}`}
-            onPress={() => router.push(`/practice/client/${client.id}`)}
-          />
-        ))}
-      </Card>
+      <SearchField value={search} onChangeText={setSearch} placeholder="Name, code or phone" />
 
-      <Card>
-        <SectionTitle>Add a client</SectionTitle>
+      <Collapsible title="Add a client" icon="person-add">
         <FieldLabel>Name</FieldLabel>
-        <Field value={name} onChangeText={setName} />
+        <Field value={name} onChangeText={setName} placeholder="Full name" />
         <FieldLabel>Phone as displayed</FieldLabel>
         <Field value={phoneDisplay} onChangeText={setPhoneDisplay} placeholder="024 123 4567" />
         <FieldLabel>Phone in E.164</FieldLabel>
@@ -122,14 +97,53 @@ export default function ClientsScreen() {
           keyboardType="phone-pad"
         />
         <FieldLabel>Address or landmark</FieldLabel>
-        <Field value={address} onChangeText={setAddress} />
+        <Field value={address} onChangeText={setAddress} placeholder="Optional" />
         {error ? <ErrorText>{error}</ErrorText> : null}
         <PrimaryButton
           label={busy ? "Saving…" : "Add client"}
-          disabled={busy}
+          disabled={busy || name.trim() === "" || phoneDisplay.trim() === ""}
           onPress={() => void addClient()}
         />
-      </Card>
+      </Collapsible>
+
+      {loading ? <ActivityIndicator /> : null}
+      {loadError ? <ErrorText>{loadError}</ErrorText> : null}
+
+      {!loading && all.length > 0 ? (
+        <ListHeader title={term === "" ? "All clients" : "Matches"} count={visible.length} />
+      ) : null}
+
+      {/* One surface for the whole list, so the rows read as a continuous
+          column rather than a stack of separate boxes. */}
+      {visible.length > 0 ? (
+        <View style={{ borderRadius: 16, overflow: "hidden" }}>
+          {visible.map((client) => (
+            <PersonRow
+              key={client.id}
+              name={client.name}
+              code={client.client_code}
+              meta={client.phone_display}
+              onPress={() => router.push(`/practice/client/${client.id}`)}
+            />
+          ))}
+        </View>
+      ) : null}
+
+      {!loading && all.length === 0 ? (
+        <EmptyState
+          icon="people-outline"
+          title="No clients yet"
+          hint="Add the first one above. It saves on the device and syncs when you have signal."
+        />
+      ) : null}
+
+      {!loading && all.length > 0 && visible.length === 0 ? (
+        <EmptyState
+          icon="search-outline"
+          title="Nobody matches that"
+          hint={`No result for “${search}”.`}
+        />
+      ) : null}
     </ScrollScreen>
   );
 }

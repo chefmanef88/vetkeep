@@ -1,30 +1,36 @@
 import type { ReactNode } from "react";
-import {
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type TextInputProps
-} from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { hairline, palette, radiusControl, shadowCard, space, touchTarget, type } from "./tokens";
 
+/**
+ * The entry screens: sign in, authenticator, onboarding.
+ *
+ * Composed top-weighted rather than vertically centred. A centred stack floats
+ * and rebalances every time the keyboard opens or an error line appears;
+ * anchoring to the top keeps the title and the first field where the eye last
+ * left them.
+ */
 export function Screen({ children }: { children: ReactNode }) {
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.container}>{children}</View>
     </SafeAreaView>
   );
 }
+
 export function Title({ children }: { children: ReactNode }) {
   return <Text style={styles.title}>{children}</Text>;
 }
+
 export function Body({ children }: { children: ReactNode }) {
   return <Text style={styles.body}>{children}</Text>;
 }
+
 export function Field(props: TextInputProps) {
-  return <TextInput style={styles.input} placeholderTextColor="#77837b" {...props} />;
+  return <TextInput style={styles.input} placeholderTextColor={palette.quiet} {...props} />;
 }
+
 export function PrimaryButton({
   label,
   onPress,
@@ -36,7 +42,13 @@ export function PrimaryButton({
 }) {
   return (
     <Pressable
-      style={[styles.button, disabled && styles.disabled]}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => [
+        styles.button,
+        pressed && !disabled && styles.buttonPressed,
+        disabled && styles.disabled
+      ]}
       disabled={disabled}
       onPress={onPress}
     >
@@ -44,43 +56,85 @@ export function PrimaryButton({
     </Pressable>
   );
 }
+
+/**
+ * Tinted rather than filled, so the two buttons never compete for the same
+ * attention. Weight and fill, not colour alone, say which is the way forward.
+ */
 export function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable style={styles.secondaryButton} onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.secondaryButton, pressed && styles.secondaryPressed]}
+      onPress={onPress}
+    >
       <Text style={styles.secondaryButtonText}>{label}</Text>
     </Pressable>
   );
 }
+
+/**
+ * Marked by a solid rule down its edge as well as by colour, so the message
+ * still reads as an alert in sunlight or to a red-green colourblind reader.
+ */
 export function ErrorText({ children }: { children: ReactNode }) {
   return (
-    <Text accessibilityRole="alert" style={styles.error}>
-      {children}
-    </Text>
+    <View accessibilityRole="alert" style={styles.errorBlock}>
+      <Text style={styles.error}>{children}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f7f8f5" },
-  container: { flex: 1, justifyContent: "center", gap: 14, padding: 24 },
-  title: { fontSize: 28, fontWeight: "800", color: "#17211b" },
-  body: { fontSize: 16, lineHeight: 23, color: "#536159" },
+  safe: { flex: 1, backgroundColor: palette.ground },
+  container: {
+    flex: 1,
+    gap: space.md,
+    paddingHorizontal: space.xl,
+    paddingTop: space.xxl
+  },
+  title: { ...type.display, color: palette.ink, marginBottom: space.xs },
+  body: { ...type.body, color: palette.quiet, marginBottom: space.sm },
   input: {
-    backgroundColor: "white",
-    borderWidth: 1,
-    borderColor: "#bcc6be",
-    borderRadius: 12,
-    padding: 14,
-    color: "#17211b"
+    backgroundColor: palette.surface,
+    borderWidth: hairline,
+    borderColor: palette.line,
+    borderRadius: radiusControl,
+    paddingHorizontal: space.lg,
+    minHeight: touchTarget,
+    ...type.body,
+    color: palette.ink
   },
-  button: { backgroundColor: "#174d35", borderRadius: 12, padding: 15, alignItems: "center" },
-  disabled: { opacity: 0.5 },
-  buttonText: { color: "white", fontWeight: "800" },
+  button: {
+    backgroundColor: palette.brand,
+    borderRadius: radiusControl,
+    minHeight: touchTarget,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: space.sm,
+    ...shadowCard
+  },
+  buttonPressed: { backgroundColor: palette.brandPressed },
+  disabled: { backgroundColor: palette.line, shadowOpacity: 0, elevation: 0 },
+  buttonText: { ...type.action, color: palette.surface },
   secondaryButton: {
-    backgroundColor: "#e8eee9",
-    borderRadius: 12,
-    padding: 15,
-    alignItems: "center"
+    backgroundColor: palette.brandSoft,
+    borderWidth: hairline,
+    borderColor: palette.line,
+    borderRadius: radiusControl,
+    minHeight: touchTarget,
+    alignItems: "center",
+    justifyContent: "center"
   },
-  secondaryButtonText: { color: "#173c2b", fontWeight: "700" },
-  error: { color: "#9f1d20" }
+  secondaryPressed: { backgroundColor: palette.line },
+  secondaryButtonText: { ...type.action, color: palette.brandInk },
+  errorBlock: {
+    borderLeftWidth: 3,
+    borderLeftColor: palette.red,
+    backgroundColor: palette.redSoft,
+    borderRadius: radiusControl,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg
+  },
+  error: { ...type.small, fontFamily: type.strong.fontFamily, color: palette.red }
 });

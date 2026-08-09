@@ -1,31 +1,42 @@
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  fonts,
+  hairline,
+  palette,
+  radius,
+  radiusControl,
+  radiusPill,
+  shadowCard,
+  space,
+  touchTarget,
+  type
+} from "./tokens";
 
 /**
  * Screens a veterinarian uses in the field, standing in someone's yard with one
  * hand on the animal. Everything here scrolls, targets are large, and nothing
  * relies on colour alone to carry meaning.
+ *
+ * The surface treatment follows GentlePaws: white cards on slate-50, rounded,
+ * lifted by a soft shadow rather than outlined by a hard border. See ./tokens.
  */
 
-export const palette = {
-  ground: "#f7f8f5",
-  surface: "#ffffff",
-  ink: "#17211b",
-  quiet: "#536159",
-  line: "#dfe5df",
-  green: "#174d35",
-  greenSoft: "#e8eee9",
-  amber: "#8a5209",
-  amberSoft: "#fdf6ea",
-  red: "#8f1d1d",
-  redSoft: "#fbe0e0"
-};
+export { palette } from "./tokens";
 
 export function ScrollScreen({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[
+        styles.scrollContent,
+        // Only the bottom is claimed here. Every screen using this sits under a
+        // navigation header, which already accounts for the status bar; adding
+        // the top inset as well would indent the first block twice.
+        { paddingBottom: insets.bottom + space.xxxl }
+      ]}
       keyboardShouldPersistTaps="handled"
     >
       {children}
@@ -45,6 +56,10 @@ export function Muted({ children }: { children: ReactNode }) {
   return <Text style={styles.muted}>{children}</Text>;
 }
 
+/**
+ * Record codes, quantities, doses. Geist Mono, so digits align down a column
+ * and a transposed number shows up as a broken edge.
+ */
 export function Mono({ children }: { children: ReactNode }) {
   return <Text style={styles.mono}>{children}</Text>;
 }
@@ -55,6 +70,10 @@ export function FieldLabel({ children }: { children: ReactNode }) {
 
 export type PillTone = "neutral" | "good" | "warn" | "bad";
 
+/**
+ * The label always states the condition in words, so the tone only reinforces
+ * what the text already says.
+ */
 export function Pill({ label, tone = "neutral" }: { label: string; tone?: PillTone }) {
   return (
     <View style={[styles.pill, pillTone[tone]]}>
@@ -133,66 +152,75 @@ export function Segmented<T extends string>({
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: palette.ground },
-  scrollContent: { padding: 16, gap: 14, paddingBottom: 48 },
+  scrollContent: { paddingHorizontal: space.lg, paddingTop: space.lg, gap: space.md },
   card: {
     backgroundColor: palette.surface,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: radius,
+    borderWidth: hairline,
     borderColor: palette.line,
-    padding: 16,
-    gap: 10
+    padding: space.lg,
+    gap: space.md,
+    ...shadowCard
   },
-  sectionTitle: { fontSize: 18, fontWeight: "800", color: palette.ink },
-  muted: { fontSize: 14, color: palette.quiet, lineHeight: 20 },
-  mono: { fontSize: 13, color: palette.quiet, fontVariant: ["tabular-nums"] },
-  fieldLabel: { fontSize: 13, fontWeight: "700", color: palette.ink },
-  pill: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  pillText: { fontSize: 12, fontWeight: "700" },
+  sectionTitle: { ...type.heading, color: palette.ink },
+  muted: { ...type.small, color: palette.quiet },
+  mono: { fontFamily: fonts.mono, fontSize: 13, color: palette.quiet },
+  fieldLabel: { ...type.label, color: palette.ink, marginBottom: -space.xs },
+  pill: {
+    alignSelf: "flex-start",
+    borderRadius: radiusPill,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs
+  },
+  pillText: { fontFamily: fonts.semibold, fontSize: 12 },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
+    gap: space.md,
+    paddingVertical: space.md,
+    borderBottomWidth: hairline,
     borderBottomColor: palette.line,
-    minHeight: 56
+    minHeight: touchTarget + space.sm
   },
-  rowPressed: { opacity: 0.6 },
-  rowBody: { flex: 1, gap: 2 },
-  rowTitle: { fontSize: 16, fontWeight: "700", color: palette.ink },
+  rowPressed: { backgroundColor: palette.ground },
+  rowBody: { flex: 1, gap: space.xs },
+  rowTitle: { ...type.strong, color: palette.ink },
   segmented: {
     flexDirection: "row",
-    borderWidth: 1,
-    borderColor: palette.line,
-    borderRadius: 10,
-    overflow: "hidden"
+    gap: space.sm
   },
+  // Separate rounded buttons rather than one divided bar: at four options the
+  // bar crushes the labels, and these stay legible and individually tappable.
   segment: {
     flex: 1,
-    paddingVertical: 11,
-    paddingHorizontal: 4,
+    paddingVertical: space.md,
+    paddingHorizontal: space.xs,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: palette.surface,
-    minHeight: 44
+    borderWidth: hairline,
+    borderColor: palette.line,
+    borderRadius: radiusControl,
+    minHeight: touchTarget - space.sm
   },
-  segmentSelected: { backgroundColor: palette.green },
-  segmentWarn: { backgroundColor: palette.amber },
-  segmentText: { fontSize: 12, fontWeight: "700", color: palette.quiet },
-  segmentTextSelected: { color: "#ffffff" }
+  segmentSelected: { backgroundColor: palette.brand, borderColor: palette.brand },
+  segmentWarn: { backgroundColor: palette.amber, borderColor: palette.amber },
+  segmentText: { fontFamily: fonts.medium, fontSize: 12, color: palette.quiet },
+  segmentTextSelected: { fontFamily: fonts.semibold, color: palette.surface },
+  scrollSpacer: { height: space.xxxl }
 });
 
 const pillTone = StyleSheet.create({
-  neutral: { backgroundColor: palette.greenSoft },
-  good: { backgroundColor: "#d6ede0" },
+  neutral: { backgroundColor: palette.brandSoft },
+  good: { backgroundColor: palette.greenSoft },
   warn: { backgroundColor: palette.amberSoft },
   bad: { backgroundColor: palette.redSoft }
 });
 
 const pillTextTone = StyleSheet.create({
-  neutral: { color: "#3d4f44" },
-  good: { color: "#14532d" },
+  neutral: { color: palette.brandInk },
+  good: { color: palette.green },
   warn: { color: palette.amber },
   bad: { color: palette.red }
 });
