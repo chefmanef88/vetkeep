@@ -8,6 +8,7 @@ import { confirmWithDevice } from "@/security/confirm-with-device";
 import { usePatientPhoto } from "@/features/practice/use-patient-photo";
 import { FolderPhoto } from "@/features/practice/folder-photo";
 import { WithholdingBanner } from "@/features/practice/treatments-section";
+import { PreventiveSection } from "@/features/practice/preventive-section";
 import { shareFolder } from "@/features/records/share-record";
 import { Card, FieldLabel, Muted, ScrollScreen, Segmented } from "@/ui/practice-components";
 import { Avatar, CodeChip, Collapsible, EmptyState, InfoRow, ListHeader } from "@/ui/elements";
@@ -344,6 +345,10 @@ export default function PatientFolderScreen() {
           onPress={() => void startRecord()}
         />
       </Card>
+
+      {/* Standing protection, not a consultation: what this animal has had and
+          what is due, whether or not anyone attended today. */}
+      <PreventiveSection patientId={folder.id} species={folder.species} isGroup={isGroup} />
 
       {records.length > 0 ? <ListHeader title="Records" count={records.length} /> : null}
 

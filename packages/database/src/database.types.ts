@@ -1263,6 +1263,114 @@ export type Database = {
           },
         ]
       }
+      preventive_care: {
+        Row: {
+          animals_treated: number | null
+          batch_lot_number: string | null
+          created_at: string
+          created_by_device_id: string | null
+          date_given: string
+          deleted_at: string | null
+          dose: string | null
+          id: string
+          kind: string
+          last_modified_by_device_id: string | null
+          manufacturer: string | null
+          next_due_date: string | null
+          notes: string | null
+          patient_id: string
+          product_name: string
+          route: string | null
+          server_version: number
+          updated_at: string
+          vaccine_type: string | null
+          vet_id: string
+          visit_id: string | null
+        }
+        Insert: {
+          animals_treated?: number | null
+          batch_lot_number?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          date_given: string
+          deleted_at?: string | null
+          dose?: string | null
+          id: string
+          kind: string
+          last_modified_by_device_id?: string | null
+          manufacturer?: string | null
+          next_due_date?: string | null
+          notes?: string | null
+          patient_id: string
+          product_name: string
+          route?: string | null
+          server_version?: number
+          updated_at?: string
+          vaccine_type?: string | null
+          vet_id: string
+          visit_id?: string | null
+        }
+        Update: {
+          animals_treated?: number | null
+          batch_lot_number?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          date_given?: string
+          deleted_at?: string | null
+          dose?: string | null
+          id?: string
+          kind?: string
+          last_modified_by_device_id?: string | null
+          manufacturer?: string | null
+          next_due_date?: string | null
+          notes?: string | null
+          patient_id?: string
+          product_name?: string
+          route?: string | null
+          server_version?: number
+          updated_at?: string
+          vaccine_type?: string | null
+          vet_id?: string
+          visit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preventive_care_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preventive_care_last_modified_by_device_id_fkey"
+            columns: ["last_modified_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preventive_care_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preventive_care_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preventive_care_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       treatments: {
         Row: {
           active_ingredient: string | null
@@ -2039,6 +2147,10 @@ export type Database = {
         Args: { p_device_id?: string; p_id: string; p_reason: string }
         Returns: undefined
       }
+      delete_preventive_care: {
+        Args: { p_device_id?: string; p_id: string; p_reason: string }
+        Returns: undefined
+      }
       delete_treatment: {
         Args: { p_device_id?: string; p_id: string; p_reason: string }
         Returns: undefined
@@ -2103,6 +2215,26 @@ export type Database = {
           p_notes?: string
           p_paid_at?: string
           p_reference?: string
+        }
+        Returns: string
+      }
+      record_preventive_care: {
+        Args: {
+          p_animals_treated?: number
+          p_batch_lot_number?: string
+          p_date_given: string
+          p_device_id?: string
+          p_dose?: string
+          p_id: string
+          p_kind: string
+          p_manufacturer?: string
+          p_next_due_date?: string
+          p_notes?: string
+          p_patient_id: string
+          p_product_name: string
+          p_route?: string
+          p_vaccine_type?: string
+          p_visit_id?: string
         }
         Returns: string
       }
