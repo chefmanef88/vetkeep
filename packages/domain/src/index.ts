@@ -11,12 +11,17 @@ export {
 export { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder, type ExamSystem } from "./exam";
 
 export {
+  PREVENTIVE_ROUTES,
   VACCINE_PROFILES,
   VACCINE_TYPES,
+  defaultRouteFor,
   dueState,
+  routeLabel,
+  routesFor,
   suggestedNextDue,
   vaccineLabel,
   vaccinesForSpecies,
+  type PreventiveRoute,
   type VaccineProfile,
   type VaccineType
 } from "./preventive";

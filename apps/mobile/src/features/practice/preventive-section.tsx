@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { dueState, suggestedNextDue, vaccineLabel, vaccinesForSpecies } from "@vetkeep/domain";
+import {
+  defaultRouteFor,
+  dueState,
+  routeLabel,
+  routesFor,
+  suggestedNextDue,
+  vaccineLabel,
+  vaccinesForSpecies
+} from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
@@ -36,20 +44,6 @@ const KINDS = [
   { value: "deworming", label: "Deworming" }
 ];
 
-const VACCINE_ROUTES = [
-  { value: "sc", label: "SC" },
-  { value: "im", label: "IM" },
-  { value: "intranasal", label: "Nasal" },
-  { value: "eye_drop", label: "Eye drop" }
-];
-
-const GROUP_ROUTES = [
-  { value: "in_water", label: "In water" },
-  { value: "wing_web", label: "Wing web" },
-  { value: "eye_drop", label: "Eye drop" },
-  { value: "sc", label: "SC" }
-];
-
 function isoToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -77,7 +71,7 @@ export function PreventiveSection({
   const [manufacturer, setManufacturer] = useState("");
   const [batch, setBatch] = useState("");
   const [dose, setDose] = useState("");
-  const [route, setRoute] = useState(isGroup ? "in_water" : "sc");
+  const [route, setRoute] = useState<string>(defaultRouteFor({ kind: "vaccination", isGroup }));
   const [animalsTreated, setAnimalsTreated] = useState("");
   const [dateGiven, setDateGiven] = useState(isoToday());
   const [nextDue, setNextDue] = useState("");
@@ -105,6 +99,21 @@ export function PreventiveSection({
 
   const isVaccination = kind === "vaccination";
   const vaccines = vaccinesForSpecies(species);
+  const routes = routesFor({ kind: isVaccination ? "vaccination" : "deworming", isGroup });
+
+  /**
+   * A vaccine is injected and a wormer is swallowed, so the route carried over
+   * from the other kind is usually wrong. It is only replaced when it does not
+   * belong to the new list, which leaves a deliberate choice alone.
+   */
+  function chooseKind(next: string) {
+    setKind(next);
+    const nextKind = next === "vaccination" ? "vaccination" : "deworming";
+    const allowed = routesFor({ kind: nextKind, isGroup });
+    if (!allowed.includes(route as (typeof allowed)[number])) {
+      setRoute(defaultRouteFor({ kind: nextKind, isGroup }));
+    }
+  }
 
   /**
    * The usual interval, offered when the vaccine is chosen. A suggestion the
@@ -226,7 +235,12 @@ export function PreventiveSection({
       {history.length === 0 ? <Muted>Nothing recorded yet for this animal.</Muted> : null}
 
       <FieldLabel>Record</FieldLabel>
-      <Segmented options={KINDS} value={kind} onChange={setKind} accessibilityLabel="What kind" />
+      <Segmented
+        options={KINDS}
+        value={kind}
+        onChange={chooseKind}
+        accessibilityLabel="What kind"
+      />
 
       {isVaccination ? (
         <>
@@ -286,7 +300,7 @@ export function PreventiveSection({
 
       <FieldLabel>Route</FieldLabel>
       <Segmented
-        options={isGroup ? GROUP_ROUTES : VACCINE_ROUTES}
+        options={routes.map((value) => ({ value, label: routeLabel(value) }))}
         value={route}
         onChange={setRoute}
         accessibilityLabel="Route"

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  PREVENTIVE_ROUTES,
   VACCINE_PROFILES,
   VACCINE_TYPES,
+  defaultRouteFor,
   dueState,
+  routeLabel,
+  routesFor,
   suggestedNextDue,
   vaccineLabel,
   vaccinesForSpecies
@@ -58,6 +62,51 @@ describe("vaccine list", () => {
     expect(vaccineLabel("cbpp")).toBe("CBPP");
     // An unrecognised value is shown as stored rather than hidden.
     expect(vaccineLabel("unknown_thing")).toBe("unknown_thing");
+  });
+});
+
+describe("routes", () => {
+  it("offers oral for a dewormer, which is how tablets and suspensions are given", () => {
+    // The bug this test exists for: the first version offered only vaccine
+    // routes, so a wormer given as a tablet had nowhere to go.
+    expect(routesFor({ kind: "deworming", isGroup: false })).toContain("oral");
+    expect(defaultRouteFor({ kind: "deworming", isGroup: false })).toBe("oral");
+  });
+
+  it("offers a pour-on for a dewormer", () => {
+    expect(routesFor({ kind: "deworming", isGroup: false })).toContain("topical");
+  });
+
+  it("worms a group through the feed or the water", () => {
+    const routes = routesFor({ kind: "deworming", isGroup: true });
+    expect(routes).toContain("in_water");
+    expect(routes).toContain("in_feed");
+    expect(defaultRouteFor({ kind: "deworming", isGroup: true })).toBe("in_water");
+  });
+
+  it("injects an individual vaccination by default", () => {
+    expect(defaultRouteFor({ kind: "vaccination", isGroup: false })).toBe("sc");
+  });
+
+  it("vaccinates a flock through the water by default", () => {
+    expect(defaultRouteFor({ kind: "vaccination", isGroup: true })).toBe("in_water");
+  });
+
+  it("never offers a route the database would refuse", () => {
+    for (const kind of ["vaccination", "deworming"] as const) {
+      for (const isGroup of [true, false]) {
+        for (const route of routesFor({ kind, isGroup })) {
+          expect(PREVENTIVE_ROUTES).toContain(route);
+        }
+      }
+    }
+  });
+
+  it("labels a route for reading", () => {
+    expect(routeLabel("oral")).toBe("Oral");
+    expect(routeLabel("topical")).toBe("Pour-on");
+    expect(routeLabel("wing_web")).toBe("Wing web");
+    expect(routeLabel("unknown")).toBe("unknown");
   });
 });
 

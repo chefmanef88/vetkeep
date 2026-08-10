@@ -74,6 +74,75 @@ export const VACCINE_PROFILES: readonly VaccineProfile[] = [
   { value: "other", label: "Other", species: [], defaultIntervalMonths: null }
 ];
 
+/**
+ * Every route the database will accept for preventive care.
+ *
+ * Kept here so the options a vet is offered cannot drift from what the schema
+ * allows. The first version of this screen offered only vaccine routes, which
+ * left a dewormer given as a tablet with nowhere to go.
+ */
+export const PREVENTIVE_ROUTES = [
+  "oral",
+  "im",
+  "iv",
+  "sc",
+  "topical",
+  "intranasal",
+  "in_water",
+  "in_feed",
+  "wing_web",
+  "eye_drop"
+] as const;
+export type PreventiveRoute = (typeof PREVENTIVE_ROUTES)[number];
+
+const ROUTE_LABELS: Record<PreventiveRoute, string> = {
+  oral: "Oral",
+  im: "IM",
+  iv: "IV",
+  sc: "SC",
+  topical: "Pour-on",
+  intranasal: "Nasal",
+  in_water: "In water",
+  in_feed: "In feed",
+  wing_web: "Wing web",
+  eye_drop: "Eye drop"
+};
+
+export function routeLabel(route: string): string {
+  return ROUTE_LABELS[route as PreventiveRoute] ?? route;
+}
+
+/**
+ * How this is actually given, narrowed to the case in hand.
+ *
+ * A dewormer is a tablet, a suspension or a pour-on; a vaccine is injected or,
+ * for a flock, put in the water. Offering all ten routes every time would make
+ * the common choice harder to find, and offering the wrong four makes it
+ * impossible.
+ */
+export function routesFor(input: {
+  kind: "vaccination" | "deworming";
+  isGroup: boolean;
+}): readonly PreventiveRoute[] {
+  if (input.kind === "deworming") {
+    return input.isGroup
+      ? ["in_water", "in_feed", "oral", "topical"]
+      : // Tablets and suspensions first: that is most of small-animal worming.
+        ["oral", "topical", "sc", "im"];
+  }
+  return input.isGroup
+    ? ["in_water", "wing_web", "eye_drop", "sc"]
+    : ["sc", "im", "intranasal", "oral"];
+}
+
+/** The route to start on, which is the one most often used for that case. */
+export function defaultRouteFor(input: {
+  kind: "vaccination" | "deworming";
+  isGroup: boolean;
+}): PreventiveRoute {
+  return routesFor(input)[0] ?? "oral";
+}
+
 /** What may sensibly be given to this species, with `other` always last. */
 export function vaccinesForSpecies(species: string): readonly VaccineProfile[] {
   return VACCINE_PROFILES.filter(
