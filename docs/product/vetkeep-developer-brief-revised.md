@@ -2,9 +2,59 @@
 
 **Document status:** Technical build specification  
 **Product stage:** Pre-development architecture baseline  
-**Revision date:** 11 July 2026 (Phase 2 scope correction applied 2 August 2026)  
+**Revision date:** 11 July 2026 (Phase 2 scope correction 2 August 2026; product model correction 10 August 2026)  
 **Primary market:** Independent solo veterinarians in Ghana and West Africa  
 **Primary platforms:** Mobile application for clinical work; web application for account, public passport, and platform workflows
+
+### Revision note — 10 August 2026
+
+**VetKeep is a record-keeping product, not a scheduling product.** The document
+previously described request-then-confirm appointments and daily route planning.
+Those were built on an assumption that does not hold: that work arrives through
+the application. It does not. A solo veterinarian is called by telephone or
+email, agrees a time on that call, and drives. An appointment record would
+mirror a negotiation that has already concluded elsewhere, and a status field
+maintained for no reader is a liability rather than a record.
+
+Seven changes follow from that.
+
+1. **Scheduling is removed.** `appointments`, `daily_routes`, `daily_route_stops`
+   and their controlled RPCs leave the specification. Consultations no longer
+   depend on a booking. See §11, retained as a record of the decision.
+2. **The patient record is a folder.** A folder holds standing information about
+   an animal or a group, and an append-only series of dated consultation records
+   beneath it. Standing information is editable for as long as the folder
+   exists. Consultation records are never overwritten: a correction after
+   signing is an amendment that is shown beside the original. See §6 and §8.
+3. **Groups are in scope.** A folder is either an individual animal or a group —
+   a flock, a herd, a pen. This reverses the v1 exclusion in §1.2. The group is
+   the patient, and the clinical questions asked of it differ from those asked
+   of one animal. See §6.2 and §7.9.
+4. **Species pathways.** Companion, pet bird, food animal, and group each take
+   the same SOAP skeleton with different objective findings and a different
+   examination set. Body condition alone is scored 1–9 in dogs and cats and 1–5
+   in ruminants; a single shared form silently loses which scale was meant. See
+   §7.9.
+5. **Withdrawal periods are mandatory for food-producing animals**, and are
+   driven by the folder's stated purpose rather than by its species. A pet
+   rabbit and a meat rabbit are the same species and carry different obligations.
+   Milk, meat and egg withholding dates are computed and displayed, not typed
+   into free text where nothing can read them. See §7.10.
+6. **The drug formulary is the field inventory.** `inventory_items` gains active
+   ingredient, route and standard withdrawal periods rather than a parallel drug
+   list being introduced. What the veterinarian carries is what the veterinarian
+   can administer; administering it deducts the batch, records the lot number
+   against the animal, and computes the withholding dates in one action. See
+   §7.10.
+7. **A consultation record can be given to the client.** This is distinct from
+   the public health passport in §10, which is deliberately restricted and never
+   exposes clinical detail. An owner is entitled to the full record of their own
+   animal, including notes, treatments and prescriptions, and may need it for a
+   referral. See §10.5.
+
+Consultation records now carry their own `VK-R-` code alongside the existing
+client and patient series, because a document handed to a client needs a
+reference that both parties can name.
 
 ### Revision note — 2 August 2026
 
@@ -20,7 +70,9 @@ Phase 2 scope was corrected and reprioritized after Phase 1 acceptance. Three ch
 
 VetKeep is a subscription-based clinical record-keeping platform built **exclusively for independent, solo veterinarians**, especially veterinarians who provide home-call, mobile, ambulatory, and field services.
 
-The product is not a clinic-management system. It must remain faster, simpler, and more practical than systems designed for hospitals, chains, or multi-user clinics.
+The product is not a clinic-management system, and it is not a scheduling system. Work reaches the veterinarian by telephone or email; the application's job begins when the veterinarian arrives, and it is to produce a clinical record that is complete, durable, and defensible. It must remain faster, simpler, and more practical than systems designed for hospitals, chains, or multi-user clinics.
+
+The unit of the product is the **folder**. A folder belongs to one animal or one group of animals, holds the standing facts about it, and accumulates a dated consultation record every time the veterinarian attends. Standing facts stay editable. Consultation records accumulate and are not rewritten. The folder is the thing a veterinarian searches for, reads before knocking on a door, adds to, and hands to a client on the way out.
 
 Each veterinarian has one private account and owns the clinical relationship with every client and animal recorded in that account. The veterinarian creates, signs, and manages the complete medical record from first consultation through diagnosis, treatment, follow-up, and preventive care.
 
@@ -37,16 +89,18 @@ VetKeep is designed around the operating realities of Ghana and West Africa:
 
 A solo veterinarian must be able to:
 
-1. Find a client or patient quickly.
-2. Review the animal's relevant history.
-3. Document a complete consultation offline.
+1. Find a client, animal, or group quickly.
+2. Open the folder and read the relevant history before knocking on the door.
+3. Document a complete consultation offline, in the form the species calls for.
 4. Capture diagnostic files and photographs offline.
 5. Record vaccinations and due dates.
-6. Schedule and confirm follow-up visits.
-7. Send reminders through WhatsApp when connected.
-8. Produce a controlled public health passport.
-9. Create a professional invoice without VetKeep handling the client's payment.
-10. Trust that completed medical records cannot be silently altered or lost.
+6. Record a treatment and be told, without calculating it, when milk, meat, or eggs are safe again.
+7. Record a follow-up intention and be reminded of it.
+8. Send reminders through WhatsApp when connected.
+9. Produce a controlled public health passport.
+10. Hand the client a copy of the consultation record before leaving.
+11. Create a professional invoice without VetKeep handling the client's payment.
+12. Trust that completed medical records cannot be silently altered or lost.
 
 ### 1.2 Non-negotiable product boundaries
 
@@ -55,18 +109,19 @@ VetKeep v1 is:
 - Solo-veterinarian only.
 - Single-seat per veterinarian account.
 - Mobile-first and offline-first.
-- Focused on clinical records, scheduling, reminders, passports, and simple invoicing.
-- Suitable for individually identifiable companion animals and livestock.
+- Focused on clinical records, treatment and withdrawal tracking, reminders, passports, and simple invoicing.
+- Suitable for companion animals, pet birds, individually identified food animals, and groups of food animals.
 
 VetKeep v1 is not:
 
 - A clinic, hospital, or branch-management platform.
 - A multi-vet collaboration product.
 - A client portal or client mobile app.
+- An appointment book, a diary, or a route planner. Work is arranged by telephone and email, outside the product.
 - A pharmacy, payroll, or insurance system, or a multi-location inventory system (lightweight personal field-supply tracking is in scope — see §7.8).
-- A herd/flock production-management system.
+- A herd production-management system. Group **clinical** records are in scope; production performance, breeding cycles, feed conversion, and profitability are not.
 
-Group, herd, flock, pen, and production-unit records may be introduced later. In v1, each patient record represents one identifiable animal.
+A folder represents either one identifiable animal or one group of animals under common management. The distinction is recorded, because the clinical questions differ: an individual has a temperature, and a flock has a mortality rate.
 
 ---
 
@@ -305,6 +360,24 @@ A user who forgets the local PIN must re-authenticate online. Local PIN recovery
 
 ## 6. Clients, Owners, and Patients
 
+A patient row is the head of a **folder**. The folder is not a separate table: it
+is the patient together with everything that references it — ownership history,
+consultation records, attachments, vaccinations, treatments.
+
+```text
+Client                    VK-C-3E1TA8
+  └── Patient folder      VK-P-7KQM2P     individual or group
+        ├── standing information          editable for the life of the folder
+        ├── consultation record  VK-R-…   2026-03-14   signed
+        ├── consultation record  VK-R-…   2026-06-02   signed
+        └── consultation record  VK-R-…   2026-08-10   open
+```
+
+Standing information — identity, signalment, group size, allergies, chronic
+conditions, ownership — is corrected in place as the veterinarian learns more.
+Consultation records are appended and never rewritten; see §8 for the integrity
+rules that apply once one is signed.
+
 ### 6.1 Clients
 
 ```sql
@@ -336,22 +409,56 @@ create table clients (
 
 ### 6.2 Patients
 
+A patient is one animal or one group. Three columns decide how the rest of the
+product behaves: `kind`, `species`, and `purpose`.
+
+`purpose` is not decoration. It, and not species, determines whether withdrawal
+periods apply. A pet rabbit and a meat rabbit are the same species and carry
+entirely different obligations, and only the veterinarian knows which is in
+front of them.
+
 ```sql
 create table patients (
   id uuid primary key,
   vet_id uuid not null references vets(id) on delete restrict,
   patient_code text not null,
   name text not null,
-  species text not null,
+
+  -- One animal, or a group under common management.
+  kind text not null default 'individual'
+    check (kind in ('individual', 'group')),
+  species text not null
+    check (species in (
+      'dog', 'cat', 'bird',
+      'cattle', 'sheep', 'goat', 'pig', 'poultry', 'rabbit',
+      'other'
+    )),
+  -- Drives withdrawal obligations. 'pet' means the animal will not enter the
+  -- food chain, whatever its species.
+  purpose text not null default 'pet'
+    check (purpose in ('pet', 'meat', 'milk', 'eggs', 'breeding', 'draught')),
+
   breed text,
-  sex text not null
-    check (sex in ('male', 'female', 'male_neutered', 'female_spayed', 'unknown')),
+  sex text
+    check (sex is null or sex in ('male', 'female', 'male_neutered', 'female_spayed', 'unknown')),
   date_of_birth date,
   date_of_birth_precision text not null default 'exact'
     check (date_of_birth_precision in ('exact', 'estimated', 'unknown')),
   color_markings text,
+
+  -- Identifiers differ by pathway: companions are chipped, food animals are
+  -- tagged, birds are ringed. None is universal, so none is required.
   microchip_id text,
+  ear_tag text,
+  leg_ring text,
   identification_notes text,
+
+  -- Group folders only. A count is a clinical denominator: "12 of 400 affected"
+  -- means nothing without it.
+  head_count integer check (head_count is null or head_count > 0),
+  group_age_weeks integer check (group_age_weeks is null or group_age_weeks >= 0),
+  housing text,
+
   status text not null default 'active'
     check (status in ('active', 'deceased', 'transferred', 'inactive')),
   deceased_at date,
@@ -362,9 +469,34 @@ create table patients (
   server_version bigint not null default 1,
   created_by_device_id uuid,
   last_modified_by_device_id uuid,
-  unique (vet_id, patient_code)
+  unique (vet_id, patient_code),
+
+  -- A group must state how many. An individual must not carry a head count.
+  constraint patients_group_requires_head_count check (
+    (kind = 'group' and head_count is not null)
+    or (kind = 'individual' and head_count is null)
+  ),
+  -- Sex is meaningful for one animal and not for a mixed flock.
+  constraint patients_individual_requires_sex check (
+    kind = 'group' or sex is not null
+  )
 );
 ```
+
+Species and purpose together decide which withholding periods a treatment must
+carry:
+
+| Species        | Group folders | Milk | Meat | Eggs |
+| -------------- | ------------- | ---- | ---- | ---- |
+| dog, cat, bird | no            | —    | —    | —    |
+| cattle         | yes           | ✓    | ✓    | —    |
+| sheep, goat    | yes           | ✓    | ✓    | —    |
+| pig            | yes           | —    | ✓    | —    |
+| poultry        | yes           | —    | ✓    | ✓    |
+| rabbit         | yes           | —    | ✓    | —    |
+
+A folder whose `purpose` is `pet` never requires withholding, whatever its
+species.
 
 ### 6.3 Patient ownership history
 
@@ -416,19 +548,49 @@ Indexes must support `vet_id` plus normalized search fields. PostgreSQL trigram 
 
 ---
 
-## 7. Visits and Clinical Records
+## 7. Consultation Records
 
-### 7.1 Visit lifecycle
+A consultation record is one dated entry in a folder. The `visits` table name is
+retained to avoid a rename across a working schema, but the concept is a
+consultation, not a scheduled appointment: `appointment_id` is dropped, and a
+record is created by the act of attending, not by a booking.
 
-A visit has the following states:
+Every record is a SOAP note. The columns already carry that structure:
+
+| SOAP           | Columns                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| **S**ubjective | `chief_complaint`, `history_of_complaint`, `past_medical_history`, `current_medications`         |
+| **O**bjective  | vitals, plus the examination findings in §7.3 and the group observations in §7.9                 |
+| **A**ssessment | `problem_list`, `differential_diagnoses`, `tentative_diagnosis`, `definitive_diagnosis`          |
+| **P**lan       | `treatment_plan`, `prescriptions`, the treatments in §7.10, `follow_up_plan`, `next_review_date` |
+
+Each record carries a `VK-R-` code, generated on the device by the same
+Crockford Base32 rules as client and patient codes (§4.1). The code is what a
+veterinarian and a client name when they refer to a document that has left the
+application.
+
+### 7.1 Record lifecycle
 
 ```text
-draft -> completed
-completed -> amended through a separate amendment record
+open -> signed
+signed -> amended through a separate amendment record
 any state -> voided with a mandatory reason
 ```
 
-A completed visit is a signed medical record. It cannot be directly edited or deleted by ordinary application operations.
+A record stays **open** and freely editable for as long as the veterinarian
+needs — a consultation interrupted by a second call may be finished that
+evening. Signing closes it.
+
+A signed record is a medical record. It cannot be directly edited or deleted by
+ordinary application operations. Corrections after signing are amendments, and
+an amendment is displayed beside the original rather than replacing it. This is
+the guarantee that makes the record worth keeping: a record that could be
+quietly rewritten after an outcome is worth less than no record at all, because
+it reads as concealment.
+
+Signing is also what produces the client's copy (§10.5). The two are one action
+in the interface — sign, and hand over — so that closing a record has an
+immediate purpose rather than being an administrative step to remember.
 
 ### 7.2 Visits table
 
@@ -437,7 +599,6 @@ create table visits (
   id uuid primary key,
   vet_id uuid not null references vets(id) on delete restrict,
   patient_id uuid not null references patients(id) on delete restrict,
-  appointment_id uuid,
   visit_date timestamptz not null,
   visit_type text not null
     check (visit_type in ('home_call', 'clinic_visit', 'field_visit', 'emergency', 'follow_up', 'teleconsult')),
@@ -713,6 +874,130 @@ Rules:
 - Expired batches must be excluded from available quantity even if `quantity_on_hand` is still positive; a scheduled or manual `expired_writeoff` movement reconciles the two.
 - Offline behavior follows §15: `inventory_movements` created during an offline visit sync using the same outbound-mutation and idempotency-key mechanism as other visit data, so a retried sync cannot double-deduct stock.
 
+### 7.9 Species pathways
+
+Four pathways share the SOAP skeleton and differ in what the Objective section
+asks and which examination set applies. The pathway is derived from the folder's
+`kind` and `species`; it is never a separate choice the veterinarian has to
+remember to make.
+
+**Companion — dog, cat.** The eleven examination systems in §7.3 apply
+unchanged. Body condition is scored 1–9. Weight in kilograms. Identity by
+microchip.
+
+**Pet bird.** Weight in **grams** — `weight_unit` already permits this, and a
+budgerigar recorded in kilograms is recorded uselessly. Body condition is a
+keel score of 1–5, not the 1–9 mammalian scale. Rectal temperature is not taken
+routinely. Identity by leg ring. The examination set replaces the mammalian
+systems that do not apply with: Beak and cere, Crop, Plumage, Keel, Vent, Wings,
+retaining General, Respiratory, Ocular, Neurological, and Musculoskeletal.
+
+**Food animal, individual — one cow, ewe, doe, sow, or rabbit.** Body condition
+is scored **1–5**. Identity by ear tag. Ruminants additionally record rumen fill;
+rabbits additionally record a Dental system, since incisor and molar overgrowth
+is among their commonest presentations and the eleven mammalian systems have
+nowhere to put it. Lactation and pregnancy status are recorded where relevant to
+the species and purpose. Withdrawal periods apply per §7.10.
+
+**Group — flock, herd, pen.** A group is not examined system by system. The
+Objective section records instead:
+
+- head count at the time of attendance, and **number affected**
+- deaths today and cumulative deaths in the current episode
+- feed and water intake, and any change in them
+- production change where the purpose implies one — a drop in lay, a drop in yield
+- housing, litter, ventilation, and stocking observations
+- post-mortem findings on animals examined after death
+
+Morbidity and mortality are derived from the counts rather than typed, so they
+cannot disagree with them. Treatment is usually applied to the whole group, in
+feed or in water, and withdrawal applies to every animal in it.
+
+Body condition scales must never be shared across pathways as a single free-text
+field without the scale being recorded. A "4" means an overweight dog and a fat
+cow, and the two are not comparable.
+
+### 7.10 Treatments, the formulary, and withdrawal periods
+
+Free text cannot answer the question a farmer actually asks: _when is the milk
+safe?_ A treatment must therefore be a structured row, not a sentence inside
+`treatment_plan`.
+
+**The formulary is the field inventory.** `inventory_items` (§7.8) is extended
+rather than duplicated: what the veterinarian carries is what the veterinarian
+can administer. Administering a product deducts the batch, records the lot
+number against the animal, and computes the withholding dates in one action.
+
+```sql
+alter table inventory_items
+  add column active_ingredient text,
+  add column default_route text
+    check (default_route is null or default_route in (
+      'oral', 'im', 'iv', 'sc', 'topical', 'intramammary', 'in_water', 'in_feed'
+    )),
+  -- Standard withholding periods for this product, in days. Null means the
+  -- product carries none; it does not mean zero, and the two must not be
+  -- conflated when a treatment is recorded.
+  add column withdrawal_meat_days integer check (withdrawal_meat_days is null or withdrawal_meat_days >= 0),
+  add column withdrawal_milk_days integer check (withdrawal_milk_days is null or withdrawal_milk_days >= 0),
+  add column withdrawal_eggs_days integer check (withdrawal_eggs_days is null or withdrawal_eggs_days >= 0);
+```
+
+```sql
+create table treatments (
+  id uuid primary key,
+  vet_id uuid not null references vets(id) on delete restrict,
+  visit_id uuid not null references visits(id) on delete restrict,
+  patient_id uuid not null references patients(id) on delete restrict,
+
+  -- Products carried are linked; a product the client buys elsewhere is named.
+  inventory_item_id uuid references inventory_items(id) on delete restrict,
+  inventory_batch_id uuid references inventory_batches(id) on delete restrict,
+  product_name text not null,
+  active_ingredient text,
+
+  dose_value numeric(10,3) not null check (dose_value > 0),
+  dose_unit text not null,
+  route text not null
+    check (route in ('oral', 'im', 'iv', 'sc', 'topical', 'intramammary', 'in_water', 'in_feed')),
+  administered_at timestamptz not null,
+  duration_days integer check (duration_days is null or duration_days > 0),
+  -- For group treatment: how many animals received it.
+  animals_treated integer check (animals_treated is null or animals_treated > 0),
+
+  -- Computed on write from the product's standard periods and the last day of
+  -- administration, then stored. Storing the resolved date rather than the
+  -- period means a later correction to the formulary cannot silently move a
+  -- withholding date that has already been given to a farmer in writing.
+  meat_withhold_until date,
+  milk_withhold_until date,
+  eggs_withhold_until date,
+  withdrawal_source text not null default 'formulary'
+    check (withdrawal_source in ('formulary', 'manual', 'none_required')),
+
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz,
+  server_version bigint not null default 1,
+  created_by_device_id uuid,
+  last_modified_by_device_id uuid
+);
+```
+
+Rules:
+
+- A treatment recorded against a folder whose `purpose` is not `pet` must resolve
+  every withholding period applicable to that species (§6.2), either from the
+  formulary or by explicit manual entry. `withdrawal_source = 'none_required'`
+  is an assertion the veterinarian makes deliberately, not a default.
+- Withholding dates are computed from the **last** day of administration, not the
+  first.
+- Active withholding must be displayed on the folder, on the consultation record,
+  and on the client's copy. A date buried in a list is not displayed.
+- Treatments follow §15 offline rules and use the same idempotency mechanism as
+  inventory movements, so a retried sync cannot record a dose twice.
+
 ---
 
 ## 8. Clinical Record Integrity and Audit
@@ -799,7 +1084,7 @@ The server must not trust a `vet_id` sent by the client. Insert and update opera
 
 ### 9.3 Parent-child ownership consistency
 
-Database triggers or controlled functions must reject a child record whose `vet_id` differs from its parent visit, patient, appointment, diagnostic, or invoice.
+Database triggers or controlled functions must reject a child record whose `vet_id` differs from its parent visit, patient, treatment, diagnostic, or invoice.
 
 ### 9.4 RLS test requirement
 
@@ -900,98 +1185,71 @@ The QR code encodes the current passport URL.
 
 Token rotation invalidates previously printed QR codes, so rotation is an emergency revocation action rather than routine maintenance. The interface must warn the veterinarian before rotation.
 
----
+### 10.6 The client's copy of a record
 
-## 11. Scheduling and Route Planning
+This is **not** the passport, and the two must never share an implementation.
+The passport is a link for a third party — a groomer, a boarding kennel — and is
+restricted by §10.3 to identity and vaccination status. The client's copy is a
+document handed to the owner of the animal, who is entitled to the full clinical
+record and may need it for a referral, a sale, or a second opinion.
 
-### 11.1 Appointment workflow
+The client's copy contains the whole record: identity, the full SOAP note,
+examination findings, treatments with doses and routes, prescriptions,
+**active withholding dates**, follow-up plan, and any amendments shown as
+amendments. It carries the veterinarian's name, business name, licence number,
+and the record's `VK-R-` code.
 
-VetKeep uses request-then-confirm scheduling. There is no public open-booking calendar in v1.
+Requirements:
 
-```text
-requested -> confirmed
-requested -> declined
-confirmed -> rescheduled
-confirmed -> completed
-confirmed -> cancelled
-confirmed -> no_show
-rescheduled -> confirmed
-rescheduled -> cancelled
-```
-
-`rescheduled` is a transient state, not a terminal one. A moved appointment returns to `confirmed` once a new time is agreed, on the same row, so the patient timeline stays contiguous and a reschedule does not fragment into two appointment records. A client who cannot agree a new time cancels instead.
-
-```sql
-create table appointments (
-  id uuid primary key,
-  vet_id uuid not null references vets(id) on delete restrict,
-  patient_id uuid references patients(id) on delete restrict,
-  client_id uuid references clients(id) on delete restrict,
-  appointment_type text not null
-    check (appointment_type in ('home_call', 'clinic_visit', 'field_visit', 'emergency', 'follow_up')),
-  scheduled_start timestamptz,
-  scheduled_end timestamptz,
-  status text not null default 'requested'
-    check (status in ('requested', 'confirmed', 'declined', 'rescheduled', 'completed', 'cancelled', 'no_show')),
-  decline_reason text,
-  cancellation_reason text,
-  visit_address text,
-  visit_latitude numeric(9,6),
-  visit_longitude numeric(9,6),
-  travel_notes text,
-  reason_for_visit text,
-  visit_id uuid references visits(id) on delete set null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  deleted_at timestamptz,
-  server_version bigint not null default 1,
-  created_by_device_id uuid,
-  last_modified_by_device_id uuid,
-  check (
-    scheduled_start is null
-    or scheduled_end is null
-    or scheduled_end > scheduled_start
-  )
-);
-```
-
-An emergency request may be created without a confirmed time, but it must still record status and contact information.
-
-### 11.2 Routes
-
-Do not store appointment IDs in an array.
-
-```sql
-create table daily_routes (
-  id uuid primary key,
-  vet_id uuid not null references vets(id) on delete restrict,
-  route_date date not null,
-  optimized boolean not null default false,
-  optimization_method text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (vet_id, route_date)
-);
-
-create table daily_route_stops (
-  id uuid primary key,
-  vet_id uuid not null references vets(id) on delete restrict,
-  route_id uuid not null references daily_routes(id) on delete cascade,
-  appointment_id uuid not null references appointments(id) on delete cascade,
-  sequence_number integer not null check (sequence_number > 0),
-  estimated_arrival timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (route_id, appointment_id),
-  unique (route_id, sequence_number)
-);
-```
-
-At launch, use a simple nearest-neighbor ordering when valid coordinates exist. The veterinarian must be able to reorder stops manually.
-
-Do not integrate a paid routing API before usage proves the need. Preserve an interface boundary so a routing provider can be added later without changing appointment storage.
+- **Generated on the device.** A veterinarian standing on a farm with no signal
+  must still be able to hand over the record. Generation must not require a
+  server round trip.
+- **A signed record only.** An open record is a draft and must not leave the
+  application.
+- **Two ranges.** One consultation, which is the ordinary case, or the folder's
+  full history, which matters when an animal transfers to another veterinarian.
+- **Sharing is a disclosure and is audited.** The audit event records that a
+  record was shared and when. It does not record the document or the recipient's
+  message. If a client later disputes what they were told, the record of
+  disclosure is the answer.
+- **Deliberate.** Sending clinical information out of the application is an
+  explicit action, never a side effect of signing or of any background process.
 
 ---
+
+## 11. Scheduling and Route Planning — Removed
+
+This section previously specified request-then-confirm appointments and daily
+route planning with manual and nearest-neighbour stop ordering. It is retained
+as a heading so that references elsewhere in this document remain resolvable,
+and as a record of why the capability is absent rather than merely unbuilt.
+
+**The assumption was wrong.** Scheduling was specified as though requests reach
+the veterinarian through the application. They do not. A solo veterinarian is
+called by telephone or email, agrees a time during that call, and drives. An
+`appointments` row would have recorded the outcome of a negotiation that
+concluded elsewhere, and a status field with no reader is an obligation to
+maintain rather than information.
+
+Removed from scope:
+
+- `appointments`, and the transitions `requested -> confirmed -> completed` with
+  their decline, reschedule, cancel, and no-show branches
+- `daily_routes`, `daily_route_stops`, and stop sequencing
+- `create_appointment`, `update_appointment_details`,
+  `transition_appointment_status`, `upsert_daily_route`, `add_route_stop`,
+  `remove_route_stop`, `resequence_route_stops`
+
+A consultation record no longer references an appointment. It is created by the
+act of attending; see §7.
+
+**What survives.** Follow-up intent does not require an appointment. A record
+carries `follow_up_plan` and `next_review_date` (§7), and those drive reminders
+through §12. The veterinarian is reminded that an animal is due; nothing
+purports to know what their day looks like.
+
+Route optimisation may return if usage demonstrates the need. It should not
+return by way of an appointment table.
 
 ## 12. WhatsApp Reminders and Messaging Outbox
 
@@ -999,11 +1257,24 @@ Do not use a single `sent boolean`.
 
 ### 12.1 Reminder definitions
 
+Reminders no longer hang off an appointment (§11). What is worth reminding a
+client about is a **due date** the veterinarian recorded: a follow-up
+(`next_review_date` on a consultation record), a vaccination due date, or the
+end of a withholding period. Each is a fact the veterinarian asserted, which is
+why it can be sent without a booking existing.
+
 ```sql
-create table appointment_reminders (
+create table client_reminders (
   id uuid primary key,
   vet_id uuid not null references vets(id) on delete restrict,
-  appointment_id uuid not null references appointments(id) on delete cascade,
+  -- What is being reminded about. Exactly one target is set, and the reminder
+  -- is cancelled if its target is voided or deleted.
+  reminder_type text not null
+    check (reminder_type in ('follow_up', 'vaccination_due', 'withdrawal_ends')),
+  visit_id uuid references visits(id) on delete cascade,
+  vaccination_id uuid references vaccinations(id) on delete cascade,
+  treatment_id uuid references treatments(id) on delete cascade,
+  patient_id uuid not null references patients(id) on delete cascade,
   send_at timestamptz not null,
   channel text not null default 'whatsapp'
     check (channel in ('whatsapp')),
@@ -1021,13 +1292,24 @@ create table appointment_reminders (
   read_at timestamptz,
   idempotency_key text not null unique,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+
+  constraint client_reminders_one_target check (
+    (visit_id is not null)::int
+    + (vaccination_id is not null)::int
+    + (treatment_id is not null)::int = 1
+  )
 );
 ```
 
+A `withdrawal_ends` reminder is addressed to the farmer and is the one message
+in this system with a food-safety consequence. It must not be silently dropped
+when a send fails; a permanently failed withdrawal reminder is surfaced to the
+veterinarian, who can telephone instead.
+
 ### 12.2 Outbox pattern
 
-Appointment confirmation and reminder creation must be committed in the same database transaction.
+Signing a consultation record and creating any reminders it implies must be committed in the same database transaction.
 
 A scheduled worker claims due reminders with row locking, sends through the configured provider, and updates status idempotently.
 
@@ -1039,7 +1321,7 @@ Requirements:
 - Duplicate callback handling.
 - Message-template version tracking.
 - Communication consent enforcement.
-- No clinical details in reminders beyond the minimum necessary appointment description.
+- No clinical details in reminders beyond the minimum necessary description of what is due.
 
 ---
 
@@ -1338,7 +1620,7 @@ Do not use universal field-level merge and do not silently use last-write-wins f
 | Draft SOAP text                  | Section-level optimistic concurrency; manual comparison when both devices changed the same section |
 | Exam finding                     | Per-system optimistic concurrency; manual conflict when the same system changed on two devices     |
 | Client contact details           | Show a conflict comparison for competing identity/contact changes                                  |
-| Appointment status               | Validate allowed state transition; reject stale transitions                                        |
+| Record signing                   | Validate allowed state transition; reject stale transitions                                        |
 | Reminder/payment side effects    | Idempotency key; never merge                                                                       |
 | Non-critical display preferences | Last-write-wins is acceptable                                                                      |
 
@@ -1369,7 +1651,7 @@ Must work fully offline:
 - Complete a visit locally and queue the signed transition.
 - Record examinations, diagnostics, vaccinations, and invoices.
 - Capture photos and files for later upload.
-- View cached appointments and route stops.
+- View cached folders and their recent consultation records.
 
 Requires connectivity:
 
@@ -1441,12 +1723,12 @@ Before production, define and publish:
 The veterinarian must be able to request an export containing:
 
 - Clients.
-- Patients and ownership history.
-- Visits and amendments.
+- Patients and ownership history, individual and group.
+- Consultation records and amendments.
 - Examinations.
 - Diagnostics.
 - Vaccinations.
-- Appointments.
+- Treatments, including withholding dates.
 - Invoices and payments.
 - Attachment manifest and downloadable files.
 
@@ -1626,8 +1908,9 @@ Glass-morphism may be used for visual identity, but heavy blur is not mandatory 
 - Additional veterinarian, nurse, receptionist, or assistant logins.
 - Shared record ownership or inter-clinic transfer workflows.
 - Client login, portal, or client mobile application.
-- Herd, flock, group-treatment, or production-management records.
-- Pharmacy-grade or multi-location inventory systems. Personal field-supply tracking for a single vet's own carried stock is in scope — see §7.8.
+- Appointment booking, diaries, and route planning. Work is arranged by telephone and email, outside the product — see §11.
+- Production-management records: breeding cycles, feed conversion, growth curves, yield tracking, and profitability. Group **clinical** records and group treatment are in scope — see §6.2, §7.9, and §7.10.
+- Pharmacy-grade or multi-location inventory systems. Personal field-supply tracking for a single vet's own carried stock, extended with formulary and withdrawal data, is in scope — see §7.8 and §7.10.
 - Procurement and supplier management.
 - Insurance claims.
 - Payroll and staff scheduling.
@@ -1691,7 +1974,7 @@ Critical journeys:
 5. Open the same account on a second device and receive the record.
 6. Create a conflicting draft edit and resolve it.
 7. Add a vaccination and enable a consented passport.
-8. Confirm an appointment and send a reminder.
+8. Sign a consultation record, hand the client a copy, and send a follow-up reminder.
 9. Create and mark a client invoice partially paid.
 10. Enter past-due mode without losing existing records.
 
@@ -1764,14 +2047,17 @@ Reprioritized 2 August 2026. Phase 2 now delivers one complete, working workflow
 
 1. **Veterinarian workspace.** Professional profile, licence verification, service areas, working hours, services offered, pricing and call-out fees (builds on the Phase 1 account/device model).
 2. **Clients and patients.** Owner contact and address, multiple pets per owner, signalment and identification, vaccination/deworming history, allergies and chronic-condition alerts, normalized search (§6).
-3. **House-call scheduling and field operations — basic slice.** Booking requests, visit address/location, travel and call-out fee, appointment confirmation, daily visit list, simple manual route ordering, arrival/consultation/completion status, emergency classification (§11, basic path only — route optimization and advanced ordering stay in Phase 4).
-4. **Mobile medical records.** Presenting complaint and history, exam vitals and the 11-system checklist defaulting to `not_examined`, problem list and differentials, diagnostics and attachments, assessment and treatment, prescriptions, procedures, discharge/home-care instructions, follow-up reminders, visit completion/locking/amendments (§7).
-5. **Payments and records — basic slice.** Service, medication, and call-out charges; cash/mobile-money/card status; receipts; outstanding balances; simple income/expense summary (§14, basic path only — VetKeep's own subscription billing stays in Phase 6).
-6. **Field inventory.** Drugs and consumables carried, batch/expiry tracking, low-stock warnings, per-visit consumption, restocking records (§7.8).
-7. **Communication and follow-up — basic slice.** Appointment confirmations, vaccination/medication reminders, follow-up messages, prescription/discharge-summary sharing, WhatsApp-friendly delivery, communication history (§12, basic path only — delivery-state/callback maturity stays in Phase 4).
-8. **Offline resilience — basic slice.** Draft consultations offline, safe local storage, sync on reconnect, conflict prevention, visible sync status, retry without duplicates (§15, basic path only — full local schema, resumable uploads at scale, and schema-migration-with-unsynced-data testing stay in Phase 3).
+3. **The folder.** A patient folder that is either an individual or a group; standing information editable for the life of the folder; an append-only series of dated consultation records beneath it; `VK-R-` record codes (§6, §7).
+4. **Mobile medical records.** Presenting complaint and history, exam vitals and the examination set for the species, problem list and differentials, diagnostics and attachments, assessment and treatment, prescriptions, procedures, discharge/home-care instructions, follow-up intent, record signing, locking, and amendments (§7).
+5. **Species pathways.** Companion, pet bird, food animal, and group, each with its own objective findings and examination set (§7.9).
+6. **Treatments, formulary, and withdrawal.** Structured treatment rows linked to the carried batch; withdrawal periods on `inventory_items`; computed and displayed milk, meat, and egg withholding dates for every food-producing folder (§7.10).
+7. **Payments and records — basic slice.** Service, medication, and call-out charges; cash/mobile-money/card status; receipts; outstanding balances; simple income/expense summary (§14, basic path only — VetKeep's own subscription billing stays in Phase 6).
+8. **Field inventory.** Drugs and consumables carried, batch/expiry tracking, low-stock warnings, per-consultation consumption, restocking records (§7.8).
+9. **The client's copy.** On-device generation of a signed consultation record, shareable and saveable, with active withholding shown; disclosure audited (§10.6).
+10. **Communication and follow-up — basic slice.** Vaccination and follow-up reminders, withdrawal-end reminders, WhatsApp-friendly delivery, communication history (§12, basic path only — delivery-state/callback maturity stays in Phase 4).
+11. **Offline resilience — basic slice.** Draft consultations offline, safe local storage, sync on reconnect, conflict prevention, visible sync status, retry without duplicates (§15, basic path only — full local schema, resumable uploads at scale, and schema-migration-with-unsynced-data testing stay in Phase 3).
 
-**Exit gate — first complete vertical slice:** create a client and patient, schedule a house call, conduct and document the visit on mobile (including any inventory consumed), issue treatment instructions, record payment, and schedule a follow-up — end to end, with basic offline support, before broadening to any other module.
+**Exit gate — first complete vertical slice:** create a client and a folder for one dog and one poultry flock; attend and document a consultation on each on mobile, offline, using the examination set the species calls for; administer a product from carried stock and see the withholding dates computed for the flock; sign both records; hand the client a copy; record payment; and set a follow-up — end to end, before broadening to any other module.
 
 ### Phase 3 — Offline mobile hardening
 
@@ -1786,11 +2072,11 @@ Builds on the basic offline resilience shipped in Phase 2.
 7. Schema migrations with unsynced data present.
 8. Device revocation and recovery testing.
 
-### Phase 4 — Scheduling and communication hardening
+### Phase 4 — Communication hardening
 
-Builds on the basic scheduling and communication shipped in Phase 2.
+Builds on the basic communication shipped in Phase 2. Route optimization is no longer part of this phase; see §11.
 
-1. Route optimization beyond manual/nearest-neighbor ordering.
+1. Full-history export for folder transfer to another veterinarian.
 2. Reminder outbox maturity: exponential retry, dead-letter visibility.
 3. WhatsApp provider integration hardening and callback verification.
 4. Delivery-state handling (sent/delivered/read) and template-version tracking.
