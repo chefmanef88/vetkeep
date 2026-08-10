@@ -668,6 +668,8 @@ export type Database = {
         Row: {
           active: boolean
           active_ingredient: string | null
+          concentration_unit: string | null
+          concentration_value: number | null
           created_at: string
           created_by_device_id: string | null
           default_route: string | null
@@ -688,6 +690,8 @@ export type Database = {
         Insert: {
           active?: boolean
           active_ingredient?: string | null
+          concentration_unit?: string | null
+          concentration_value?: number | null
           created_at?: string
           created_by_device_id?: string | null
           default_route?: string | null
@@ -708,6 +712,8 @@ export type Database = {
         Update: {
           active?: boolean
           active_ingredient?: string | null
+          concentration_unit?: string | null
+          concentration_value?: number | null
           created_at?: string
           created_by_device_id?: string | null
           default_route?: string | null
@@ -1376,9 +1382,13 @@ export type Database = {
           active_ingredient: string | null
           administered_at: string
           animals_treated: number | null
+          concentration_unit: string | null
+          concentration_value: number | null
           created_at: string
           created_by_device_id: string | null
           deleted_at: string | null
+          dose_rate_unit: string | null
+          dose_rate_value: number | null
           dose_unit: string
           dose_value: number
           duration_days: number | null
@@ -1397,15 +1407,20 @@ export type Database = {
           updated_at: string
           vet_id: string
           visit_id: string
+          weight_kg_used: number | null
           withdrawal_source: string
         }
         Insert: {
           active_ingredient?: string | null
           administered_at: string
           animals_treated?: number | null
+          concentration_unit?: string | null
+          concentration_value?: number | null
           created_at?: string
           created_by_device_id?: string | null
           deleted_at?: string | null
+          dose_rate_unit?: string | null
+          dose_rate_value?: number | null
           dose_unit: string
           dose_value: number
           duration_days?: number | null
@@ -1424,15 +1439,20 @@ export type Database = {
           updated_at?: string
           vet_id: string
           visit_id: string
+          weight_kg_used?: number | null
           withdrawal_source?: string
         }
         Update: {
           active_ingredient?: string | null
           administered_at?: string
           animals_treated?: number | null
+          concentration_unit?: string | null
+          concentration_value?: number | null
           created_at?: string
           created_by_device_id?: string | null
           deleted_at?: string | null
+          dose_rate_unit?: string | null
+          dose_rate_value?: number | null
           dose_unit?: string
           dose_value?: number
           duration_days?: number | null
@@ -1451,6 +1471,7 @@ export type Database = {
           updated_at?: string
           vet_id?: string
           visit_id?: string
+          weight_kg_used?: number | null
           withdrawal_source?: string
         }
         Relationships: [
@@ -2256,7 +2277,11 @@ export type Database = {
           p_active_ingredient?: string
           p_administered_at?: string
           p_animals_treated?: number
+          p_concentration_unit?: string
+          p_concentration_value?: number
           p_device_id?: string
+          p_dose_rate_unit?: string
+          p_dose_rate_value?: number
           p_dose_unit: string
           p_dose_value: number
           p_duration_days?: number
@@ -2269,6 +2294,7 @@ export type Database = {
           p_product_name: string
           p_route: string
           p_visit_id: string
+          p_weight_kg_used?: number
           p_withdrawal_source?: string
         }
         Returns: string
@@ -2511,6 +2537,8 @@ export type Database = {
         Args: {
           p_active?: boolean
           p_active_ingredient?: string
+          p_concentration_unit?: string
+          p_concentration_value?: number
           p_default_route?: string
           p_device_id?: string
           p_id: string

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
+  calculateDose,
+  concentrationLabel,
   defaultTreatmentRoute,
   requiredWithdrawals,
   treatmentRouteLabel,
@@ -34,7 +36,15 @@ type CarriedItem = {
   withdrawal_meat_days: number | null;
   withdrawal_milk_days: number | null;
   withdrawal_eggs_days: number | null;
+  concentration_value: number | null;
+  concentration_unit: string | null;
 };
+
+const RATE_UNITS = [
+  { value: "mg_per_kg", label: "mg/kg" },
+  { value: "ml_per_kg", label: "ml/kg" },
+  { value: "iu_per_kg", label: "IU/kg" }
+];
 
 type TreatmentRow = {
   id: string;
@@ -91,6 +101,9 @@ export function TreatmentsSection({
   const [dose, setDose] = useState("");
   const [doseUnit, setDoseUnit] = useState("ml");
   const [route, setRoute] = useState<string>(defaultTreatmentRoute({ species, purpose, isGroup }));
+  const [rateValue, setRateValue] = useState("");
+  const [rateUnit, setRateUnit] = useState("mg_per_kg");
+  const [weightKg, setWeightKg] = useState("");
   const [durationDays, setDurationDays] = useState("");
   const [animalsTreated, setAnimalsTreated] = useState("");
   const [meatUntil, setMeatUntil] = useState("");
@@ -118,7 +131,7 @@ export function TreatmentsSection({
       supabase
         .from("inventory_items")
         .select(
-          "id, item_name, unit, active_ingredient, default_route, withdrawal_meat_days, withdrawal_milk_days, withdrawal_eggs_days"
+          "id, item_name, unit, active_ingredient, default_route, withdrawal_meat_days, withdrawal_milk_days, withdrawal_eggs_days, concentration_value, concentration_unit"
         )
         .eq("active", true)
         .is("deleted_at", null)
@@ -148,6 +161,29 @@ export function TreatmentsSection({
 
   const mustAsk = required.filter((kind) => !formularyCovers(kind)) as WithdrawalKind[];
 
+  const concentration =
+    chosen?.concentration_value != null && chosen.concentration_unit != null
+      ? { value: chosen.concentration_value, unit: chosen.concentration_unit as never }
+      : null;
+
+  /**
+   * The sum a vet does in their head: rate times weight, divided by the strength
+   * of the bottle. Shown with its working rather than as a bare number, so it
+   * can be checked instead of trusted.
+   */
+  const calculated =
+    optionalNumber(rateValue) !== undefined && optionalNumber(weightKg) !== undefined
+      ? calculateDose({
+          rate: optionalNumber(rateValue) as number,
+          rateUnit: rateUnit as never,
+          weightKg: optionalNumber(weightKg) as number,
+          concentration,
+          ...(isGroup && optionalNumber(animalsTreated) !== undefined
+            ? { animals: optionalNumber(animalsTreated) as number }
+            : {})
+        })
+      : null;
+
   function chooseItem(next: string) {
     setItemId(next);
     const item = carried.find((candidate) => candidate.id === next);
@@ -161,6 +197,7 @@ export function TreatmentsSection({
     setItemId(null);
     setProductName("");
     setDose("");
+    setRateValue("");
     setDurationDays("");
     setAnimalsTreated("");
     setMeatUntil("");
@@ -199,7 +236,14 @@ export function TreatmentsSection({
         p_eggs_withhold_until: optionalText(eggsUntil),
         // Asserting that nothing is withheld is a deliberate act, never a
         // default, so it is only sent when the vet ticked it.
-        p_withdrawal_source: noneRequired ? "none_required" : itemId ? "formulary" : "manual"
+        p_withdrawal_source: noneRequired ? "none_required" : itemId ? "formulary" : "manual",
+        // Kept so the dose can be rechecked later: a volume alone cannot be.
+        p_dose_rate_value: optionalNumber(rateValue),
+        p_dose_rate_unit: optionalNumber(rateValue) !== undefined ? rateUnit : undefined,
+        p_weight_kg_used:
+          optionalNumber(rateValue) !== undefined ? optionalNumber(weightKg) : undefined,
+        p_concentration_value: concentration?.value,
+        p_concentration_unit: chosen?.concentration_unit ?? undefined
       })
     );
     setBusy(false);
@@ -284,7 +328,7 @@ export function TreatmentsSection({
 
           <View style={styles.pairRow}>
             <View style={styles.pairCell}>
-              <FieldLabel>Dose</FieldLabel>
+              <FieldLabel>Dose given</FieldLabel>
               <Field
                 value={dose}
                 onChangeText={setDose}
@@ -297,6 +341,71 @@ export function TreatmentsSection({
               <Field value={doseUnit} onChangeText={setDoseUnit} placeholder="ml" />
             </View>
           </View>
+
+          {/* Work it out rather than doing the arithmetic in your head at the
+              end of a long day. */}
+          <FieldLabel>Or work it out from a rate</FieldLabel>
+          <View style={styles.pairRow}>
+            <View style={styles.pairCell}>
+              <Field
+                value={rateValue}
+                onChangeText={setRateValue}
+                keyboardType="decimal-pad"
+                placeholder="20"
+              />
+            </View>
+            <View style={styles.pairCellWide}>
+              <Segmented
+                options={RATE_UNITS}
+                value={rateUnit}
+                onChange={setRateUnit}
+                accessibilityLabel="Dose rate unit"
+              />
+            </View>
+          </View>
+          <View style={styles.pairRow}>
+            <View style={styles.pairCell}>
+              <FieldLabel>Weight in kg</FieldLabel>
+              <Field
+                value={weightKg}
+                onChangeText={setWeightKg}
+                keyboardType="decimal-pad"
+                placeholder="15"
+              />
+            </View>
+            <View style={styles.pairCell}>
+              <FieldLabel>Strength</FieldLabel>
+              <Text style={styles.strength}>
+                {concentration
+                  ? `${concentration.value} ${concentrationLabel(chosen?.concentration_unit ?? "")}`
+                  : "Not on file"}
+              </Text>
+            </View>
+          </View>
+
+          {calculated ? (
+            calculated.ok ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Use the calculated dose"
+                style={styles.result}
+                onPress={() => {
+                  setDose(String(calculated.volumeMl));
+                  setDoseUnit("ml");
+                }}
+              >
+                <Ionicons name="calculator" size={18} color={palette.brandInk} />
+                <View style={styles.resultBody}>
+                  <Text style={styles.resultValue}>Give {calculated.volumeMl} ml</Text>
+                  {/* The sum, so it can be checked rather than trusted. */}
+                  <Text style={styles.resultWorking}>{calculated.working}</Text>
+                  <Text style={styles.resultHint}>Tap to use this as the dose</Text>
+                </View>
+              </Pressable>
+            ) : (
+              <Muted>{calculated.reason}</Muted>
+            )
+          ) : null}
 
           <FieldLabel>Route</FieldLabel>
           <Segmented
@@ -469,6 +578,20 @@ const styles = StyleSheet.create({
   withheld: { ...type.small, fontSize: 12, color: palette.quiet },
   withheldActive: { fontFamily: fonts.semibold, color: palette.amber },
   pairRow: { flexDirection: "row", gap: space.md },
+  pairCellWide: { flex: 2, gap: space.xs, justifyContent: "flex-end" },
+  strength: { ...type.small, color: palette.quiet, paddingVertical: space.md },
+  result: {
+    flexDirection: "row",
+    gap: space.md,
+    alignItems: "flex-start",
+    backgroundColor: palette.brandSoft,
+    borderRadius: radiusControl,
+    padding: space.md
+  },
+  resultBody: { flex: 1, gap: 2 },
+  resultValue: { fontFamily: fonts.semibold, fontSize: 16, color: palette.brandInk },
+  resultWorking: { fontFamily: fonts.mono, fontSize: 11, color: palette.quiet },
+  resultHint: { ...type.small, fontSize: 11, color: palette.brandInk },
   pairCell: { flex: 1, gap: space.xs },
   assert: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.sm },
   assertText: { ...type.small, fontSize: 12, color: palette.ink, flex: 1 },

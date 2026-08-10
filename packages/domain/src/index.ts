@@ -11,6 +11,20 @@ export {
 export { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder, type ExamSystem } from "./exam";
 
 export {
+  CONCENTRATION_UNITS,
+  DOSE_RATE_UNITS,
+  calculateDose,
+  concentrationLabel,
+  doseRateLabel,
+  toKilograms,
+  toMgPerMl,
+  type Concentration,
+  type ConcentrationUnit,
+  type DoseRateUnit,
+  type DoseResult
+} from "./dose";
+
+export {
   TREATMENT_ROUTES,
   defaultTreatmentRoute,
   treatmentRouteLabel,

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { treatmentRouteLabel, treatmentRoutesFor } from "@vetkeep/domain";
+import { concentrationLabel, treatmentRouteLabel, treatmentRoutesFor } from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
@@ -32,7 +32,16 @@ type Product = {
   withdrawal_meat_days: number | null;
   withdrawal_milk_days: number | null;
   withdrawal_eggs_days: number | null;
+  concentration_value: number | null;
+  concentration_unit: string | null;
 };
+
+const STRENGTH_UNITS = [
+  { value: "mg_per_ml", label: "mg/ml" },
+  { value: "percent", label: "%" },
+  { value: "iu_per_ml", label: "IU/ml" },
+  { value: "mg_per_g", label: "mg/g" }
+];
 
 const TYPES = [
   { value: "drug", label: "Drug" },
@@ -67,6 +76,8 @@ export default function ProductsScreen() {
   const [unit, setUnit] = useState("ml");
   const [activeIngredient, setActiveIngredient] = useState("");
   const [route, setRoute] = useState("im");
+  const [strength, setStrength] = useState("");
+  const [strengthUnit, setStrengthUnit] = useState("mg_per_ml");
   const [meatDays, setMeatDays] = useState("");
   const [milkDays, setMilkDays] = useState("");
   const [eggsDays, setEggsDays] = useState("");
@@ -77,7 +88,7 @@ export default function ProductsScreen() {
     const { data: rows, error: queryError } = await supabase
       .from("inventory_items")
       .select(
-        "id, item_name, item_type, unit, active_ingredient, default_route, withdrawal_meat_days, withdrawal_milk_days, withdrawal_eggs_days"
+        "id, item_name, item_type, unit, active_ingredient, default_route, withdrawal_meat_days, withdrawal_milk_days, withdrawal_eggs_days, concentration_value, concentration_unit"
       )
       .eq("active", true)
       .is("deleted_at", null)
@@ -94,6 +105,8 @@ export default function ProductsScreen() {
     setUnit("ml");
     setActiveIngredient("");
     setRoute("im");
+    setStrength("");
+    setStrengthUnit("mg_per_ml");
     setMeatDays("");
     setMilkDays("");
     setEggsDays("");
@@ -122,7 +135,10 @@ export default function ProductsScreen() {
         p_default_route: route,
         p_withdrawal_meat_days: optionalNumber(meatDays),
         p_withdrawal_milk_days: optionalNumber(milkDays),
-        p_withdrawal_eggs_days: optionalNumber(eggsDays)
+        p_withdrawal_eggs_days: optionalNumber(eggsDays),
+        // Both together or neither: a number without its unit is not a strength.
+        p_concentration_value: optionalNumber(strength),
+        p_concentration_unit: optionalNumber(strength) !== undefined ? strengthUnit : undefined
       })
     );
     setBusy(false);
@@ -155,6 +171,9 @@ export default function ProductsScreen() {
                 {product.active_ingredient ? `${product.active_ingredient} · ` : ""}
                 {product.unit}
                 {product.default_route ? ` · ${treatmentRouteLabel(product.default_route)}` : ""}
+                {product.concentration_value !== null && product.concentration_unit
+                  ? ` · ${product.concentration_value} ${concentrationLabel(product.concentration_unit)}`
+                  : ""}
               </Text>
               {/* Stated plainly, because this is why the list exists. */}
               {withholding ? (
@@ -209,6 +228,32 @@ export default function ProductsScreen() {
           onChange={setRoute}
           accessibilityLabel="Usual route"
         />
+
+        {/* The strength is what turns a dose rate into a volume. Without it a
+            treatment can still be recorded, but the arithmetic stays in the
+            vet's head. */}
+        <FieldLabel>Strength</FieldLabel>
+        <View style={styles.pairRow}>
+          <View style={styles.pairCell}>
+            <Field
+              value={strength}
+              onChangeText={setStrength}
+              keyboardType="decimal-pad"
+              placeholder="200"
+            />
+          </View>
+          <View style={styles.pairCellWide}>
+            <Segmented
+              options={STRENGTH_UNITS}
+              value={strengthUnit}
+              onChange={setStrengthUnit}
+              accessibilityLabel="Strength unit"
+            />
+          </View>
+        </View>
+        <Muted>
+          A percentage is grams per hundred millilitres, so 20% is 200 mg/ml. Enter it either way.
+        </Muted>
 
         <FieldLabel>Withholding periods, in days</FieldLabel>
         <Muted>
@@ -279,5 +324,6 @@ const styles = StyleSheet.create({
   meta: { ...type.small, fontSize: 12, color: palette.quiet },
   withholding: { fontFamily: fonts.semibold, fontSize: 12, color: palette.amber },
   pairRow: { flexDirection: "row", gap: space.md },
-  pairCell: { flex: 1, gap: space.xs }
+  pairCell: { flex: 1, gap: space.xs },
+  pairCellWide: { flex: 2, gap: space.xs, justifyContent: "flex-end" }
 });
