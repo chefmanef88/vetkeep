@@ -2151,6 +2151,10 @@ export type Database = {
         Args: { p_device_id?: string; p_id: string; p_reason: string }
         Returns: undefined
       }
+      delete_product: {
+        Args: { p_device_id?: string; p_id: string; p_reason: string }
+        Returns: undefined
+      }
       delete_treatment: {
         Args: { p_device_id?: string; p_id: string; p_reason: string }
         Returns: undefined
@@ -2258,14 +2262,11 @@ export type Database = {
           p_duration_days?: number
           p_eggs_withhold_until?: string
           p_id: string
-          p_inventory_batch_id?: string
           p_inventory_item_id?: string
           p_meat_withhold_until?: string
           p_milk_withhold_until?: string
-          p_movement_id?: string
           p_notes?: string
           p_product_name: string
-          p_quantity_used?: number
           p_route: string
           p_visit_id: string
           p_withdrawal_source?: string
@@ -2503,6 +2504,22 @@ export type Database = {
           p_id: string
           p_notes?: string
           p_route_date: string
+        }
+        Returns: string
+      }
+      upsert_product: {
+        Args: {
+          p_active?: boolean
+          p_active_ingredient?: string
+          p_default_route?: string
+          p_device_id?: string
+          p_id: string
+          p_item_name: string
+          p_item_type: string
+          p_unit: string
+          p_withdrawal_eggs_days?: number
+          p_withdrawal_meat_days?: number
+          p_withdrawal_milk_days?: number
         }
         Returns: string
       }

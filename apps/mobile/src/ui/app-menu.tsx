@@ -114,7 +114,7 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
   const needsAttention = conflicts.length + deadLetters.length;
   const licenceVerified = profile?.license_verified === true;
 
-  function go(path: "/practice/clients" | "/practice/stock" | "/practice/sync") {
+  function go(path: "/practice/clients" | "/practice/products" | "/practice/sync") {
     onClose();
     router.push(path);
   }
@@ -179,10 +179,10 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
             onPress={() => go("/practice/clients")}
           />
           <MenuRow
-            icon="cube-outline"
-            label="Stock"
-            detail="What you are carrying"
-            onPress={() => go("/practice/stock")}
+            icon="medkit-outline"
+            label="Products"
+            detail="What you use, and what it obliges"
+            onPress={() => go("/practice/products")}
           />
           <MenuRow
             icon="sync-outline"

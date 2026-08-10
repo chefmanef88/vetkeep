@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { sortByExamOrder } from "@vetkeep/domain";
@@ -18,10 +18,8 @@ import {
 } from "@/features/practice/draft-store";
 import {
   draftFromVisit,
-  type ConsumedMovement,
   type DraftForm,
   type ExamFinding,
-  type UsableBatch,
   type VisitRow
 } from "@/features/practice/visit-types";
 import { Body, ErrorText, Field, PrimaryButton, SecondaryButton } from "@/ui/components";
@@ -48,8 +46,6 @@ const EXAM_OPTIONS = [
 type Loaded = {
   visit: VisitRow;
   findings: ExamFinding[];
-  batches: UsableBatch[];
-  consumed: ConsumedMovement[];
 };
 
 /** How many of a set of free-text answers have been given. */
@@ -80,9 +76,8 @@ export default function VisitScreen() {
 
   const { data, error, loading, reload } = useQuery<Loaded>(async () => {
     const visitId = String(id);
-    const today = new Date().toISOString().slice(0, 10);
 
-    const [visitResult, findingsResult, batchesResult, movementsResult] = await Promise.all([
+    const [visitResult, findingsResult] = await Promise.all([
       supabase
         .from("visits")
         .select("*, patients(name, species, breed, patient_code, purpose, kind)")
@@ -92,23 +87,7 @@ export default function VisitScreen() {
         .from("physical_exam_findings")
         .select("id, system_name, status, remarks, server_version")
         .eq("visit_id", visitId)
-        .order("system_name", { ascending: true }),
-      supabase
-        .from("inventory_batches")
-        .select(
-          "id, batch_lot_number, expiry_date, quantity_on_hand, inventory_items(item_name, unit)"
-        )
-        .is("deleted_at", null)
-        .gt("quantity_on_hand", 0)
-        .or(`expiry_date.is.null,expiry_date.gte.${today}`),
-      supabase
-        .from("inventory_movements")
-        .select(
-          "id, quantity, notes, inventory_batches(batch_lot_number, inventory_items(item_name, unit))"
-        )
-        .eq("visit_id", visitId)
-        .eq("movement_type", "consumption")
-        .order("created_at", { ascending: true })
+        .order("system_name", { ascending: true })
     ]);
 
     if (visitResult.error || !visitResult.data) throw new Error("Could not load this visit.");
@@ -119,9 +98,7 @@ export default function VisitScreen() {
       visit,
       // Ordered head to tail rather than alphabetically: an examination read
       // down the screen is a checklist, one that jumps around the animal is not.
-      findings: sortByExamOrder((findingsResult.data ?? []) as ExamFinding[]),
-      batches: (batchesResult.data ?? []) as unknown as UsableBatch[],
-      consumed: (movementsResult.data ?? []) as unknown as ConsumedMovement[]
+      findings: sortByExamOrder((findingsResult.data ?? []) as ExamFinding[])
     };
   }, [id]);
 
@@ -181,7 +158,7 @@ export default function VisitScreen() {
     );
   }
 
-  const { visit, findings, batches, consumed } = data;
+  const { visit, findings } = data;
   const isDraft = visit.workflow_status === "draft";
   const notExamined = findings.filter((f) => f.status === "not_examined").length;
   const examined = findings.length - notExamined;
@@ -639,14 +616,6 @@ export default function VisitScreen() {
 
       <AttachmentsSection visitId={visit.id} patientId={visit.patient_id} editable={isDraft} />
 
-      <StockSection
-        visitId={visit.id}
-        editable={isDraft}
-        batches={batches}
-        consumed={consumed}
-        onRecorded={reload}
-      />
-
       {isDraft ? (
         <Card>
           {/* Save lives out here rather than inside a section. The sections
@@ -791,141 +760,6 @@ function ExamRow({
         <Muted>{finding.remarks}</Muted>
       ) : null}
     </View>
-  );
-}
-
-function StockSection({
-  visitId,
-  editable,
-  batches,
-  consumed,
-  onRecorded
-}: {
-  visitId: string;
-  editable: boolean;
-  batches: UsableBatch[];
-  consumed: ConsumedMovement[];
-  onRecorded: () => void;
-}) {
-  const [batchId, setBatchId] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const selected = batches.find((b) => b.id === batchId) ?? null;
-
-  async function record() {
-    if (!selected) {
-      setError("Choose which batch you took it from.");
-      return;
-    }
-    const amount = Number(quantity.trim());
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setError("Enter how much you used.");
-      return;
-    }
-    if (amount > Number(selected.quantity_on_hand)) {
-      setError(
-        `Only ${selected.quantity_on_hand} ${selected.inventory_items?.unit ?? ""} left in that batch.`
-      );
-      return;
-    }
-
-    setBusy(true);
-    setError(null);
-    // The movement id is minted here, so a retried sync deducts the stock once.
-    const { error: rpcError } = await supabase.rpc("record_inventory_consumption", {
-      p_movement_id: globalThis.crypto.randomUUID(),
-      p_batch_id: selected.id,
-      p_visit_id: visitId,
-      p_quantity: amount
-    });
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
-      return;
-    }
-    setQuantity("");
-    setBatchId(null);
-    onRecorded();
-  }
-
-  return (
-    <Collapsible
-      title="Stock used"
-      icon="cube"
-      hint={consumed.length === 0 ? "Nothing taken" : `${consumed.length} recorded`}
-    >
-      {consumed.length === 0 ? (
-        <Muted>Nothing taken from the vehicle for this visit.</Muted>
-      ) : (
-        consumed.map((movement) => (
-          <View key={movement.id} style={styles.usedRow}>
-            <Text style={styles.usedName}>
-              {movement.inventory_batches?.inventory_items?.item_name ?? "Item"}
-            </Text>
-            <Text style={styles.usedQty}>
-              {Math.abs(Number(movement.quantity))}{" "}
-              {movement.inventory_batches?.inventory_items?.unit ?? ""}
-            </Text>
-          </View>
-        ))
-      )}
-
-      {editable ? (
-        batches.length === 0 ? (
-          <Muted>
-            No usable stock on hand. Expired batches are never offered, even when still in the
-            vehicle.
-          </Muted>
-        ) : (
-          <>
-            <FieldLabel>Batch</FieldLabel>
-            {/* Selection reads as a chosen row, not as a list of buttons all
-                shouting equally. */}
-            {batches.map((batch) => {
-              const chosen = batch.id === batchId;
-              return (
-                <Pressable
-                  key={batch.id}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: chosen }}
-                  style={({ pressed }) => [
-                    styles.batchRow,
-                    chosen && styles.batchChosen,
-                    pressed && styles.batchPressed
-                  ]}
-                  onPress={() => setBatchId(batch.id)}
-                >
-                  <Ionicons
-                    name={chosen ? "radio-button-on" : "radio-button-off"}
-                    size={18}
-                    color={chosen ? palette.brand : palette.quiet}
-                  />
-                  <View style={styles.batchBody}>
-                    <Text style={styles.batchName}>
-                      {batch.inventory_items?.item_name ?? "Item"}
-                    </Text>
-                    <Text style={styles.batchMeta}>
-                      {batch.batch_lot_number ? `${batch.batch_lot_number} · ` : ""}
-                      {batch.quantity_on_hand} {batch.inventory_items?.unit ?? ""} left
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-            <FieldLabel>Quantity used</FieldLabel>
-            <Field keyboardType="decimal-pad" value={quantity} onChangeText={setQuantity} />
-            {error ? <ErrorText>{error}</ErrorText> : null}
-            <PrimaryButton
-              label={busy ? "Recording…" : "Record stock used"}
-              disabled={busy}
-              onPress={() => void record()}
-            />
-          </>
-        )
-      ) : null}
-    </Collapsible>
   );
 }
 
