@@ -1936,6 +1936,15 @@ export type Database = {
         }
         Returns: string
       }
+      record_record_disclosure: {
+        Args: {
+          p_device_id?: string
+          p_patient_id: string
+          p_scope?: string
+          p_visit_id?: string
+        }
+        Returns: undefined
+      }
       register_attachment: {
         Args: {
           p_attachment_type: string

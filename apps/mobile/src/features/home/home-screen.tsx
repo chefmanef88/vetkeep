@@ -1,15 +1,26 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
 import { View, StyleSheet } from "react-native";
-import { registerCurrentDevice } from "@/device/device-registry";
+import { purposeLabel, speciesProfile } from "@vetkeep/domain";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { useSync } from "@/sync/sync-provider";
-import { Body, ErrorText, PrimaryButton, SecondaryButton } from "@/ui/components";
-import { Card, ScrollScreen, SectionTitle } from "@/ui/practice-components";
-import { InfoRow, NavTile, PageHeader, StatTile } from "@/ui/elements";
+import { PrimaryButton } from "@/ui/components";
+import { ScrollScreen } from "@/ui/practice-components";
+import { EmptyState, ListHeader, PageHeader, PersonRow, StatTile } from "@/ui/elements";
 import { useSession } from "@/auth/session-provider";
-import { space } from "@/ui/tokens";
+import { MenuButton } from "@/ui/app-menu";
+import { radius, space } from "@/ui/tokens";
+
+type RecentFolder = {
+  id: string;
+  name: string;
+  patient_code: string;
+  species: string;
+  kind: string;
+  purpose: string;
+  breed: string | null;
+  head_count: number | null;
+};
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -24,37 +35,59 @@ function firstName(full: string | null | undefined): string {
   return full.trim().split(/\s+/)[0] ?? "there";
 }
 
+function describeFolder(folder: RecentFolder): string {
+  const profile = speciesProfile(folder.species);
+  if (folder.kind === "group") {
+    const noun = profile.groupNoun ?? "group";
+    const head = folder.head_count === null ? "" : ` of ${folder.head_count}`;
+    return `${noun.charAt(0).toUpperCase()}${noun.slice(1)}${head} · ${purposeLabel(folder.purpose)}`;
+  }
+  return `${profile.label}${folder.breed ? ` · ${folder.breed}` : ""}`;
+}
+
 export function HomeScreen() {
   const { profile } = useSession();
   const { pendingCount, conflicts, deadLetters } = useSync();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
-  // The count behind "Start work", so the day has a size before it is opened.
-  const { data: dueToday } = useQuery<number>(async () => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
+  /**
+   * Recently touched folders, not a diary. Work arrives by telephone (brief
+   * §11), so the useful question on opening the app is "which folder do I need",
+   * and the answer is most often one seen lately.
+   */
+  const { data: recent } = useQuery<RecentFolder[]>(async () => {
+    const { data: rows, error: queryError } = await supabase
+      .from("patients")
+      .select("id, name, patient_code, species, kind, purpose, breed, head_count")
+      .is("deleted_at", null)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(5);
+    if (queryError) throw new Error("Could not load recent folders.");
+    return (rows ?? []) as RecentFolder[];
+  }, []);
 
+  const { data: folderCount } = useQuery<number>(async () => {
     const { count, error: queryError } = await supabase
-      .from("appointments")
+      .from("patients")
       .select("id", { count: "exact", head: true })
       .is("deleted_at", null)
-      .in("status", ["confirmed", "rescheduled"])
-      .gte("scheduled_start", start.toISOString())
-      .lt("scheduled_start", end.toISOString());
-
-    if (queryError) throw new Error("Could not count today's visits.");
+      .eq("status", "active");
+    if (queryError) throw new Error("Could not count folders.");
     return count ?? 0;
   }, []);
 
   const needsAttention = conflicts.length + deadLetters.length;
-  const licenceVerified = profile?.license_verified === true;
 
   return (
     <ScrollScreen topInset>
+      {/* Home is the root, so nothing owns the leading edge and the menu can
+          sit where it was asked for. Sub-screens keep the back arrow there and
+          carry the menu on the trailing edge instead. */}
+      <View style={styles.topBar}>
+        <MenuButton />
+      </View>
+
       <PageHeader
         title={`${greeting()}, ${firstName(profile?.full_name)}`}
         subtitle={new Date().toLocaleDateString(undefined, {
@@ -66,11 +99,11 @@ export function HomeScreen() {
 
       <View style={styles.statRow}>
         <StatTile
-          icon="calendar"
-          label="Visits today"
-          value={dueToday ?? "—"}
+          icon="folder-open"
+          label="Folders"
+          value={folderCount ?? "—"}
           tone="brand"
-          onPress={() => router.push("/practice/today")}
+          onPress={() => router.push("/practice/clients")}
         />
         <StatTile
           icon={needsAttention > 0 ? "alert-circle" : "cloud-done"}
@@ -81,57 +114,46 @@ export function HomeScreen() {
         />
       </View>
 
-      <PrimaryButton label="Start work" onPress={() => router.push("/practice/today")} />
+      {/* Finding the folder is the act that starts everything, so it is the
+          primary action. There is nothing to "start": the day is not booked. */}
+      <PrimaryButton
+        label="Find a client or animal"
+        onPress={() => router.push("/practice/clients")}
+      />
 
-      <View style={styles.grid}>
-        <NavTile icon="people" label="Clients" onPress={() => router.push("/practice/clients")} />
-        <NavTile icon="cube" label="Stock" onPress={() => router.push("/practice/stock")} />
-        <NavTile
-          icon="sync"
-          label="Sync"
-          badge={needsAttention}
-          onPress={() => router.push("/practice/sync")}
-        />
-      </View>
+      {recent && recent.length > 0 ? (
+        <>
+          <ListHeader title="Recently opened" count={recent.length} />
+          <View style={styles.list}>
+            {recent.map((folder) => (
+              <PersonRow
+                key={folder.id}
+                name={folder.name}
+                code={folder.patient_code}
+                meta={describeFolder(folder)}
+                tone={folder.kind === "group" ? "warn" : "good"}
+                onPress={() =>
+                  router.push({ pathname: "/practice/patient/[id]", params: { id: folder.id } })
+                }
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
 
-      <Card>
-        <SectionTitle>This account</SectionTitle>
-        <InfoRow
-          icon="person-circle-outline"
-          label="Status"
-          value={profile?.account_status ?? "unknown"}
-          tone={profile?.account_status === "active" ? "good" : "warn"}
+      {recent && recent.length === 0 ? (
+        <EmptyState
+          icon="folder-outline"
+          title="No folders yet"
+          hint="Add a client, then an animal or a flock. Each one becomes a folder that records build up in."
         />
-        <InfoRow
-          icon={licenceVerified ? "shield-checkmark-outline" : "shield-outline"}
-          label="Licence"
-          value={licenceVerified ? "Verified" : "Pending"}
-          tone={licenceVerified ? "good" : "warn"}
-        />
-        {error ? <ErrorText>{error}</ErrorText> : null}
-        {message ? <Body>{message}</Body> : null}
-        <SecondaryButton
-          label="Register or refresh this device"
-          onPress={() => {
-            setError(null);
-            setMessage(null);
-            void registerCurrentDevice()
-              .then(() => setMessage("Device registration refreshed."))
-              .catch((reason: unknown) =>
-                setError(reason instanceof Error ? reason.message : "Registration failed")
-              );
-          }}
-        />
-        <SecondaryButton
-          label="Sign out"
-          onPress={() => void supabase.auth.signOut({ scope: "local" })}
-        />
-      </Card>
+      ) : null}
     </ScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  topBar: { flexDirection: "row", marginLeft: -space.sm },
   statRow: { flexDirection: "row", gap: space.md },
-  grid: { flexDirection: "row", gap: space.md }
+  list: { borderRadius: radius, overflow: "hidden" }
 });

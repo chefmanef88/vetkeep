@@ -8,6 +8,26 @@ export {
   normalizeRecordCode
 } from "./codes";
 
+export { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder, type ExamSystem } from "./exam";
+
+export {
+  PATIENT_KINDS,
+  PURPOSES,
+  SPECIES,
+  SPECIES_PROFILES,
+  allowsGroup,
+  isSpecies,
+  purposeLabel,
+  requiredWithdrawals,
+  speciesProfile,
+  type IdentifierKind,
+  type PatientKind,
+  type Purpose,
+  type Species,
+  type SpeciesProfile,
+  type WithdrawalKind
+} from "./species";
+
 export const ACCOUNT_STATUSES = ["active", "suspended", "closed"] as const;
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 

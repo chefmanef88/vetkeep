@@ -1,13 +1,20 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
+import { sortByExamOrder } from "@vetkeep/domain";
 import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
 import { SyncBanner } from "@/sync/sync-banner";
 import { AttachmentsSection } from "@/features/practice/attachments-section";
 import { useQuery } from "@/features/practice/use-query";
+import {
+  clearDraft,
+  differsFrom,
+  loadDraft,
+  saveDraft as persistTyping
+} from "@/features/practice/draft-store";
 import {
   draftFromVisit,
   type ConsumedMovement,
@@ -26,6 +33,8 @@ import {
   Segmented
 } from "@/ui/practice-components";
 import { Avatar, CodeChip, Collapsible, ProgressBar } from "@/ui/elements";
+import { confirmWithDevice } from "@/security/confirm-with-device";
+import { shareRecord } from "@/features/records/share-record";
 import { fonts, palette, radiusControl, radiusPill, space, type } from "@/ui/tokens";
 
 const EXAM_OPTIONS = [
@@ -51,10 +60,22 @@ export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { record } = useSync();
-  const [draft, setDraft] = useState<DraftForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  /**
+   * Three layers, resolved in order: what the vet has typed this session, what
+   * the device was holding from a previous one, and what the server last saved.
+   * Derived rather than copied into state, so there is no moment where the
+   * screen is showing one and about to be overwritten by another.
+   */
+  const [edits, setEdits] = useState<DraftForm | null>(null);
+  const [heldTyping, setHeldTyping] = useState<DraftForm | null>(null);
+  const [localChecked, setLocalChecked] = useState(false);
+  const [restoredAt, setRestoredAt] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [voidReason, setVoidReason] = useState("");
+  const [voiding, setVoiding] = useState(false);
 
   const { data, error, loading, reload } = useQuery<Loaded>(async () => {
     const visitId = String(id);
@@ -92,17 +113,57 @@ export default function VisitScreen() {
     if (visitResult.error || !visitResult.data) throw new Error("Could not load this visit.");
 
     const visit = visitResult.data as unknown as VisitRow;
-    setDraft((current) => current ?? draftFromVisit(visit));
 
     return {
       visit,
-      findings: (findingsResult.data ?? []) as ExamFinding[],
+      // Ordered head to tail rather than alphabetically: an examination read
+      // down the screen is a checklist, one that jumps around the animal is not.
+      findings: sortByExamOrder((findingsResult.data ?? []) as ExamFinding[]),
       batches: (batchesResult.data ?? []) as unknown as UsableBatch[],
       consumed: (movementsResult.data ?? []) as unknown as ConsumedMovement[]
     };
   }, [id]);
 
-  if (loading && !data) {
+  const visitId = String(id);
+  const serverVersion = data?.visit.server_version ?? null;
+
+  // Ask the device first. Typing that never reached the server lives only here,
+  // and restoring it must win over the saved copy rather than race with it.
+  useEffect(() => {
+    let active = true;
+    void loadDraft(visitId).then((stored) => {
+      if (!active) return;
+      if (stored) {
+        setHeldTyping(stored.form);
+        setRestoredAt(stored.savedAt);
+      }
+      setLocalChecked(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [visitId]);
+
+  const draft: DraftForm | null = edits ?? heldTyping ?? (data ? draftFromVisit(data.visit) : null);
+
+  /**
+   * Held on the device as the vet types, debounced so a long note is not
+   * writing to the keystore on every keystroke. A signed record is not a draft
+   * and is never stored this way.
+   */
+  useEffect(() => {
+    if (!draft || !localChecked || serverVersion === null) return;
+    if (data?.visit.workflow_status !== "draft") return;
+    const timer = setTimeout(() => {
+      void persistTyping(visitId, draft, serverVersion).catch(() => {
+        // A failed local save must not interrupt the consultation. The record
+        // is still in memory and the Save button still works.
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [draft, localChecked, serverVersion, visitId, data?.visit.workflow_status]);
+
+  if ((loading && !data) || !localChecked) {
     return (
       <ScrollScreen>
         <ActivityIndicator />
@@ -151,7 +212,7 @@ export default function VisitScreen() {
   ]);
 
   const set = (key: keyof DraftForm, value: string) =>
-    setDraft((current) => (current ? { ...current, [key]: value } : current));
+    setEdits((current) => ({ ...(current ?? draft ?? ({} as DraftForm)), [key]: value }));
 
   async function saveDraft() {
     setSaving(true);
@@ -196,6 +257,12 @@ export default function VisitScreen() {
         }) as Record<string, unknown>
       });
 
+      // The queue owns the work now, so the local copy is discarded. Keeping
+      // both would leave two stores claiming to hold the truth, and a stale
+      // local draft would later overwrite a saved record on reopening.
+      await clearDraft(visitId);
+      setRestoredAt(null);
+
       // Never just "Saved" when it is only on the phone: the vet decides
       // differently about leaving a compound if the record has not left with them.
       setStatus(
@@ -238,6 +305,49 @@ export default function VisitScreen() {
     }
   }
 
+  async function giveClientACopy() {
+    setActionError(null);
+    // Sending clinical information out of the app re-authenticates.
+    const confirmed = await confirmWithDevice("Confirm sharing this record");
+    if (!confirmed) return;
+
+    setSharing(true);
+    const outcome = await shareRecord(visitId);
+    setSharing(false);
+    if (!outcome.ok) setActionError(outcome.message);
+  }
+
+  /**
+   * Withdrawing a record, not erasing one.
+   *
+   * A signed consultation is a medical record: it stays, marked as withdrawn,
+   * with the reason attached. Deleting it outright would leave a gap that reads
+   * as concealment to anyone who later sees the history — including the vet.
+   */
+  async function withdrawRecord() {
+    setActionError(null);
+    if (voidReason.trim().length < 3) {
+      setActionError("Say why this record is being withdrawn. It stays on the record.");
+      return;
+    }
+    const confirmed = await confirmWithDevice("Confirm withdrawing this record");
+    if (!confirmed) return;
+
+    setVoiding(true);
+    const { error: rpcError } = await supabase.rpc("void_visit", {
+      p_visit_id: visitId,
+      p_reason: voidReason.trim()
+    });
+    setVoiding(false);
+    if (rpcError) {
+      setActionError(rpcError.message);
+      return;
+    }
+    await clearDraft(visitId);
+    setVoidReason("");
+    reload();
+  }
+
   async function markRemainingNormal() {
     setActionError(null);
     const { error: rpcError } = await supabase.rpc("mark_remaining_systems_normal", {
@@ -259,6 +369,10 @@ export default function VisitScreen() {
       setActionError(rpcError.message);
       return;
     }
+    // A signed record is no longer a draft, so nothing about it should remain
+    // in the unsaved-typing store.
+    await clearDraft(visitId);
+    setRestoredAt(null);
     reload();
   }
 
@@ -291,6 +405,18 @@ export default function VisitScreen() {
       <View style={styles.codeRow}>
         <CodeChip>{visit.patients?.patient_code ?? "—"}</CodeChip>
       </View>
+
+      {/* Said once, plainly. Announcing a recovery when nothing was lost teaches
+          a vet to ignore the message, so it only appears when the restored text
+          actually differs from what was last saved. */}
+      {restoredAt && differsFrom(draft, draftFromVisit(visit)) ? (
+        <Card>
+          <Muted>
+            Unsaved notes from {new Date(restoredAt).toLocaleString()} were restored. They are on
+            this phone only until you press Save.
+          </Muted>
+        </Card>
+      ) : null}
 
       {findings.length > 0 ? (
         <Card>
@@ -532,12 +658,55 @@ export default function VisitScreen() {
         </Card>
       ) : (
         <Card>
+          {actionError ? <ErrorText>{actionError}</ErrorText> : null}
           <SecondaryButton
-            label="Back to today"
-            onPress={() => router.replace("/practice/today")}
+            label="Back to the folder"
+            onPress={() =>
+              router.replace({
+                pathname: "/practice/patient/[id]",
+                params: { id: visit.patient_id }
+              })
+            }
           />
         </Card>
       )}
+
+      {/* Only a signed record leaves the app. A draft handed to a client reads
+          as settled when it is not, and the database refuses it anyway. */}
+      {visit.workflow_status === "completed" ? (
+        <Card>
+          <FieldLabel>Give the client a copy</FieldLabel>
+          <Muted>
+            A PDF of this consultation, made on this phone, so it works with no signal. Sharing is
+            recorded against the record.
+          </Muted>
+          <PrimaryButton
+            label={sharing ? "Preparing…" : "Share this record"}
+            disabled={sharing}
+            onPress={() => void giveClientACopy()}
+          />
+        </Card>
+      ) : null}
+
+      {visit.workflow_status !== "voided" ? (
+        <Collapsible title="Withdraw this record" icon="close-circle" tone="bad">
+          <Muted>
+            The record stays in the folder, marked as withdrawn, with your reason attached. It is
+            not deleted: a gap in a clinical history reads as concealment, and a withdrawn record
+            that is visible is worth more than one that vanished.
+          </Muted>
+          <FieldLabel>Why</FieldLabel>
+          <Field
+            value={voidReason}
+            onChangeText={setVoidReason}
+            placeholder="Recorded against the wrong animal, duplicate entry"
+          />
+          <SecondaryButton
+            label={voiding ? "Withdrawing…" : "Withdraw record"}
+            onPress={() => void withdrawRecord()}
+          />
+        </Collapsible>
+      ) : null}
     </ScrollScreen>
   );
 }

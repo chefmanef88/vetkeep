@@ -2,6 +2,7 @@ import { Redirect, Stack } from "expo-router";
 import { ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "@/auth/session-provider";
+import { MenuButton } from "@/ui/app-menu";
 import { palette, type } from "@/ui/tokens";
 
 /**
@@ -35,13 +36,16 @@ export default function PracticeLayout() {
         // separating that a shadow would otherwise do.
         headerShadowVisible: false,
         headerTitleStyle: { ...type.heading, color: palette.ink },
-        contentStyle: { backgroundColor: palette.ground }
+        contentStyle: { backgroundColor: palette.ground },
+        // Reachable from every practice screen, so the things a vet needs
+        // occasionally never have to live on the screens they use constantly.
+        headerRight: () => <MenuButton />
       }}
     >
-      <Stack.Screen name="today" options={{ title: "Today" }} />
       <Stack.Screen name="clients" options={{ title: "Clients" }} />
       <Stack.Screen name="client/[id]" options={{ title: "Client" }} />
-      <Stack.Screen name="visit/[id]" options={{ title: "Visit" }} />
+      <Stack.Screen name="patient/[id]" options={{ title: "Folder" }} />
+      <Stack.Screen name="visit/[id]" options={{ title: "Record" }} />
       <Stack.Screen name="stock" options={{ title: "Stock" }} />
       <Stack.Screen name="sync" options={{ title: "Sync" }} />
     </Stack>

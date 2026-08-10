@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider } from "@/auth/session-provider";
 import { LocalUnlockGate } from "@/security/local-unlock-gate";
 import { SyncProvider } from "@/sync/sync-provider";
+import { AppMenuProvider } from "@/ui/app-menu";
 import { palette } from "@/ui/tokens";
 
 void SplashScreen.preventAutoHideAsync();
@@ -42,13 +43,15 @@ export default function RootLayout() {
       <SessionProvider>
         <LocalUnlockGate>
           <SyncProvider>
-            <StatusBar style="dark" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: palette.ground }
-              }}
-            />
+            <AppMenuProvider>
+              <StatusBar style="dark" />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: palette.ground }
+                }}
+              />
+            </AppMenuProvider>
           </SyncProvider>
         </LocalUnlockGate>
       </SessionProvider>

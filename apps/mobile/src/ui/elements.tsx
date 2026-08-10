@@ -204,6 +204,51 @@ export function EmptyState({
   );
 }
 
+/**
+ * A wrapping set of choices, for option lists too long for a segmented bar.
+ *
+ * Species runs to ten and purpose to six; squeezed into one row they become
+ * unreadable and untappable. Wrapped chips keep every option visible at once,
+ * which matters more than compactness when the choice determines what the rest
+ * of the form asks.
+ */
+export function OptionChips<T extends string>({
+  options,
+  value,
+  onChange,
+  accessibilityLabel
+}: {
+  options: { value: T; label: string }[];
+  value: T | null;
+  onChange: (next: T) => void;
+  accessibilityLabel?: string;
+}) {
+  return (
+    <View style={styles.chipWrap} accessibilityLabel={accessibilityLabel}>
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            style={({ pressed }) => [
+              styles.choiceChip,
+              selected && styles.choiceChipOn,
+              pressed && styles.pressed
+            ]}
+            onPress={() => onChange(option.value)}
+          >
+            <Text style={[styles.choiceChipText, selected && styles.choiceChipTextOn]}>
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 /** A page title with supporting line, sitting on the ground, not in a box. */
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -522,6 +567,20 @@ const styles = StyleSheet.create({
     paddingBottom: space.lg,
     gap: space.sm
   },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  choiceChip: {
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    borderRadius: radiusPill,
+    borderWidth: hairline,
+    borderColor: palette.line,
+    backgroundColor: palette.surface,
+    minHeight: 40,
+    justifyContent: "center"
+  },
+  choiceChipOn: { backgroundColor: palette.brand, borderColor: palette.brand },
+  choiceChipText: { fontFamily: fonts.medium, fontSize: 14, color: palette.ink },
+  choiceChipTextOn: { fontFamily: fonts.semibold, color: palette.surface },
   pageHeader: { gap: space.xs, paddingHorizontal: space.xs, paddingBottom: space.xs },
   pageTitle: { ...type.display, color: palette.ink },
   pageSubtitle: { ...type.body, color: palette.quiet },
