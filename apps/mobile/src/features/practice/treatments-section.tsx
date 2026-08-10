@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { requiredWithdrawals, type WithdrawalKind } from "@vetkeep/domain";
+import {
+  defaultTreatmentRoute,
+  requiredWithdrawals,
+  treatmentRouteLabel,
+  treatmentRoutesFor,
+  type WithdrawalKind
+} from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
@@ -74,20 +80,6 @@ type TreatmentRow = {
   withdrawal_source: string;
 };
 
-const ROUTES = [
-  { value: "im", label: "IM" },
-  { value: "sc", label: "SC" },
-  { value: "iv", label: "IV" },
-  { value: "oral", label: "Oral" }
-];
-
-const GROUP_ROUTES = [
-  { value: "in_water", label: "In water" },
-  { value: "in_feed", label: "In feed" },
-  { value: "topical", label: "Topical" },
-  { value: "intramammary", label: "Intramammary" }
-];
-
 const WITHDRAWAL_LABEL: Record<WithdrawalKind, string> = {
   meat: "Meat",
   milk: "Milk",
@@ -129,7 +121,7 @@ export function TreatmentsSection({
   const [productName, setProductName] = useState("");
   const [dose, setDose] = useState("");
   const [doseUnit, setDoseUnit] = useState("ml");
-  const [route, setRoute] = useState(isGroup ? "in_water" : "im");
+  const [route, setRoute] = useState<string>(defaultTreatmentRoute({ species, purpose, isGroup }));
   const [durationDays, setDurationDays] = useState("");
   const [animalsTreated, setAnimalsTreated] = useState("");
   const [meatUntil, setMeatUntil] = useState("");
@@ -307,7 +299,7 @@ export function TreatmentsSection({
           <View key={treatment.id} style={[styles.given, active && styles.givenWithheld]}>
             <Text style={styles.product}>{treatment.product_name}</Text>
             <Text style={styles.detail}>
-              {treatment.dose_value} {treatment.dose_unit} · {treatment.route.replace(/_/g, " ")}
+              {treatment.dose_value} {treatment.dose_unit} · {treatmentRouteLabel(treatment.route)}
               {treatment.duration_days ? ` · ${treatment.duration_days} days` : ""}
               {treatment.animals_treated ? ` · ${treatment.animals_treated} animals` : ""}
             </Text>
@@ -389,7 +381,10 @@ export function TreatmentsSection({
 
           <FieldLabel>Route</FieldLabel>
           <Segmented
-            options={isGroup ? GROUP_ROUTES : ROUTES}
+            options={treatmentRoutesFor({ species, purpose, isGroup }).map((value) => ({
+              value,
+              label: treatmentRouteLabel(value)
+            }))}
             value={route}
             onChange={setRoute}
             accessibilityLabel="Route"
