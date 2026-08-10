@@ -7,6 +7,7 @@ import { useQuery } from "@/features/practice/use-query";
 import { confirmWithDevice } from "@/security/confirm-with-device";
 import { usePatientPhoto } from "@/features/practice/use-patient-photo";
 import { FolderPhoto } from "@/features/practice/folder-photo";
+import { WithholdingBanner } from "@/features/practice/treatments-section";
 import { shareFolder } from "@/features/records/share-record";
 import { Card, FieldLabel, Muted, ScrollScreen, Segmented } from "@/ui/practice-components";
 import { Avatar, CodeChip, Collapsible, EmptyState, InfoRow, ListHeader } from "@/ui/elements";
@@ -253,6 +254,10 @@ export default function PatientFolderScreen() {
       <View style={styles.codeRow}>
         <CodeChip>{folder.patient_code}</CodeChip>
       </View>
+
+      {/* Above everything else: a farmer selling milk under withholding is the
+          most consequential mistake this app can help avoid. */}
+      <WithholdingBanner patientId={folder.id} />
 
       <Card>
         <FolderPhoto

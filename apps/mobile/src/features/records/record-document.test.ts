@@ -188,6 +188,107 @@ describe("buildRecordDocument", () => {
     expect(html).not.toContain('class="portrait"');
   });
 
+  it("lists the treatments given, with dose and route", () => {
+    const html = buildRecordDocument(
+      input({
+        record: {
+          treatments: [
+            {
+              productName: "Oxytetracycline 20%",
+              doseValue: "20",
+              doseUnit: "ml",
+              route: "im",
+              durationDays: 5,
+              animalsTreated: null,
+              meatWithholdUntil: null,
+              milkWithholdUntil: null,
+              eggsWithholdUntil: null
+            }
+          ]
+        }
+      })
+    );
+    expect(html).toContain("Oxytetracycline 20%");
+    expect(html).toContain("20 ml");
+    expect(html).toContain("for 5 days");
+  });
+
+  it("states withholding as a date, not a number of days to count forward", () => {
+    // The farmer must not have to do arithmetic to know when milk is safe.
+    const html = buildRecordDocument(
+      input({
+        record: {
+          treatments: [
+            {
+              productName: "Oxytetracycline",
+              doseValue: "20",
+              doseUnit: "ml",
+              route: "im",
+              durationDays: null,
+              animalsTreated: null,
+              meatWithholdUntil: "2026-09-07",
+              milkWithholdUntil: "2026-08-17",
+              eggsWithholdUntil: null
+            }
+          ]
+        }
+      })
+    );
+    expect(html).toContain("Withholding periods");
+    expect(html).toContain("17 August 2026");
+    expect(html).toContain("7 September 2026");
+    expect(html).toContain("must not be sold");
+  });
+
+  it("takes the longest withholding when two courses overlap", () => {
+    // A shorter later course must never appear to release the animal early.
+    const base = {
+      doseValue: "20",
+      doseUnit: "ml",
+      route: "im",
+      durationDays: null,
+      animalsTreated: null,
+      meatWithholdUntil: null,
+      eggsWithholdUntil: null
+    };
+    const html = buildRecordDocument(
+      input({
+        record: {
+          treatments: [
+            { ...base, productName: "First", milkWithholdUntil: "2026-08-17" },
+            { ...base, productName: "Second", milkWithholdUntil: "2026-08-24" }
+          ]
+        }
+      })
+    );
+    expect(html).toContain("24 August 2026");
+    expect(html).not.toContain("17 August 2026");
+  });
+
+  it("shows no withholding block when nothing is withheld", () => {
+    const html = buildRecordDocument(
+      input({
+        record: {
+          treatments: [
+            {
+              productName: "Meloxicam",
+              doseValue: "1.5",
+              doseUnit: "ml",
+              route: "sc",
+              durationDays: null,
+              animalsTreated: null,
+              meatWithholdUntil: null,
+              milkWithholdUntil: null,
+              eggsWithholdUntil: null
+            }
+          ]
+        }
+      })
+    );
+    expect(html).toContain("Meloxicam");
+    expect(html).not.toContain("Withholding periods");
+  });
+
   it("warns in the document itself when a record is unsigned", () => {
     // The interface should not offer this, so the document is a second guard.
     const html = buildRecordDocument(input({ record: { workflowStatus: "draft" } }));

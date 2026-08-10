@@ -667,8 +667,10 @@ export type Database = {
       inventory_items: {
         Row: {
           active: boolean
+          active_ingredient: string | null
           created_at: string
           created_by_device_id: string | null
+          default_route: string | null
           deleted_at: string | null
           id: string
           item_name: string
@@ -679,11 +681,16 @@ export type Database = {
           unit: string
           updated_at: string
           vet_id: string
+          withdrawal_eggs_days: number | null
+          withdrawal_meat_days: number | null
+          withdrawal_milk_days: number | null
         }
         Insert: {
           active?: boolean
+          active_ingredient?: string | null
           created_at?: string
           created_by_device_id?: string | null
+          default_route?: string | null
           deleted_at?: string | null
           id: string
           item_name: string
@@ -694,11 +701,16 @@ export type Database = {
           unit: string
           updated_at?: string
           vet_id: string
+          withdrawal_eggs_days?: number | null
+          withdrawal_meat_days?: number | null
+          withdrawal_milk_days?: number | null
         }
         Update: {
           active?: boolean
+          active_ingredient?: string | null
           created_at?: string
           created_by_device_id?: string | null
+          default_route?: string | null
           deleted_at?: string | null
           id?: string
           item_name?: string
@@ -709,6 +721,9 @@ export type Database = {
           unit?: string
           updated_at?: string
           vet_id?: string
+          withdrawal_eggs_days?: number | null
+          withdrawal_meat_days?: number | null
+          withdrawal_milk_days?: number | null
         }
         Relationships: [
           {
@@ -1241,6 +1256,147 @@ export type Database = {
           },
           {
             foreignKeyName: "physical_exam_findings_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      treatments: {
+        Row: {
+          active_ingredient: string | null
+          administered_at: string
+          animals_treated: number | null
+          created_at: string
+          created_by_device_id: string | null
+          deleted_at: string | null
+          dose_unit: string
+          dose_value: number
+          duration_days: number | null
+          eggs_withhold_until: string | null
+          id: string
+          inventory_batch_id: string | null
+          inventory_item_id: string | null
+          last_modified_by_device_id: string | null
+          meat_withhold_until: string | null
+          milk_withhold_until: string | null
+          notes: string | null
+          patient_id: string
+          product_name: string
+          route: string
+          server_version: number
+          updated_at: string
+          vet_id: string
+          visit_id: string
+          withdrawal_source: string
+        }
+        Insert: {
+          active_ingredient?: string | null
+          administered_at: string
+          animals_treated?: number | null
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          dose_unit: string
+          dose_value: number
+          duration_days?: number | null
+          eggs_withhold_until?: string | null
+          id: string
+          inventory_batch_id?: string | null
+          inventory_item_id?: string | null
+          last_modified_by_device_id?: string | null
+          meat_withhold_until?: string | null
+          milk_withhold_until?: string | null
+          notes?: string | null
+          patient_id: string
+          product_name: string
+          route: string
+          server_version?: number
+          updated_at?: string
+          vet_id: string
+          visit_id: string
+          withdrawal_source?: string
+        }
+        Update: {
+          active_ingredient?: string | null
+          administered_at?: string
+          animals_treated?: number | null
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          dose_unit?: string
+          dose_value?: number
+          duration_days?: number | null
+          eggs_withhold_until?: string | null
+          id?: string
+          inventory_batch_id?: string | null
+          inventory_item_id?: string | null
+          last_modified_by_device_id?: string | null
+          meat_withhold_until?: string | null
+          milk_withhold_until?: string | null
+          notes?: string | null
+          patient_id?: string
+          product_name?: string
+          route?: string
+          server_version?: number
+          updated_at?: string
+          vet_id?: string
+          visit_id?: string
+          withdrawal_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatments_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatments_inventory_batch_id_fkey"
+            columns: ["inventory_batch_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatments_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_item_stock"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "treatments_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatments_last_modified_by_device_id_fkey"
+            columns: ["last_modified_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatments_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatments_visit_id_fkey"
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visits"
@@ -1883,6 +2039,10 @@ export type Database = {
         Args: { p_device_id?: string; p_id: string; p_reason: string }
         Returns: undefined
       }
+      delete_treatment: {
+        Args: { p_device_id?: string; p_id: string; p_reason: string }
+        Returns: undefined
+      }
       end_patient_owner: {
         Args: {
           p_device_id?: string
@@ -1955,6 +2115,29 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_treatment: {
+        Args: {
+          p_active_ingredient?: string
+          p_administered_at?: string
+          p_animals_treated?: number
+          p_device_id?: string
+          p_dose_unit: string
+          p_dose_value: number
+          p_duration_days?: number
+          p_eggs_withhold_until?: string
+          p_id: string
+          p_inventory_batch_id?: string
+          p_inventory_item_id?: string
+          p_meat_withhold_until?: string
+          p_milk_withhold_until?: string
+          p_notes?: string
+          p_product_name: string
+          p_route: string
+          p_visit_id: string
+          p_withdrawal_source?: string
+        }
+        Returns: string
+      }
       register_attachment: {
         Args: {
           p_attachment_type: string
@@ -2022,6 +2205,18 @@ export type Database = {
           p_status: string
           p_system_name: string
           p_visit_id: string
+        }
+        Returns: undefined
+      }
+      set_item_formulary: {
+        Args: {
+          p_active_ingredient?: string
+          p_default_route?: string
+          p_device_id?: string
+          p_id: string
+          p_withdrawal_eggs_days?: number
+          p_withdrawal_meat_days?: number
+          p_withdrawal_milk_days?: number
         }
         Returns: undefined
       }

@@ -26,7 +26,16 @@ export type VisitRow = {
   prescriptions: string | null;
   follow_up_plan: string | null;
   next_review_date: string | null;
-  patients: { name: string; species: string; breed: string | null; patient_code: string } | null;
+  patients: {
+    name: string;
+    species: string;
+    breed: string | null;
+    patient_code: string;
+    // Purpose decides which withholding periods a treatment on this record
+    // must resolve, so the screen cannot ask the right questions without it.
+    purpose: string;
+    kind: string;
+  } | null;
 };
 
 export type ExamFinding = {

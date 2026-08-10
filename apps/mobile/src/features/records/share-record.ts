@@ -11,6 +11,7 @@ import {
   type DocumentClient,
   type DocumentFolder,
   type DocumentRecord,
+  type DocumentTreatment,
   type DocumentVet
 } from "./record-document";
 
@@ -78,9 +79,40 @@ type VisitRow = {
   next_review_date: string | null;
 };
 
+type TreatmentRow = {
+  visit_id: string;
+  product_name: string;
+  dose_value: number;
+  dose_unit: string;
+  route: string;
+  duration_days: number | null;
+  animals_treated: number | null;
+  meat_withhold_until: string | null;
+  milk_withhold_until: string | null;
+  eggs_withhold_until: string | null;
+};
+
+const TREATMENT_COLUMNS =
+  "visit_id, product_name, dose_value, dose_unit, route, duration_days, animals_treated, meat_withhold_until, milk_withhold_until, eggs_withhold_until";
+
+function toDocumentTreatment(row: TreatmentRow): DocumentTreatment {
+  return {
+    productName: row.product_name,
+    doseValue: String(row.dose_value),
+    doseUnit: row.dose_unit,
+    route: row.route,
+    durationDays: row.duration_days,
+    animalsTreated: row.animals_treated,
+    meatWithholdUntil: row.meat_withhold_until,
+    milkWithholdUntil: row.milk_withhold_until,
+    eggsWithholdUntil: row.eggs_withhold_until
+  };
+}
+
 function toDocumentRecord(
   visit: VisitRow,
-  abnormalFindings: { systemName: string; remarks: string | null }[]
+  abnormalFindings: { systemName: string; remarks: string | null }[],
+  treatments: DocumentTreatment[] = []
 ): DocumentRecord {
   return {
     visitDate: visit.visit_date,
@@ -100,7 +132,8 @@ function toDocumentRecord(
     prescriptions: visit.prescriptions,
     followUpPlan: visit.follow_up_plan,
     nextReviewDate: visit.next_review_date,
-    abnormalFindings
+    abnormalFindings,
+    treatments
   };
 }
 
@@ -280,14 +313,21 @@ export async function shareRecord(visitId: string): Promise<ShareOutcome> {
     return { ok: false, message: "Sign the record before giving it to the client." };
   }
 
-  const [context, findingsResult] = await Promise.all([
+  const [context, findingsResult, treatmentResult] = await Promise.all([
     loadContext(visit.patient_id),
     supabase
       .from("physical_exam_findings")
       .select("system_name, remarks")
       .eq("visit_id", visitId)
       .eq("status", "abnormal")
-      .order("system_name", { ascending: true })
+      .order("system_name", { ascending: true }),
+    supabase
+      .from("treatments")
+      .select(TREATMENT_COLUMNS)
+      .eq("visit_id", visitId)
+      .is("deleted_at", null)
+      .order("administered_at", { ascending: true })
+      .returns<TreatmentRow[]>()
   ]);
   if (!context.ok) return context;
 
@@ -296,7 +336,8 @@ export async function shareRecord(visitId: string): Promise<ShareOutcome> {
     (findingsResult.data ?? []).map((finding) => ({
       systemName: finding.system_name,
       remarks: finding.remarks
-    }))
+    })),
+    (treatmentResult.data ?? []).map(toDocumentTreatment)
   );
 
   const html = buildRecordDocument({
@@ -349,6 +390,25 @@ export async function shareFolder(patientId: string): Promise<ShareOutcome> {
     .eq("status", "abnormal")
     .order("system_name", { ascending: true });
 
+  // One query for every record's treatments as well, for the same reason.
+  const { data: allTreatments } = await supabase
+    .from("treatments")
+    .select(TREATMENT_COLUMNS)
+    .in(
+      "visit_id",
+      visits.map((visit) => visit.id)
+    )
+    .is("deleted_at", null)
+    .order("administered_at", { ascending: true })
+    .returns<TreatmentRow[]>();
+
+  const treatmentsByVisit = new Map<string, DocumentTreatment[]>();
+  for (const row of allTreatments ?? []) {
+    const list = treatmentsByVisit.get(row.visit_id) ?? [];
+    list.push(toDocumentTreatment(row));
+    treatmentsByVisit.set(row.visit_id, list);
+  }
+
   const byVisit = new Map<string, { systemName: string; remarks: string | null }[]>();
   for (const finding of findings ?? []) {
     const list = byVisit.get(finding.visit_id) ?? [];
@@ -361,7 +421,9 @@ export async function shareFolder(patientId: string): Promise<ShareOutcome> {
     vet: context.vet,
     client: context.client,
     folder: context.folder,
-    records: visits.map((visit) => toDocumentRecord(visit, byVisit.get(visit.id) ?? [])),
+    records: visits.map((visit) =>
+      toDocumentRecord(visit, byVisit.get(visit.id) ?? [], treatmentsByVisit.get(visit.id) ?? [])
+    ),
     generatedAt
   });
 

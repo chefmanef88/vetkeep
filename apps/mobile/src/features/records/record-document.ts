@@ -61,6 +61,19 @@ export type DocumentRecord = {
   followUpPlan: string | null;
   nextReviewDate: string | null;
   abnormalFindings: { systemName: string; remarks: string | null }[];
+  treatments?: DocumentTreatment[];
+};
+
+export type DocumentTreatment = {
+  productName: string;
+  doseValue: string;
+  doseUnit: string;
+  route: string;
+  durationDays: number | null;
+  animalsTreated: number | null;
+  meatWithholdUntil: string | null;
+  milkWithholdUntil: string | null;
+  eggsWithholdUntil: string | null;
 };
 
 export type RecordDocumentInput = {
@@ -142,6 +155,54 @@ function portrait(folder: DocumentFolder): string {
   return `<img class="portrait" src="${escapeHtml(uri)}" alt="${escapeHtml(folder.name)}"/>`;
 }
 
+/**
+ * Treatments given, and the withholding they create.
+ *
+ * The withholding block is the single most consequential thing on this page. A
+ * farmer reads it to know when milk can be sold or an animal slaughtered, so it
+ * is set apart rather than listed among the medicines, and it is stated as a
+ * date rather than a number of days the reader has to count forward from.
+ */
+function treatments(record: DocumentRecord): string {
+  const given = record.treatments ?? [];
+  if (given.length === 0) return "";
+
+  const rows = given
+    .map((treatment) => {
+      const course = treatment.durationDays ? ` for ${treatment.durationDays} days` : "";
+      const count = treatment.animalsTreated ? ` · ${treatment.animalsTreated} animals` : "";
+      return `<li><strong>${escapeHtml(treatment.productName)}</strong> — ${escapeHtml(
+        `${treatment.doseValue} ${treatment.doseUnit}`
+      )}, ${escapeHtml(treatment.route.replace(/_/g, " "))}${escapeHtml(course)}${escapeHtml(count)}</li>`;
+    })
+    .join("");
+
+  const holds: string[] = [];
+  const latest = (pick: (t: DocumentTreatment) => string | null): string | null =>
+    given
+      .map(pick)
+      .filter((value): value is string => value !== null)
+      .sort()
+      .pop() ?? null;
+
+  const milk = latest((t) => t.milkWithholdUntil);
+  const eggs = latest((t) => t.eggsWithholdUntil);
+  const meat = latest((t) => t.meatWithholdUntil);
+  if (milk) holds.push(`Milk must not be sold or consumed before ${formatDate(milk)}`);
+  if (eggs) holds.push(`Eggs must not be sold or consumed before ${formatDate(eggs)}`);
+  if (meat) holds.push(`This animal must not be slaughtered for meat before ${formatDate(meat)}`);
+
+  const withholding =
+    holds.length === 0
+      ? ""
+      : `<div class="withholding">
+  <h2>Withholding periods</h2>
+  <ul>${holds.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+</div>`;
+
+  return `<section><h2>Treatments given</h2><ul>${rows}</ul></section>${withholding}`;
+}
+
 function folderLine(folder: DocumentFolder): string {
   if (folder.kind === "group") {
     const head = folder.headCount === null ? "" : ` · ${folder.headCount} head`;
@@ -183,6 +244,9 @@ export function buildRecordDocument(input: RecordDocumentInput): string {
   p { margin: 0; font-size: 14px; }
   ul { margin: 0; padding-left: 18px; font-size: 14px; }
   footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #DFE5DF; font-size: 11px; color: #536159; }
+  .withholding { background: #FDF6EA; border-left: 5px solid #8A5209; padding: 14px 16px; margin: 18px 0; page-break-inside: avoid; }
+  .withholding h2 { color: #8A5209; }
+  .withholding li { font-weight: 700; font-size: 14px; }
   .draft { background: #FDF6EA; border-left: 4px solid #8A5209; padding: 12px; margin-bottom: 20px; font-size: 13px; }
 </style>
 </head>
@@ -221,6 +285,7 @@ ${vitals(record)}
 ${abnormal(record)}
 ${section(diagnosisLabel, diagnosis)}
 ${section("Treatment given", record.treatmentPlan)}
+${treatments(record)}
 ${section("Medicines and instructions", record.prescriptions)}
 ${section("Home care and follow-up", record.followUpPlan)}
 ${record.nextReviewDate ? section("Next review", formatDate(record.nextReviewDate)) : ""}
@@ -284,6 +349,7 @@ export function buildFolderDocument(input: {
   ${abnormal(record)}
   ${section(label, diagnosis)}
   ${section("Treatment given", record.treatmentPlan)}
+  ${treatments(record)}
   ${section("Medicines and instructions", record.prescriptions)}
   ${section("Home care and follow-up", record.followUpPlan)}
 </article>`;
@@ -316,6 +382,9 @@ export function buildFolderDocument(input: {
   h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #536159; margin: 0 0 3px; }
   p { margin: 0; font-size: 14px; }
   ul { margin: 0; padding-left: 18px; font-size: 14px; }
+  .withholding { background: #FDF6EA; border-left: 5px solid #8A5209; padding: 14px 16px; margin: 18px 0; page-break-inside: avoid; }
+  .withholding h2 { color: #8A5209; }
+  .withholding li { font-weight: 700; font-size: 14px; }
   footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #DFE5DF; font-size: 11px; color: #536159; }
 </style>
 </head>

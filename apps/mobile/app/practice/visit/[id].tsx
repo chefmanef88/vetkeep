@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
 import { SyncBanner } from "@/sync/sync-banner";
 import { AttachmentsSection } from "@/features/practice/attachments-section";
+import { TreatmentsSection } from "@/features/practice/treatments-section";
 import { useQuery } from "@/features/practice/use-query";
 import {
   clearDraft,
@@ -84,7 +85,7 @@ export default function VisitScreen() {
     const [visitResult, findingsResult, batchesResult, movementsResult] = await Promise.all([
       supabase
         .from("visits")
-        .select("*, patients(name, species, breed, patient_code)")
+        .select("*, patients(name, species, breed, patient_code, purpose, kind)")
         .eq("id", visitId)
         .maybeSingle(),
       supabase
@@ -627,6 +628,14 @@ export default function VisitScreen() {
           />
         </Collapsible>
       ) : null}
+
+      <TreatmentsSection
+        visitId={visit.id}
+        species={visit.patients?.species ?? "other"}
+        purpose={visit.patients?.purpose ?? "pet"}
+        isGroup={visit.patients?.kind === "group"}
+        editable={isDraft}
+      />
 
       <AttachmentsSection visitId={visit.id} patientId={visit.patient_id} editable={isDraft} />
 
