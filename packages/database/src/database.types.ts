@@ -2130,8 +2130,10 @@ export type Database = {
           p_inventory_item_id?: string
           p_meat_withhold_until?: string
           p_milk_withhold_until?: string
+          p_movement_id?: string
           p_notes?: string
           p_product_name: string
+          p_quantity_used?: number
           p_route: string
           p_visit_id: string
           p_withdrawal_source?: string

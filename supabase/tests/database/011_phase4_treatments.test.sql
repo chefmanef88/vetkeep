@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(27);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -261,6 +261,96 @@ select throws_ok(
   '22023',
   'This record is signed and can no longer be added to',
   'A signed record cannot have a treatment appended to it'
+);
+
+-- ---------------------------------------------------------------------------
+-- Giving a drug is one act: the treatment and the stock movement (21-27)
+-- ---------------------------------------------------------------------------
+
+select public.restock_inventory_batch(
+  p_batch_id => '25000000-0000-0000-0000-000000000001',
+  p_movement_id => '45000000-0000-0000-0000-000000000001',
+  p_item_id => 'f5000000-0000-0000-0000-000000000001',
+  p_quantity => 100,
+  p_batch_lot_number => 'LOT-A1',
+  p_expiry_date => '2027-01-01'
+);
+
+-- 21
+select is(
+  (select quantity_on_hand from public.inventory_batches where id = '25000000-0000-0000-0000-000000000001'),
+  100::numeric(10,2),
+  'The batch starts full'
+);
+
+-- 22
+select lives_ok(
+  $$select public.record_treatment(
+      p_id => '15000000-0000-0000-0000-000000000010',
+      p_visit_id => 'e5000000-0000-0000-0000-000000000002',
+      p_product_name => 'Oxytetracycline 20%',
+      p_dose_value => 20, p_dose_unit => 'ml', p_route => 'im',
+      p_inventory_item_id => 'f5000000-0000-0000-0000-000000000001',
+      p_inventory_batch_id => '25000000-0000-0000-0000-000000000001',
+      p_movement_id => '35000000-0000-0000-0000-000000000001',
+      p_quantity_used => 20
+    )$$,
+  'Recording a treatment takes the stock in the same act'
+);
+
+-- 23
+select is(
+  (select quantity_on_hand from public.inventory_batches where id = '25000000-0000-0000-0000-000000000001'),
+  80::numeric(10,2),
+  'The batch is drawn down by what was given'
+);
+
+-- 24
+select is(
+  (select count(*)::int from public.inventory_movements
+   where visit_id = 'e5000000-0000-0000-0000-000000000002' and movement_type = 'consumption'),
+  1,
+  'One movement, not two'
+);
+
+-- 25
+select is(
+  (select public.record_treatment(
+      p_id => '15000000-0000-0000-0000-000000000010',
+      p_visit_id => 'e5000000-0000-0000-0000-000000000002',
+      p_product_name => 'Oxytetracycline 20%',
+      p_dose_value => 20, p_dose_unit => 'ml', p_route => 'im',
+      p_inventory_item_id => 'f5000000-0000-0000-0000-000000000001',
+      p_inventory_batch_id => '25000000-0000-0000-0000-000000000001',
+      p_movement_id => '35000000-0000-0000-0000-000000000001',
+      p_quantity_used => 20
+  )),
+  '15000000-0000-0000-0000-000000000010'::uuid,
+  'A retried sync returns the same treatment'
+);
+
+-- 26
+select is(
+  (select quantity_on_hand from public.inventory_batches where id = '25000000-0000-0000-0000-000000000001'),
+  80::numeric(10,2),
+  'A retried sync does not deduct the stock twice'
+);
+
+-- 27
+select throws_ok(
+  $$select public.record_treatment(
+      p_id => '15000000-0000-0000-0000-000000000011',
+      p_visit_id => 'e5000000-0000-0000-0000-000000000002',
+      p_product_name => 'Oxytetracycline 20%',
+      p_dose_value => 500, p_dose_unit => 'ml', p_route => 'im',
+      p_inventory_item_id => 'f5000000-0000-0000-0000-000000000001',
+      p_inventory_batch_id => '25000000-0000-0000-0000-000000000001',
+      p_movement_id => '35000000-0000-0000-0000-000000000002',
+      p_quantity_used => 500
+    )$$,
+  '22023',
+  NULL,
+  'Taking more than the batch holds fails, and takes the treatment with it'
 );
 
 reset role;

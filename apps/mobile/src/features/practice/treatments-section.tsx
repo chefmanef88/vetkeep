@@ -19,6 +19,13 @@ import { fonts, hairline, palette, radiusControl, space, type } from "@/ui/token
  * of a long day.
  */
 
+type CarriedBatch = {
+  id: string;
+  quantity_on_hand: number;
+  expiry_date: string | null;
+  batch_lot_number: string | null;
+};
+
 type CarriedItem = {
   id: string;
   item_name: string;
@@ -28,7 +35,29 @@ type CarriedItem = {
   withdrawal_meat_days: number | null;
   withdrawal_milk_days: number | null;
   withdrawal_eggs_days: number | null;
+  inventory_batches: CarriedBatch[];
 };
+
+/**
+ * First expired, first out.
+ *
+ * Reaching for the batch closest to expiry is what keeps stock turning over
+ * rather than leaving a bottle to go out of date at the back of the bag. It is
+ * also what a vet does by hand, so defaulting to it means the common case needs
+ * no decision.
+ */
+function preferredBatch(item: CarriedItem | null): CarriedBatch | null {
+  if (!item || item.inventory_batches.length === 0) return null;
+  return (
+    [...item.inventory_batches].sort((a, b) => {
+      if (a.expiry_date === b.expiry_date) return 0;
+      // A batch with no expiry sorts last: it can wait.
+      if (a.expiry_date === null) return 1;
+      if (b.expiry_date === null) return -1;
+      return a.expiry_date < b.expiry_date ? -1 : 1;
+    })[0] ?? null
+  );
+}
 
 type TreatmentRow = {
   id: string;
@@ -95,6 +124,8 @@ export function TreatmentsSection({
   const required = requiredWithdrawals({ species, purpose });
 
   const [itemId, setItemId] = useState<string | null>(null);
+  const [batchId, setBatchId] = useState<string | null>(null);
+  const [quantityUsed, setQuantityUsed] = useState("");
   const [productName, setProductName] = useState("");
   const [dose, setDose] = useState("");
   const [doseUnit, setDoseUnit] = useState("ml");
@@ -126,7 +157,7 @@ export function TreatmentsSection({
       supabase
         .from("inventory_items")
         .select(
-          "id, item_name, unit, active_ingredient, default_route, withdrawal_meat_days, withdrawal_milk_days, withdrawal_eggs_days, inventory_batches!inner(id, quantity_on_hand, expiry_date)"
+          "id, item_name, unit, active_ingredient, default_route, withdrawal_meat_days, withdrawal_milk_days, withdrawal_eggs_days, inventory_batches!inner(id, quantity_on_hand, expiry_date, batch_lot_number)"
         )
         .eq("active", true)
         .is("deleted_at", null)
@@ -166,10 +197,15 @@ export function TreatmentsSection({
     setProductName(item.item_name);
     setDoseUnit(item.unit);
     if (item.default_route) setRoute(item.default_route);
+    // Pre-filled, not assumed: the vet can change both before recording.
+    setBatchId(preferredBatch(item)?.id ?? null);
+    setQuantityUsed(dose);
   }
 
   function reset() {
     setItemId(null);
+    setBatchId(null);
+    setQuantityUsed("");
     setProductName("");
     setDose("");
     setDurationDays("");
@@ -180,6 +216,10 @@ export function TreatmentsSection({
     setNoneRequired(false);
   }
 
+  // Stock only moves when the product actually came out of the vehicle. A drug
+  // the client bought elsewhere is a treatment and nothing more.
+  const takesStock = batchId !== null && optionalNumber(quantityUsed) !== undefined;
+
   async function record() {
     setError(null);
     if (productName.trim() === "") {
@@ -188,6 +228,10 @@ export function TreatmentsSection({
     }
     if (optionalNumber(dose) === undefined) {
       setError("Enter the dose.");
+      return;
+    }
+    if (batchId !== null && optionalNumber(quantityUsed) === undefined) {
+      setError("Say how much came out of the batch, or clear the batch.");
       return;
     }
 
@@ -210,7 +254,13 @@ export function TreatmentsSection({
         p_eggs_withhold_until: optionalText(eggsUntil),
         // Asserting that nothing is withheld is a deliberate act, never a
         // default, so it is only sent when the vet ticked it.
-        p_withdrawal_source: noneRequired ? "none_required" : itemId ? "formulary" : "manual"
+        p_withdrawal_source: noneRequired ? "none_required" : itemId ? "formulary" : "manual",
+        // Sent together or not at all: the treatment and the stock movement are
+        // one transaction, and the movement id is minted here so a retried sync
+        // draws the batch down once.
+        p_inventory_batch_id: takesStock ? (batchId ?? undefined) : undefined,
+        p_quantity_used: takesStock ? optionalNumber(quantityUsed) : undefined,
+        p_movement_id: takesStock ? globalThis.crypto.randomUUID() : undefined
       })
     );
     setBusy(false);
@@ -292,6 +342,34 @@ export function TreatmentsSection({
             onChangeText={setProductName}
             placeholder="Name it if you did not carry it"
           />
+
+          {chosen && chosen.inventory_batches.length > 0 ? (
+            <>
+              <FieldLabel>Batch it came from</FieldLabel>
+              <OptionChips
+                options={[...chosen.inventory_batches]
+                  .sort((a, b) => (a.expiry_date ?? "9999").localeCompare(b.expiry_date ?? "9999"))
+                  .map((batch) => ({
+                    value: batch.id,
+                    label: `${batch.batch_lot_number ?? "No lot"} · ${batch.quantity_on_hand} ${chosen.unit}`
+                  }))}
+                value={batchId}
+                onChange={setBatchId}
+                accessibilityLabel="Batch"
+              />
+              <FieldLabel>Taken from stock</FieldLabel>
+              <Field
+                value={quantityUsed}
+                onChangeText={setQuantityUsed}
+                keyboardType="decimal-pad"
+                placeholder={`How many ${chosen.unit}`}
+              />
+              <Muted>
+                Recording this takes it off your stock in the same action. The lot number goes on
+                the animal&apos;s record.
+              </Muted>
+            </>
+          ) : null}
 
           <View style={styles.pairRow}>
             <View style={styles.pairCell}>
