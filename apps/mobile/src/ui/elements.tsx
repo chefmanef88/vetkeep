@@ -1,6 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextInputProps
+} from "react-native";
 import {
   fonts,
   hairline,
@@ -47,7 +55,19 @@ const toneInk: Record<Tone, string> = {
  * Initials on a tinted disc. Gives a list of names a left edge the eye can run
  * down, which a column of plain text rows does not have.
  */
-export function Avatar({ name, tone = "brand" }: { name: string; tone?: Tone }) {
+export function Avatar({
+  name,
+  tone = "brand",
+  photoUri,
+  size = 44
+}: {
+  name: string;
+  tone?: Tone;
+  /** A signed URL. Falls back to initials while absent, so a queued photograph
+   *  taken in a field does not leave a broken image on the folder. */
+  photoUri?: string | null | undefined;
+  size?: number;
+}) {
   const initials = name
     .trim()
     .split(/\s+/)
@@ -56,9 +76,23 @@ export function Avatar({ name, tone = "brand" }: { name: string; tone?: Tone }) 
     .join("")
     .toUpperCase();
 
+  const shape = { width: size, height: size, borderRadius: size / 2 };
+
+  if (photoUri) {
+    return (
+      <Image
+        source={{ uri: photoUri }}
+        style={[styles.avatar, shape]}
+        accessibilityLabel={`Photograph of ${name}`}
+      />
+    );
+  }
+
   return (
-    <View style={[styles.avatar, { backgroundColor: toneFill[tone] }]}>
-      <Text style={[styles.avatarText, { color: toneInk[tone] }]}>{initials || "?"}</Text>
+    <View style={[styles.avatar, shape, { backgroundColor: toneFill[tone] }]}>
+      <Text style={[styles.avatarText, { fontSize: size * 0.34, color: toneInk[tone] }]}>
+        {initials || "?"}
+      </Text>
     </View>
   );
 }
@@ -149,12 +183,14 @@ export function PersonRow({
   meta,
   code,
   tone = "brand",
+  photoUri,
   onPress
 }: {
   name: string;
   meta?: string;
   code?: string;
   tone?: Tone;
+  photoUri?: string | null | undefined;
   onPress: () => void;
 }) {
   return (
@@ -163,7 +199,7 @@ export function PersonRow({
       style={({ pressed }) => [styles.personRow, pressed && styles.pressed]}
       onPress={onPress}
     >
-      <Avatar name={name} tone={tone} />
+      <Avatar name={name} tone={tone} photoUri={photoUri} />
       <View style={styles.personBody}>
         <Text style={styles.personName} numberOfLines={1}>
           {name}
@@ -470,13 +506,11 @@ export function ProgressBar({
 
 const styles = StyleSheet.create({
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: radiusPill,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    backgroundColor: palette.ground
   },
-  avatarText: { fontFamily: fonts.semibold, fontSize: 15 },
+  avatarText: { fontFamily: fonts.semibold },
   iconChip: { borderRadius: radiusControl, alignItems: "center", justifyContent: "center" },
   codeChip: {
     backgroundColor: palette.ground,

@@ -5,6 +5,8 @@ import { purposeLabel, speciesProfile } from "@vetkeep/domain";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { confirmWithDevice } from "@/security/confirm-with-device";
+import { usePatientPhoto } from "@/features/practice/use-patient-photo";
+import { FolderPhoto } from "@/features/practice/folder-photo";
 import { shareFolder } from "@/features/records/share-record";
 import { Card, FieldLabel, Muted, ScrollScreen, Segmented } from "@/ui/practice-components";
 import { Avatar, CodeChip, Collapsible, EmptyState, InfoRow, ListHeader } from "@/ui/elements";
@@ -32,6 +34,7 @@ type Folder = {
   group_age_weeks: number | null;
   housing: string | null;
   status: string;
+  profile_photo_attachment_id: string | null;
 };
 
 type RecordRow = {
@@ -105,7 +108,7 @@ export default function PatientFolderScreen() {
       supabase
         .from("patients")
         .select(
-          "id, patient_code, name, kind, species, purpose, breed, sex, date_of_birth, date_of_birth_precision, color_markings, microchip_id, ear_tag, leg_ring, identification_notes, head_count, group_age_weeks, housing, status"
+          "id, patient_code, name, kind, species, purpose, breed, sex, date_of_birth, date_of_birth_precision, color_markings, microchip_id, ear_tag, leg_ring, identification_notes, head_count, group_age_weeks, housing, status, profile_photo_attachment_id"
         )
         .eq("id", patientId)
         .is("deleted_at", null)
@@ -134,6 +137,9 @@ export default function PatientFolderScreen() {
       reload();
     }, [reload])
   );
+
+  // Before the early returns below: hooks cannot be called conditionally.
+  const photoUri = usePatientPhoto(data?.folder.profile_photo_attachment_id);
 
   async function startRecord() {
     setBusy(true);
@@ -229,7 +235,7 @@ export default function PatientFolderScreen() {
       <SyncBanner />
 
       <View style={styles.header}>
-        <Avatar name={folder.name} tone={isGroup ? "warn" : "good"} />
+        <Avatar name={folder.name} tone={isGroup ? "warn" : "good"} photoUri={photoUri} />
         <View style={styles.headerBody}>
           <Text style={styles.headerName} numberOfLines={1}>
             {folder.name}
@@ -247,6 +253,16 @@ export default function PatientFolderScreen() {
       <View style={styles.codeRow}>
         <CodeChip>{folder.patient_code}</CodeChip>
       </View>
+
+      <Card>
+        <FolderPhoto
+          patientId={folder.id}
+          name={folder.name}
+          photoUri={photoUri}
+          hasPhoto={folder.profile_photo_attachment_id !== null}
+          onChanged={reload}
+        />
+      </Card>
 
       {/* Standing information. Corrected in place as the vet learns more, unlike
           the records below, which only ever accumulate. */}

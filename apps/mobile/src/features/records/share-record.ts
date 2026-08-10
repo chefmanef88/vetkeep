@@ -104,6 +104,46 @@ function toDocumentRecord(
   };
 }
 
+/**
+ * The animal's photograph as inline bytes.
+ *
+ * Downloaded and encoded rather than linked: the bucket is private and a signed
+ * URL expires, so a document carrying a link would show the owner a broken
+ * image a week later. Returns null on any failure — a missing picture is a
+ * cosmetic loss, and it must never be the reason a farmer leaves without
+ * paperwork.
+ */
+async function loadPhotoDataUri(attachmentId: string | null): Promise<string | null> {
+  if (!attachmentId) return null;
+  try {
+    const { data: attachment } = await supabase
+      .from("attachments")
+      .select("storage_bucket, storage_path, mime_type, upload_status")
+      .eq("id", attachmentId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (!attachment || attachment.upload_status !== "uploaded") return null;
+
+    const { data: blob } = await supabase.storage
+      .from(attachment.storage_bucket)
+      .download(attachment.storage_path);
+    if (!blob) return null;
+
+    const base64 = await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onerror = () => resolve(null);
+      reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.readAsDataURL(blob);
+    });
+
+    // readAsDataURL already produces "data:<mime>;base64,…".
+    return base64 && base64.startsWith("data:image/") ? base64 : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The practice, the owner and the animal: the same header on both documents. */
 async function loadContext(
   patientId: string
@@ -120,7 +160,7 @@ async function loadContext(
     supabase
       .from("patients")
       .select(
-        "name, patient_code, species, kind, purpose, breed, sex, head_count, microchip_id, ear_tag, leg_ring"
+        "name, patient_code, species, kind, purpose, breed, sex, head_count, microchip_id, ear_tag, leg_ring, profile_photo_attachment_id"
       )
       .eq("id", patientId)
       .is("deleted_at", null)
@@ -144,6 +184,7 @@ async function loadContext(
 
   const profile = speciesProfile(patient.species);
   const identifier = patient.microchip_id ?? patient.ear_tag ?? patient.leg_ring ?? null;
+  const photoDataUri = await loadPhotoDataUri(patient.profile_photo_attachment_id);
 
   return {
     ok: true,
@@ -175,7 +216,8 @@ async function loadContext(
           ? "Ear tag"
           : patient.leg_ring
             ? "Leg ring"
-            : null
+            : null,
+      photoDataUri
     }
   };
 }

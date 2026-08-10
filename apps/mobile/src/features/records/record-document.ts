@@ -35,6 +35,12 @@ export type DocumentFolder = {
   headCount: number | null;
   identifier: string | null;
   identifierLabel: string | null;
+  /**
+   * A data URI, never a link. The attachments bucket is private and a signed
+   * URL expires, so a document carrying one would show a broken image to the
+   * owner a week later. Inlined bytes travel with the file.
+   */
+  photoDataUri?: string | null;
 };
 
 export type DocumentRecord = {
@@ -123,6 +129,19 @@ function abnormal(record: DocumentRecord): string {
   return `<section><h2>Abnormal findings</h2><ul>${items}</ul></section>`;
 }
 
+/**
+ * The animal's picture, when there is one.
+ *
+ * Only a data URI is accepted. Anything else — an http link, a file path — is
+ * refused rather than rendered, because a document that reaches out to a private
+ * bucket shows the owner a broken image once the signature expires.
+ */
+function portrait(folder: DocumentFolder): string {
+  const uri = folder.photoDataUri;
+  if (!uri || !uri.startsWith("data:image/")) return "";
+  return `<img class="portrait" src="${escapeHtml(uri)}" alt="${escapeHtml(folder.name)}"/>`;
+}
+
 function folderLine(folder: DocumentFolder): string {
   if (folder.kind === "group") {
     const head = folder.headCount === null ? "" : ` · ${folder.headCount} head`;
@@ -153,7 +172,9 @@ export function buildRecordDocument(input: RecordDocumentInput): string {
   .practice { font-size: 20px; font-weight: 700; color: #174D35; margin: 0; }
   .practice-meta { font-size: 12px; color: #536159; margin: 4px 0 0; }
   h1 { font-size: 18px; margin: 0 0 4px; }
-  .subject { background: #F7F8F5; padding: 16px; margin-bottom: 24px; }
+  .subject { background: #F7F8F5; padding: 16px; margin-bottom: 24px; display: flex; gap: 16px; align-items: flex-start; }
+  .subject-body { flex: 1; }
+  .portrait { width: 96px; height: 96px; border-radius: 48px; object-fit: cover; flex-shrink: 0; }
   table { border-collapse: collapse; width: 100%; font-size: 13px; }
   th { text-align: left; color: #536159; font-weight: 500; width: 34%; padding: 3px 0; vertical-align: top; }
   td { padding: 3px 0; }
@@ -181,14 +202,17 @@ ${
 }
 
 <div class="subject">
-  <h1>${escapeHtml(folder.name)}</h1>
-  <table>
-    ${row("Animal", folderLine(folder))}
-    ${row("Record for", folder.patientCode)}
-    ${folder.identifierLabel ? row(folder.identifierLabel, folder.identifier) : ""}
-    ${row("Owner", `${client.name} (${client.clientCode})`)}
-    ${row("Attended", `${formatDate(record.visitDate)} · ${record.visitType.replace(/_/g, " ")}`)}
-  </table>
+  ${portrait(folder)}
+  <div class="subject-body">
+    <h1>${escapeHtml(folder.name)}</h1>
+    <table>
+      ${row("Animal", folderLine(folder))}
+      ${row("Record for", folder.patientCode)}
+      ${folder.identifierLabel ? row(folder.identifierLabel, folder.identifier) : ""}
+      ${row("Owner", `${client.name} (${client.clientCode})`)}
+      ${row("Attended", `${formatDate(record.visitDate)} · ${record.visitType.replace(/_/g, " ")}`)}
+    </table>
+  </div>
 </div>
 
 ${section("Reason for the visit", record.chiefComplaint)}
@@ -278,7 +302,9 @@ export function buildFolderDocument(input: {
   .practice { font-size: 20px; font-weight: 700; color: #174D35; margin: 0; }
   .practice-meta { font-size: 12px; color: #536159; margin: 4px 0 0; }
   h1 { font-size: 18px; margin: 0 0 4px; }
-  .subject { background: #F7F8F5; padding: 16px; margin-bottom: 24px; }
+  .subject { background: #F7F8F5; padding: 16px; margin-bottom: 24px; display: flex; gap: 16px; align-items: flex-start; }
+  .subject-body { flex: 1; }
+  .portrait { width: 96px; height: 96px; border-radius: 48px; object-fit: cover; flex-shrink: 0; }
   table { border-collapse: collapse; width: 100%; font-size: 13px; }
   th { text-align: left; color: #536159; font-weight: 500; width: 34%; padding: 3px 0; vertical-align: top; }
   td { padding: 3px 0; }
@@ -303,14 +329,17 @@ export function buildFolderDocument(input: {
 </header>
 
 <div class="subject">
-  <h1>${escapeHtml(folder.name)} — full history</h1>
-  <table>
-    ${row("Animal", folderLine(folder))}
-    ${row("Record for", folder.patientCode)}
-    ${folder.identifierLabel ? row(folder.identifierLabel, folder.identifier) : ""}
-    ${row("Owner", `${client.name} (${client.clientCode})`)}
-    ${row("Consultations", String(records.length))}
-  </table>
+  ${portrait(folder)}
+  <div class="subject-body">
+    <h1>${escapeHtml(folder.name)} — full history</h1>
+    <table>
+      ${row("Animal", folderLine(folder))}
+      ${row("Record for", folder.patientCode)}
+      ${folder.identifierLabel ? row(folder.identifierLabel, folder.identifier) : ""}
+      ${row("Owner", `${client.name} (${client.clientCode})`)}
+      ${row("Consultations", String(records.length))}
+    </table>
+  </div>
 </div>
 
 ${entries}

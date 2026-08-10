@@ -158,6 +158,36 @@ describe("buildRecordDocument", () => {
     expect(html).toContain("kept for eggs");
   });
 
+  it("shows the animal's picture when there is one", () => {
+    const html = buildRecordDocument(
+      input({ folder: { photoDataUri: "data:image/jpeg;base64,/9j/4AAQSkZJRg==" } })
+    );
+    expect(html).toContain('class="portrait"');
+    expect(html).toContain("data:image/jpeg;base64,");
+  });
+
+  it("shows no picture when the folder has none", () => {
+    const html = buildRecordDocument(input({}));
+    expect(html).not.toContain('class="portrait"');
+  });
+
+  it("refuses a link where a data URI is required", () => {
+    // A signed URL expires, so a document carrying one would show the owner a
+    // broken image a week later. Better no picture than a broken one.
+    const html = buildRecordDocument(
+      input({ folder: { photoDataUri: "https://example.test/private/photo.jpg?token=abc" } })
+    );
+    expect(html).not.toContain('class="portrait"');
+    expect(html).not.toContain("example.test");
+  });
+
+  it("refuses a non-image data URI", () => {
+    const html = buildRecordDocument(
+      input({ folder: { photoDataUri: "data:text/html;base64,PHNjcmlwdD4=" } })
+    );
+    expect(html).not.toContain('class="portrait"');
+  });
+
   it("warns in the document itself when a record is unsigned", () => {
     // The interface should not offer this, so the document is a second guard.
     const html = buildRecordDocument(input({ record: { workflowStatus: "draft" } }));

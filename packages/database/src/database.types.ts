@@ -1071,6 +1071,7 @@ export type Database = {
           microchip_id: string | null
           name: string
           patient_code: string
+          profile_photo_attachment_id: string | null
           purpose: string
           server_version: number
           sex: string | null
@@ -1100,6 +1101,7 @@ export type Database = {
           microchip_id?: string | null
           name: string
           patient_code: string
+          profile_photo_attachment_id?: string | null
           purpose?: string
           server_version?: number
           sex?: string | null
@@ -1129,6 +1131,7 @@ export type Database = {
           microchip_id?: string | null
           name?: string
           patient_code?: string
+          profile_photo_attachment_id?: string | null
           purpose?: string
           server_version?: number
           sex?: string | null
@@ -1150,6 +1153,13 @@ export type Database = {
             columns: ["last_modified_by_device_id"]
             isOneToOne: false
             referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_profile_photo_fkey"
+            columns: ["profile_photo_attachment_id"]
+            isOneToOne: false
+            referencedRelation: "attachments"
             referencedColumns: ["id"]
           },
           {
@@ -2012,6 +2022,14 @@ export type Database = {
           p_status: string
           p_system_name: string
           p_visit_id: string
+        }
+        Returns: undefined
+      }
+      set_patient_photo: {
+        Args: {
+          p_attachment_id?: string
+          p_device_id?: string
+          p_patient_id: string
         }
         Returns: undefined
       }
