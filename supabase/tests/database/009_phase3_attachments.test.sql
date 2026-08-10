@@ -22,7 +22,11 @@ select set_config('request.jwt.claim.sub', 'a5000000-0000-0000-0000-000000000001
 select set_config('request.jwt.claims', '{"sub":"a5000000-0000-0000-0000-000000000001","role":"authenticated","aal":"aal2"}', true);
 
 select public.create_patient(
-  'c5000000-0000-0000-0000-000000000001', 'VK-P-ATT001', 'Photo Patient', 'Dog', 'female'
+  p_id => 'c5000000-0000-0000-0000-000000000001',
+  p_patient_code => 'VK-P-ATT001',
+  p_name => 'Photo Patient',
+  p_species => 'dog',
+  p_sex => 'female'
 );
 
 -- ---------------------------------------------------------------------------

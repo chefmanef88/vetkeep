@@ -12,7 +12,9 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
 
   const { data: patient, error } = await supabase
     .from("patients")
-    .select("id, patient_code, name, species, breed, sex, date_of_birth, status, microchip_id")
+    .select(
+      "id, patient_code, name, species, breed, sex, date_of_birth, status, microchip_id, kind, purpose, head_count"
+    )
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -64,7 +66,10 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
         </p>
         <p>
           {patient.species}
-          {patient.breed ? ` · ${patient.breed}` : ""} · {patient.sex.replace("_", " ")}
+          {patient.breed ? ` · ${patient.breed}` : ""}
+          {/* A group carries no single sex, and a head count instead. */}
+          {patient.sex ? ` · ${patient.sex.replace("_", " ")}` : ""}
+          {patient.head_count !== null ? ` · ${patient.head_count} head` : ""}
         </p>
         {patient.date_of_birth ? (
           <p className="muted">Born {formatDate(patient.date_of_birth)}</p>

@@ -30,8 +30,8 @@ insert into public.vet_devices (
 insert into public.patients (
   id, vet_id, patient_code, name, species, sex
 ) values
-  ('c0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'VK-P-AAA111', 'Bella', 'Dog', 'female'),
-  ('c0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000002', 'VK-P-BBB222', 'Rex', 'Dog', 'male');
+  ('c0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'VK-P-AAA111', 'Bella', 'dog', 'female'),
+  ('c0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000002', 'VK-P-BBB222', 'Rex', 'dog', 'male');
 
 -- public.visits is owned by the visits migration; only the columns this module
 -- depends on (id, vet_id) plus that table's own not-null columns are supplied.

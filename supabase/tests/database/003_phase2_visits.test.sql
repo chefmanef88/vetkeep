@@ -38,9 +38,9 @@ insert into public.clients (
 insert into public.patients (
   id, vet_id, patient_code, name, species, sex, deleted_at
 ) values
-  ('94000000-0000-0000-0000-000000000001', '91000000-0000-0000-0000-000000000001', 'VK-P-AAA111', 'Patient A', 'Dog', 'female', null),
-  ('94000000-0000-0000-0000-000000000002', '91000000-0000-0000-0000-000000000002', 'VK-P-BBB222', 'Patient B', 'Cat', 'male', null),
-  ('94000000-0000-0000-0000-000000000003', '91000000-0000-0000-0000-000000000001', 'VK-P-AAA222', 'Patient A Removed', 'Goat', 'unknown', now());
+  ('94000000-0000-0000-0000-000000000001', '91000000-0000-0000-0000-000000000001', 'VK-P-AAA111', 'Patient A', 'dog', 'female', null),
+  ('94000000-0000-0000-0000-000000000002', '91000000-0000-0000-0000-000000000002', 'VK-P-BBB222', 'Patient B', 'cat', 'male', null),
+  ('94000000-0000-0000-0000-000000000003', '91000000-0000-0000-0000-000000000001', 'VK-P-AAA222', 'Patient A Removed', 'goat', 'unknown', now());
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '90000000-0000-0000-0000-000000000001', true);

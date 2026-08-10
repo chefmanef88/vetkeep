@@ -1059,14 +1059,21 @@ export type Database = {
           date_of_birth_precision: string
           deceased_at: string | null
           deleted_at: string | null
+          ear_tag: string | null
+          group_age_weeks: number | null
+          head_count: number | null
+          housing: string | null
           id: string
           identification_notes: string | null
+          kind: string
           last_modified_by_device_id: string | null
+          leg_ring: string | null
           microchip_id: string | null
           name: string
           patient_code: string
+          purpose: string
           server_version: number
-          sex: string
+          sex: string | null
           species: string
           status: string
           updated_at: string
@@ -1081,14 +1088,21 @@ export type Database = {
           date_of_birth_precision?: string
           deceased_at?: string | null
           deleted_at?: string | null
+          ear_tag?: string | null
+          group_age_weeks?: number | null
+          head_count?: number | null
+          housing?: string | null
           id: string
           identification_notes?: string | null
+          kind?: string
           last_modified_by_device_id?: string | null
+          leg_ring?: string | null
           microchip_id?: string | null
           name: string
           patient_code: string
+          purpose?: string
           server_version?: number
-          sex: string
+          sex?: string | null
           species: string
           status?: string
           updated_at?: string
@@ -1103,14 +1117,21 @@ export type Database = {
           date_of_birth_precision?: string
           deceased_at?: string | null
           deleted_at?: string | null
+          ear_tag?: string | null
+          group_age_weeks?: number | null
+          head_count?: number | null
+          housing?: string | null
           id?: string
           identification_notes?: string | null
+          kind?: string
           last_modified_by_device_id?: string | null
+          leg_ring?: string | null
           microchip_id?: string | null
           name?: string
           patient_code?: string
+          purpose?: string
           server_version?: number
-          sex?: string
+          sex?: string | null
           species?: string
           status?: string
           updated_at?: string
@@ -1792,12 +1813,19 @@ export type Database = {
           p_date_of_birth?: string
           p_date_of_birth_precision?: string
           p_device_id?: string
+          p_ear_tag?: string
+          p_group_age_weeks?: number
+          p_head_count?: number
+          p_housing?: string
           p_id: string
           p_identification_notes?: string
+          p_kind?: string
+          p_leg_ring?: string
           p_microchip_id?: string
           p_name: string
           p_patient_code: string
-          p_sex: string
+          p_purpose?: string
+          p_sex?: string
           p_species: string
         }
         Returns: string
@@ -2055,11 +2083,18 @@ export type Database = {
           p_date_of_birth_precision?: string
           p_deceased_at?: string
           p_device_id?: string
+          p_ear_tag?: string
+          p_group_age_weeks?: number
+          p_head_count?: number
+          p_housing?: string
           p_id: string
           p_identification_notes?: string
+          p_kind?: string
+          p_leg_ring?: string
           p_microchip_id?: string
           p_name: string
-          p_sex: string
+          p_purpose?: string
+          p_sex?: string
           p_species: string
           p_status?: string
         }

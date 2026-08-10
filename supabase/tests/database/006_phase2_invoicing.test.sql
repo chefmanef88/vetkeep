@@ -798,7 +798,11 @@ select set_config('request.jwt.claim.sub', 'a1000000-0000-0000-0000-000000000001
 select set_config('request.jwt.claims', '{"sub":"a1000000-0000-0000-0000-000000000001","role":"authenticated","aal":"aal2"}', true);
 
 select public.create_patient(
-  'f1000000-0000-0000-0000-000000000001', 'VK-P-4Q8T6R', 'Invoice Patient A', 'Dog', 'female'
+  p_id => 'f1000000-0000-0000-0000-000000000001',
+  p_patient_code => 'VK-P-4Q8T6R',
+  p_name => 'Invoice Patient A',
+  p_species => 'dog',
+  p_sex => 'female'
 );
 select public.create_visit(
   'f1000000-0000-0000-0000-000000000002',

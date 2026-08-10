@@ -27,7 +27,11 @@ select public.create_client(
   '024 300 0011', '+233243000011', null, null, null, 'Adenta, Accra', 5.700000, -0.150000
 );
 select public.create_patient(
-  'b1000000-0000-0000-0000-000000000001', 'VK-P-SCH001', 'Patient A', 'Dog', 'female'
+  p_id => 'b1000000-0000-0000-0000-000000000001',
+  p_patient_code => 'VK-P-SCH001',
+  p_name => 'Patient A',
+  p_species => 'dog',
+  p_sex => 'female'
 );
 
 -- ---------------------------------------------------------------------------
@@ -587,7 +591,11 @@ select public.create_client(
   '024 300 0022', '+233243000022'
 );
 select public.create_patient(
-  'b1000000-0000-0000-0000-000000000002', 'VK-P-SCH002', 'Patient B', 'Cat', 'male'
+  p_id => 'b1000000-0000-0000-0000-000000000002',
+  p_patient_code => 'VK-P-SCH002',
+  p_name => 'Patient B',
+  p_species => 'cat',
+  p_sex => 'male'
 );
 
 -- 60

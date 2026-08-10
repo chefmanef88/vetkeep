@@ -85,13 +85,21 @@ select is(
 
 select lives_ok(
   $$select public.create_patient(
-      '70000000-0000-0000-0000-000000000001', 'VK-P-XYZ789', 'Patient One', 'Dog', 'female'
+      p_id => '70000000-0000-0000-0000-000000000001',
+      p_patient_code => 'VK-P-XYZ789',
+      p_name => 'Patient One',
+      p_species => 'dog',
+      p_sex => 'female'
     )$$,
   'Vet A can create a patient'
 );
 select throws_ok(
   $$select public.create_patient(
-      gen_random_uuid(), 'VK-P-BAD001', 'Bad Sex Patient', 'Cat', 'not-a-sex'
+      p_id => gen_random_uuid(),
+      p_patient_code => 'VK-P-BAD001',
+      p_name => 'Bad Sex Patient',
+      p_species => 'cat',
+      p_sex => 'not-a-sex'
     )$$,
   '22023',
   'Invalid sex value',

@@ -24,7 +24,11 @@ select public.create_client(
   '024 390 0011', '+233243900011'
 );
 select public.create_patient(
-  'd3000000-0000-0000-0000-000000000001', 'VK-P-SYNC01', 'Sync Patient', 'Dog', 'female'
+  p_id => 'd3000000-0000-0000-0000-000000000001',
+  p_patient_code => 'VK-P-SYNC01',
+  p_name => 'Sync Patient',
+  p_species => 'dog',
+  p_sex => 'female'
 );
 select public.create_visit(
   'e3000000-0000-0000-0000-000000000001',
@@ -89,16 +93,22 @@ select lives_ok(
 -- 7
 select lives_ok(
   $$select public.update_patient(
-      'd3000000-0000-0000-0000-000000000001', 'Sync Patient', 'Dog', 'female',
-      null, null, 'exact', null, null, null, 'active', null, null, 1
+      p_id => 'd3000000-0000-0000-0000-000000000001',
+      p_name => 'Sync Patient',
+      p_species => 'dog',
+      p_sex => 'female',
+      p_base_server_version => 1
     )$$,
   'A patient update carrying the current version succeeds'
 );
 -- 8
 select throws_ok(
   $$select public.update_patient(
-      'd3000000-0000-0000-0000-000000000001', 'Stale Name', 'Dog', 'female',
-      null, null, 'exact', null, null, null, 'active', null, null, 1
+      p_id => 'd3000000-0000-0000-0000-000000000001',
+      p_name => 'Stale Name',
+      p_species => 'dog',
+      p_sex => 'female',
+      p_base_server_version => 1
     )$$,
   '40001',
   null,
@@ -113,8 +123,11 @@ select is(
 -- 10
 select throws_ok(
   $$select public.update_patient(
-      '00000000-0000-0000-0000-0000000000ff', 'Nobody', 'Dog', 'female',
-      null, null, 'exact', null, null, null, 'active', null, null, 1
+      p_id => '00000000-0000-0000-0000-0000000000ff',
+      p_name => 'Nobody',
+      p_species => 'dog',
+      p_sex => 'female',
+      p_base_server_version => 1
     )$$,
   'P0002',
   'Patient not found',
