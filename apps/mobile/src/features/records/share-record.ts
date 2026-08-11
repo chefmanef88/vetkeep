@@ -56,11 +56,12 @@ async function loadPrinting(): Promise<
 }
 
 const VISIT_COLUMNS =
-  "id, patient_id, visit_date, visit_type, workflow_status, chief_complaint, history_of_complaint, temperature_c, heart_rate_bpm, respiratory_rate_bpm, weight_value, weight_unit, definitive_diagnosis, tentative_diagnosis, treatment_plan, prescriptions, follow_up_plan, next_review_date";
+  "id, patient_id, record_code, visit_date, visit_type, workflow_status, chief_complaint, history_of_complaint, temperature_c, heart_rate_bpm, respiratory_rate_bpm, weight_value, weight_unit, definitive_diagnosis, tentative_diagnosis, treatment_plan, prescriptions, follow_up_plan, next_review_date";
 
 type VisitRow = {
   id: string;
   patient_id: string;
+  record_code: string | null;
   visit_date: string;
   visit_type: string;
   workflow_status: string;
@@ -115,6 +116,7 @@ function toDocumentRecord(
   treatments: DocumentTreatment[] = []
 ): DocumentRecord {
   return {
+    recordCode: visit.record_code,
     visitDate: visit.visit_date,
     visitType: visit.visit_type,
     workflowStatus: visit.workflow_status,

@@ -15,9 +15,11 @@ const SEGMENT_LENGTH = 6;
 
 export const CLIENT_CODE_PREFIX = "VK-C-";
 export const PATIENT_CODE_PREFIX = "VK-P-";
+export const RECORD_CODE_PREFIX = "VK-R-";
 
 export const CLIENT_CODE_PATTERN = /^VK-C-[0-9A-HJKMNP-TV-Z]{6}$/;
 export const PATIENT_CODE_PATTERN = /^VK-P-[0-9A-HJKMNP-TV-Z]{6}$/;
+export const RECORD_CODE_PATTERN = /^VK-R-[0-9A-HJKMNP-TV-Z]{6}$/;
 
 function randomBytes(length: number): Uint8Array {
   const bytes = new Uint8Array(length);
@@ -57,6 +59,19 @@ export function generatePatientCode(): string {
 }
 
 /**
+ * The reference on a consultation record.
+ *
+ * A record handed to a client needs something both parties can name over the
+ * telephone. The patient code plus the date was doing that job and collides:
+ * an animal seen morning and evening on a farm visit produces two documents
+ * with the same reference, and "the record from the third" stops identifying
+ * anything. This is minted per record, like the client and patient series.
+ */
+export function generateVisitRecordCode(): string {
+  return `${RECORD_CODE_PREFIX}${randomSegment()}`;
+}
+
+/**
  * Accepts the forms a code arrives in when a person types or pastes it: lower
  * case, surrounding whitespace, and the characters Crockford treats as aliases
  * (I and L for 1, O for zero). Returns null when the result is not a valid code,
@@ -65,7 +80,11 @@ export function generatePatientCode(): string {
 export function normalizeRecordCode(input: string): string | null {
   const candidate = input.trim().toUpperCase().replace(/[IL]/g, "1").replace(/O/g, "0");
 
-  if (CLIENT_CODE_PATTERN.test(candidate) || PATIENT_CODE_PATTERN.test(candidate)) {
+  if (
+    CLIENT_CODE_PATTERN.test(candidate) ||
+    PATIENT_CODE_PATTERN.test(candidate) ||
+    RECORD_CODE_PATTERN.test(candidate)
+  ) {
     return candidate;
   }
   return null;

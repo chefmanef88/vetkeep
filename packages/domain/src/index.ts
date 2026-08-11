@@ -3,8 +3,11 @@ export {
   CLIENT_CODE_PREFIX,
   PATIENT_CODE_PATTERN,
   PATIENT_CODE_PREFIX,
+  RECORD_CODE_PATTERN,
+  RECORD_CODE_PREFIX,
   generateClientCode,
   generatePatientCode,
+  generateVisitRecordCode,
   normalizeRecordCode
 } from "./codes";
 

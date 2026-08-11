@@ -1372,6 +1372,7 @@ export type Database = {
           patient_id: string
           prescriptions: string | null
           problem_list: string | null
+          record_code: string
           respiratory_rate_bpm: number | null
           server_version: number
           signed_at: string | null
@@ -1409,6 +1410,7 @@ export type Database = {
           patient_id: string
           prescriptions?: string | null
           problem_list?: string | null
+          record_code: string
           respiratory_rate_bpm?: number | null
           server_version?: number
           signed_at?: string | null
@@ -1446,6 +1448,7 @@ export type Database = {
           patient_id?: string
           prescriptions?: string | null
           problem_list?: string | null
+          record_code?: string
           respiratory_rate_bpm?: number | null
           server_version?: number
           signed_at?: string | null
@@ -1606,6 +1609,7 @@ export type Database = {
           p_device_id?: string
           p_id: string
           p_patient_id: string
+          p_record_code?: string
           p_visit_date: string
           p_visit_type: string
         }

@@ -35,6 +35,7 @@ function input(overrides: {
       ...overrides.folder
     },
     record: {
+      recordCode: "VK-R-ABC123",
       visitDate: "2026-08-10T09:30:00.000Z",
       visitType: "home_call",
       workflowStatus: "completed",
@@ -298,6 +299,19 @@ describe("buildRecordDocument", () => {
   it("says nothing about signing when the record is signed", () => {
     const html = buildRecordDocument(input({}));
     expect(html).not.toContain("unsigned");
+  });
+  it("prints the record reference the client can name on the telephone", () => {
+    const html = buildRecordDocument(input({}));
+    // The animal's file and this consultation are different references, and a
+    // document carrying only the file cannot identify which visit it describes.
+    expect(html).toContain("VK-R-ABC123");
+    expect(html).toContain("Animal file");
+  });
+
+  it("omits the reference rather than printing an empty row for an older record", () => {
+    const html = buildRecordDocument(input({ record: { recordCode: null } }));
+    expect(html).not.toContain("VK-R-");
+    expect(html).toContain("Animal file");
   });
 });
 

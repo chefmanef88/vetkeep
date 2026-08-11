@@ -44,6 +44,8 @@ export type DocumentFolder = {
 };
 
 export type DocumentRecord = {
+  /** The VK-R- reference both the vet and the client can name. */
+  recordCode: string | null;
   visitDate: string;
   visitType: string;
   workflowStatus: string;
@@ -271,7 +273,8 @@ ${
     <h1>${escapeHtml(folder.name)}</h1>
     <table>
       ${row("Animal", folderLine(folder))}
-      ${row("Record for", folder.patientCode)}
+      ${record.recordCode ? row("Record", record.recordCode) : ""}
+      ${row("Animal file", folder.patientCode)}
       ${folder.identifierLabel ? row(folder.identifierLabel, folder.identifier) : ""}
       ${row("Owner", `${client.name} (${client.clientCode})`)}
       ${row("Attended", `${formatDate(record.visitDate)} · ${record.visitType.replace(/_/g, " ")}`)}

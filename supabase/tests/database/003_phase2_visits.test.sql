@@ -861,7 +861,7 @@ select ok(not has_table_privilege('authenticated', 'public.visit_amendments', 'I
 select ok(
   not has_function_privilege(
     'anon',
-    'public.create_visit(uuid,uuid,timestamp with time zone,text,text,uuid)',
+    'public.create_visit(uuid,uuid,timestamp with time zone,text,text,uuid,text)',
     'EXECUTE'
   ),
   'Anonymous role cannot execute create_visit'
@@ -870,7 +870,7 @@ select ok(
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.create_visit(uuid,uuid,timestamp with time zone,text,text,uuid)',
+    'public.create_visit(uuid,uuid,timestamp with time zone,text,text,uuid,text)',
     'EXECUTE'
   ),
   'Authenticated role can execute create_visit'

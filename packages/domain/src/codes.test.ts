@@ -4,6 +4,7 @@ import {
   PATIENT_CODE_PATTERN,
   generateClientCode,
   generatePatientCode,
+  generateVisitRecordCode,
   normalizeRecordCode
 } from "./codes";
 
@@ -50,5 +51,42 @@ describe("normalizeRecordCode", () => {
     expect(normalizeRecordCode("VK-X-9K3M7T")).toBeNull();
     expect(normalizeRecordCode("9K3M7T")).toBeNull();
     expect(normalizeRecordCode("")).toBeNull();
+  });
+});
+
+describe("generateVisitRecordCode", () => {
+  it("produces a VK-R- code in the shared alphabet", () => {
+    for (let i = 0; i < 200; i++) {
+      expect(generateVisitRecordCode()).toMatch(/^VK-R-[0-9A-HJKMNP-TV-Z]{6}$/);
+    }
+  });
+
+  it("never emits the characters that are misread when a code is read aloud", () => {
+    // I, L and O become 1, 1 and 0 down a telephone; U is excluded to avoid
+    // accidental obscenities. This is the whole reason for a custom alphabet.
+    const segments = Array.from({ length: 500 }, () => generateVisitRecordCode().slice(5));
+    expect(segments.join("")).not.toMatch(/[ILOU]/);
+  });
+
+  it("does not repeat itself across a practice-sized run", () => {
+    // Not a uniqueness proof — the database holds a unique index for that. It
+    // catches a generator that has stopped being random, which no constraint
+    // would report until two records collided in the field.
+    const codes = new Set(Array.from({ length: 2000 }, generateVisitRecordCode));
+    expect(codes.size).toBe(2000);
+  });
+
+  it("is a different series from the client and patient codes", () => {
+    // A record reference and an animal file are different things, and a
+    // document that confuses them sends someone to the wrong folder.
+    expect(generateVisitRecordCode().startsWith("VK-R-")).toBe(true);
+    expect(generateClientCode().startsWith("VK-R-")).toBe(false);
+    expect(generatePatientCode().startsWith("VK-R-")).toBe(false);
+  });
+
+  it("is accepted by the normalizer, including from a handwritten note", () => {
+    const code = generateVisitRecordCode();
+    expect(normalizeRecordCode(code)).toBe(code);
+    expect(normalizeRecordCode("  vk-r-9k3m7t  ")).toBe("VK-R-9K3M7T");
   });
 });

@@ -1,7 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { purposeLabel, speciesProfile } from "@vetkeep/domain";
+import { generateVisitRecordCode, purposeLabel, speciesProfile } from "@vetkeep/domain";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { confirmWithDevice } from "@/security/confirm-with-device";
@@ -152,7 +152,10 @@ export default function PatientFolderScreen() {
       p_id: recordId,
       p_patient_id: String(id),
       p_visit_date: new Date().toISOString(),
-      p_visit_type: recordType
+      p_visit_type: recordType,
+      // Minted here, offline, so the record carries the reference the client
+      // will be given from the moment it exists.
+      p_record_code: generateVisitRecordCode()
     });
     setBusy(false);
     if (rpcError) {
