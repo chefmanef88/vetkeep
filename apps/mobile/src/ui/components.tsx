@@ -34,19 +34,24 @@ export function Field(props: TextInputProps) {
 export function PrimaryButton({
   label,
   onPress,
-  disabled = false
+  disabled = false,
+  tone = "brand"
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  /** "danger" for an action that destroys something. Never the default. */
+  tone?: "brand" | "danger";
 }) {
+  const danger = tone === "danger";
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       style={({ pressed }) => [
         styles.button,
-        pressed && !disabled && styles.buttonPressed,
+        danger && styles.buttonDanger,
+        pressed && !disabled && (danger ? styles.buttonDangerPressed : styles.buttonPressed),
         disabled && styles.disabled
       ]}
       disabled={disabled}
@@ -115,6 +120,10 @@ const styles = StyleSheet.create({
     ...shadowCard
   },
   buttonPressed: { backgroundColor: palette.brandPressed },
+  // Destructive actions do not borrow the brand colour. Reaching for the same
+  // green as Save would make the two look interchangeable at a glance.
+  buttonDanger: { backgroundColor: palette.red },
+  buttonDangerPressed: { backgroundColor: "#6E1616" },
   disabled: { backgroundColor: palette.line, shadowOpacity: 0, elevation: 0 },
   buttonText: { ...type.action, color: palette.surface },
   secondaryButton: {

@@ -114,7 +114,9 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
   const needsAttention = conflicts.length + deadLetters.length;
   const licenceVerified = profile?.license_verified === true;
 
-  function go(path: "/practice/clients" | "/practice/products" | "/practice/sync") {
+  function go(
+    path: "/practice/clients" | "/practice/products" | "/practice/sync" | "/practice/close-account"
+  ) {
     onClose();
     router.push(path);
   }
@@ -223,6 +225,15 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
               onClose();
               void supabase.auth.signOut({ scope: "local" });
             }}
+          />
+          {/* Reachable without being easy to hit: the screen itself carries the
+              weight, and the server refuses anything unconfirmed. */}
+          <MenuRow
+            icon="trash-outline"
+            label="Close your account"
+            detail="Permanent. Clinical records are retained."
+            tone="danger"
+            onPress={() => go("/practice/close-account")}
           />
         </ScrollView>
       </View>

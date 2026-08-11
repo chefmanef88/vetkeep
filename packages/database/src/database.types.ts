@@ -1129,6 +1129,8 @@ export type Database = {
           account_status: string
           auth_user_id: string
           business_name: string | null
+          closed_at: string | null
+          closure_reason: string | null
           created_at: string
           full_name: string
           id: string
@@ -1146,6 +1148,8 @@ export type Database = {
           account_status?: string
           auth_user_id: string
           business_name?: string | null
+          closed_at?: string | null
+          closure_reason?: string | null
           created_at?: string
           full_name: string
           id?: string
@@ -1163,6 +1167,8 @@ export type Database = {
           account_status?: string
           auth_user_id?: string
           business_name?: string | null
+          closed_at?: string | null
+          closure_reason?: string | null
           created_at?: string
           full_name?: string
           id?: string
@@ -1512,6 +1518,14 @@ export type Database = {
           p_unit_price_pesewas: number
         }
         Returns: string
+      }
+      close_vet_account: {
+        Args: {
+          p_confirmation: string
+          p_device_id?: string
+          p_reason?: string
+        }
+        Returns: undefined
       }
       complete_vet_onboarding: {
         Args: {
