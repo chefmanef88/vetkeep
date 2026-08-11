@@ -57,7 +57,6 @@ select lives_ok(
       '94000000-0000-0000-0000-000000000001',
       '2026-08-02 09:00:00+00'::timestamptz,
       'home_call',
-      null::uuid,
       'Lethargy',
       '92000000-0000-0000-0000-000000000001'
     )$$,
@@ -171,7 +170,6 @@ select lives_ok(
       '94000000-0000-0000-0000-000000000001',
       '2026-08-02 09:00:00+00'::timestamptz,
       'home_call',
-      null::uuid,
       'Lethargy',
       '92000000-0000-0000-0000-000000000001'
     )$$,
@@ -526,7 +524,6 @@ select lives_ok(
       '94000000-0000-0000-0000-000000000001',
       '2026-08-03 11:00:00+00'::timestamptz,
       'follow_up',
-      null::uuid,
       'Vomiting since yesterday',
       '92000000-0000-0000-0000-000000000001'
     )$$,
@@ -864,7 +861,7 @@ select ok(not has_table_privilege('authenticated', 'public.visit_amendments', 'I
 select ok(
   not has_function_privilege(
     'anon',
-    'public.create_visit(uuid,uuid,timestamp with time zone,text,uuid,text,uuid)',
+    'public.create_visit(uuid,uuid,timestamp with time zone,text,text,uuid)',
     'EXECUTE'
   ),
   'Anonymous role cannot execute create_visit'
@@ -873,7 +870,7 @@ select ok(
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.create_visit(uuid,uuid,timestamp with time zone,text,uuid,text,uuid)',
+    'public.create_visit(uuid,uuid,timestamp with time zone,text,text,uuid)',
     'EXECUTE'
   ),
   'Authenticated role can execute create_visit'

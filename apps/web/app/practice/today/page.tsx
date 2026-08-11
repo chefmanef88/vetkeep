@@ -4,6 +4,16 @@ import { formatDateTime } from "@/lib/practice/format";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * What was attended today.
+ *
+ * This page used to list confirmed appointments, which assumed work arrives
+ * through the application. It does not: the veterinarian is telephoned, agrees
+ * a time on the call, and drives (brief §11). So "today" is not a plan to be
+ * worked through — it is the records written today, with the open ones first,
+ * because an unsigned record is the only thing on this page that still needs
+ * something doing to it.
+ */
 export default async function TodayPage() {
   const supabase = await createClient();
 
@@ -12,53 +22,62 @@ export default async function TodayPage() {
   const endOfDay = new Date(startOfDay);
   endOfDay.setDate(endOfDay.getDate() + 1);
 
-  const { data: stops, error } = await supabase
-    .from("appointments")
+  const { data: records, error } = await supabase
+    .from("visits")
     .select(
-      "id, status, scheduled_start, visit_address, reason_for_visit, visit_id, appointment_type, clients(name, phone_display), patients(name, species)"
+      "id, visit_date, visit_type, workflow_status, chief_complaint, patients(name, species, patient_code), clients:patients(clients(name, phone_display))"
     )
     .is("deleted_at", null)
-    .in("status", ["confirmed", "rescheduled"])
-    .gte("scheduled_start", startOfDay.toISOString())
-    .lt("scheduled_start", endOfDay.toISOString())
-    .order("scheduled_start", { ascending: true });
+    .gte("visit_date", startOfDay.toISOString())
+    .lt("visit_date", endOfDay.toISOString())
+    .order("visit_date", { ascending: false });
 
-  if (error) throw new Error("Unable to load today's visits.");
+  if (error) throw new Error("Unable to load today's records.");
+
+  // Drafts first: they are the only rows here that are not finished.
+  const ordered = [...(records ?? [])].sort((a, b) => {
+    const aDraft = a.workflow_status === "draft" ? 0 : 1;
+    const bDraft = b.workflow_status === "draft" ? 0 : 1;
+    return aDraft - bDraft;
+  });
 
   return (
     <section className="card stack">
       <h1>Today</h1>
       <p className="muted">{startOfDay.toLocaleDateString(undefined, { dateStyle: "full" })}</p>
 
-      {stops?.length ? (
+      {ordered.length ? (
         <ol className="route-list">
-          {stops.map((stop, index) => (
-            <li key={stop.id}>
+          {ordered.map((record, index) => (
+            <li key={record.id}>
               <span className="stop-index">{index + 1}</span>
               <div className="stop-body">
                 <div className="row-head">
-                  <strong>{stop.patients?.name ?? "Unknown animal"}</strong>
-                  <span className="muted">{formatDateTime(stop.scheduled_start)}</span>
+                  <strong>{record.patients?.name ?? "Unknown animal"}</strong>
+                  <span className="muted">{formatDateTime(record.visit_date)}</span>
                 </div>
                 <span className="muted">
-                  {stop.clients?.name ?? "Unknown client"}
-                  {stop.clients?.phone_display ? ` · ${stop.clients.phone_display}` : ""}
+                  {record.patients?.patient_code ?? ""}
+                  {record.patients?.species ? ` · ${record.patients.species}` : ""}
+                  {record.visit_type ? ` · ${record.visit_type.replace("_", " ")}` : ""}
                 </span>
-                {stop.visit_address ? <span className="muted">{stop.visit_address}</span> : null}
-                {stop.reason_for_visit ? <span>{stop.reason_for_visit}</span> : null}
-                {stop.visit_id ? (
-                  <Link href={`/practice/visits/${stop.visit_id}`}>Open visit record</Link>
-                ) : (
-                  <Link href="/practice/appointments">Start this visit</Link>
-                )}
+                {record.chief_complaint ? <span>{record.chief_complaint}</span> : null}
+                <div className="row-head">
+                  <span className={`pill pill-${record.workflow_status}`}>
+                    {record.workflow_status}
+                  </span>
+                  <Link href={`/practice/visits/${record.id}`}>
+                    {record.workflow_status === "draft" ? "Finish this record" : "Open record"}
+                  </Link>
+                </div>
               </div>
             </li>
           ))}
         </ol>
       ) : (
         <p className="muted">
-          No confirmed visits today. Check <Link href="/practice/appointments">appointments</Link>{" "}
-          for open requests.
+          Nothing recorded today. Records are written on the phone during a visit; open a{" "}
+          <Link href="/practice/clients">client</Link> to see their folders.
         </p>
       )}
     </section>

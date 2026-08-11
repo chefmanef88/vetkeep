@@ -44,8 +44,11 @@ select public.create_visit('e5000000-0000-0000-0000-000000000002', 'd5000000-000
 select public.create_visit('e5000000-0000-0000-0000-000000000003', 'd5000000-0000-0000-0000-000000000003', now(), 'field_visit');
 
 -- A carried product with known withholding periods.
-select public.create_inventory_item(
-  'f5000000-0000-0000-0000-000000000001', 'Oxytetracycline 20%', 'drug', 'ml', 100
+select public.upsert_product(
+  p_id => 'f5000000-0000-0000-0000-000000000001',
+  p_item_name => 'Oxytetracycline 20%',
+  p_item_type => 'drug',
+  p_unit => 'ml'
 );
 
 -- ---------------------------------------------------------------------------

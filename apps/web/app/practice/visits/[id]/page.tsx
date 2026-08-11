@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/practice/format";
 import { VisitEditor } from "./visit-editor";
 import { CompletedVisit } from "./completed-visit";
-import { StockUsed } from "./stock-used";
 
 export const dynamic = "force-dynamic";
 
@@ -40,34 +39,13 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
     .is("deleted_at", null)
     .maybeSingle();
 
-  // Only batches that are actually usable are offered: still in stock, not soft
-  // deleted, and not expired. An expired tube in the vehicle must not be
-  // selectable for a patient.
-  const today = new Date().toISOString().slice(0, 10);
-  const { data: availableBatches } = await supabase
-    .from("inventory_batches")
-    .select("id, batch_lot_number, expiry_date, quantity_on_hand, inventory_items(item_name, unit)")
-    .is("deleted_at", null)
-    .gt("quantity_on_hand", 0)
-    .or(`expiry_date.is.null,expiry_date.gte.${today}`)
-    .order("expiry_date", { ascending: true, nullsFirst: false });
-
-  const { data: movements } = await supabase
-    .from("inventory_movements")
-    .select(
-      "id, quantity, notes, inventory_batches(batch_lot_number, inventory_items(item_name, unit))"
-    )
-    .eq("visit_id", id)
-    .eq("movement_type", "consumption")
-    .order("created_at", { ascending: true });
-
   const isDraft = visit.workflow_status === "draft";
 
   return (
     <>
       <section className="card stack">
         <p className="muted">
-          <Link href="/practice/appointments">← Appointments</Link>
+          <Link href="/practice/today">← Today</Link>
         </p>
         <div className="row-head">
           <h1>{visit.patients?.name ?? "Visit"}</h1>
@@ -121,31 +99,6 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
       ) : (
         <CompletedVisit visit={visit} findings={findings ?? []} amendments={amendments ?? []} />
       )}
-
-      <StockUsed
-        visitId={visit.id}
-        editable={isDraft}
-        batches={(availableBatches ?? [])
-          .filter((batch) => batch.inventory_items !== null)
-          .map((batch) => ({
-            id: batch.id,
-            itemName: batch.inventory_items!.item_name,
-            unit: batch.inventory_items!.unit,
-            lotNumber: batch.batch_lot_number,
-            expiryDate: batch.expiry_date,
-            quantityOnHand: Number(batch.quantity_on_hand)
-          }))}
-        consumed={(movements ?? [])
-          .filter((movement) => movement.inventory_batches?.inventory_items != null)
-          .map((movement) => ({
-            id: movement.id,
-            quantity: Number(movement.quantity),
-            notes: movement.notes,
-            itemName: movement.inventory_batches!.inventory_items!.item_name,
-            unit: movement.inventory_batches!.inventory_items!.unit,
-            lotNumber: movement.inventory_batches!.batch_lot_number
-          }))}
-      />
 
       <section className="card stack">
         <h2>Charges</h2>

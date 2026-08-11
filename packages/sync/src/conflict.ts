@@ -29,18 +29,14 @@ const POLICIES: Record<EntityType, ConflictPolicy> = {
   patient: "manual_compare",
   patient_owner: "manual_compare",
 
-  // Status moves are validated against the state machine, so a transition
-  // replayed from a device that was offline is rejected rather than applied.
-  appointment: "validate_transition",
-
-  // Side effects with money or stock attached. Idempotency keys make a replay a
-  // no-op; merging two versions of them would double-count.
-  inventory_movement: "idempotent_never_merge",
+  // Side effects with money or a clinical consequence attached. Idempotency
+  // keys make a replay a no-op; merging two versions would double-count a dose
+  // or a payment.
+  treatment: "idempotent_never_merge",
+  preventive_care: "idempotent_never_merge",
   invoice: "idempotent_never_merge",
   invoice_payment: "idempotent_never_merge",
 
-  // Ordering stops on a route carries no clinical meaning.
-  route_stop: "last_write_wins",
   display_preference: "last_write_wins"
 };
 

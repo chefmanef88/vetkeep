@@ -34,142 +34,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      appointments: {
-        Row: {
-          appointment_type: string
-          cancellation_reason: string | null
-          client_id: string | null
-          completed_at: string | null
-          confirmed_at: string | null
-          contact_name: string | null
-          contact_phone_display: string | null
-          contact_phone_e164: string | null
-          created_at: string
-          created_by_device_id: string | null
-          decline_reason: string | null
-          deleted_at: string | null
-          id: string
-          last_modified_by_device_id: string | null
-          patient_id: string | null
-          reason_for_visit: string | null
-          scheduled_end: string | null
-          scheduled_start: string | null
-          server_version: number
-          status: string
-          status_changed_at: string
-          travel_notes: string | null
-          updated_at: string
-          vet_id: string
-          visit_address: string | null
-          visit_id: string | null
-          visit_latitude: number | null
-          visit_longitude: number | null
-        }
-        Insert: {
-          appointment_type: string
-          cancellation_reason?: string | null
-          client_id?: string | null
-          completed_at?: string | null
-          confirmed_at?: string | null
-          contact_name?: string | null
-          contact_phone_display?: string | null
-          contact_phone_e164?: string | null
-          created_at?: string
-          created_by_device_id?: string | null
-          decline_reason?: string | null
-          deleted_at?: string | null
-          id: string
-          last_modified_by_device_id?: string | null
-          patient_id?: string | null
-          reason_for_visit?: string | null
-          scheduled_end?: string | null
-          scheduled_start?: string | null
-          server_version?: number
-          status?: string
-          status_changed_at?: string
-          travel_notes?: string | null
-          updated_at?: string
-          vet_id: string
-          visit_address?: string | null
-          visit_id?: string | null
-          visit_latitude?: number | null
-          visit_longitude?: number | null
-        }
-        Update: {
-          appointment_type?: string
-          cancellation_reason?: string | null
-          client_id?: string | null
-          completed_at?: string | null
-          confirmed_at?: string | null
-          contact_name?: string | null
-          contact_phone_display?: string | null
-          contact_phone_e164?: string | null
-          created_at?: string
-          created_by_device_id?: string | null
-          decline_reason?: string | null
-          deleted_at?: string | null
-          id?: string
-          last_modified_by_device_id?: string | null
-          patient_id?: string | null
-          reason_for_visit?: string | null
-          scheduled_end?: string | null
-          scheduled_start?: string | null
-          server_version?: number
-          status?: string
-          status_changed_at?: string
-          travel_notes?: string | null
-          updated_at?: string
-          vet_id?: string
-          visit_address?: string | null
-          visit_id?: string | null
-          visit_latitude?: number | null
-          visit_longitude?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "appointments_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_created_by_device_id_fkey"
-            columns: ["created_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "vet_devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_last_modified_by_device_id_fkey"
-            columns: ["last_modified_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "vet_devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "patients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_vet_id_fkey"
-            columns: ["vet_id"]
-            isOneToOne: false
-            referencedRelation: "vets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visits"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       attachments: {
         Row: {
           attachment_type: string
@@ -426,244 +290,6 @@ export type Database = {
           },
         ]
       }
-      daily_route_stops: {
-        Row: {
-          appointment_id: string
-          arrival_notes: string | null
-          created_at: string
-          created_by_device_id: string | null
-          deleted_at: string | null
-          estimated_arrival: string | null
-          id: string
-          last_modified_by_device_id: string | null
-          route_id: string
-          sequence_number: number
-          server_version: number
-          updated_at: string
-          vet_id: string
-        }
-        Insert: {
-          appointment_id: string
-          arrival_notes?: string | null
-          created_at?: string
-          created_by_device_id?: string | null
-          deleted_at?: string | null
-          estimated_arrival?: string | null
-          id: string
-          last_modified_by_device_id?: string | null
-          route_id: string
-          sequence_number: number
-          server_version?: number
-          updated_at?: string
-          vet_id: string
-        }
-        Update: {
-          appointment_id?: string
-          arrival_notes?: string | null
-          created_at?: string
-          created_by_device_id?: string | null
-          deleted_at?: string | null
-          estimated_arrival?: string | null
-          id?: string
-          last_modified_by_device_id?: string | null
-          route_id?: string
-          sequence_number?: number
-          server_version?: number
-          updated_at?: string
-          vet_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_route_stops_appointment_id_fkey"
-            columns: ["appointment_id"]
-            isOneToOne: false
-            referencedRelation: "appointments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_route_stops_created_by_device_id_fkey"
-            columns: ["created_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "vet_devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_route_stops_last_modified_by_device_id_fkey"
-            columns: ["last_modified_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "vet_devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_route_stops_route_id_fkey"
-            columns: ["route_id"]
-            isOneToOne: false
-            referencedRelation: "daily_routes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_route_stops_vet_id_fkey"
-            columns: ["vet_id"]
-            isOneToOne: false
-            referencedRelation: "vets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      daily_routes: {
-        Row: {
-          created_at: string
-          created_by_device_id: string | null
-          deleted_at: string | null
-          id: string
-          last_modified_by_device_id: string | null
-          notes: string | null
-          optimization_method: string | null
-          optimized: boolean
-          route_date: string
-          server_version: number
-          updated_at: string
-          vet_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by_device_id?: string | null
-          deleted_at?: string | null
-          id: string
-          last_modified_by_device_id?: string | null
-          notes?: string | null
-          optimization_method?: string | null
-          optimized?: boolean
-          route_date: string
-          server_version?: number
-          updated_at?: string
-          vet_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by_device_id?: string | null
-          deleted_at?: string | null
-          id?: string
-          last_modified_by_device_id?: string | null
-          notes?: string | null
-          optimization_method?: string | null
-          optimized?: boolean
-          route_date?: string
-          server_version?: number
-          updated_at?: string
-          vet_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_routes_created_by_device_id_fkey"
-            columns: ["created_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "vet_devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_routes_last_modified_by_device_id_fkey"
-            columns: ["last_modified_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "vet_devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_routes_vet_id_fkey"
-            columns: ["vet_id"]
-            isOneToOne: false
-            referencedRelation: "vets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_batches: {
-        Row: {
-          batch_lot_number: string | null
-          created_at: string
-          created_by_device_id: string | null
-          deleted_at: string | null
-          expiry_date: string | null
-          id: string
-          item_id: string
-          last_modified_by_device_id: string | null
-          quantity_on_hand: number
-          received_at: string
-          server_version: number
-          unit_cost_pesewas: number | null
-          updated_at: string
-          vet_id: string
-        }
-        Insert: {
-          batch_lot_number?: string | null
-          created_at?: string
-          created_by_device_id?: string | null
-          deleted_at?: string | null
-          expiry_date?: string | null
-          id: string
-          item_id: string
-          last_modified_by_device_id?: string | null
-          quantity_on_hand?: number
-          received_at?: string
-          server_version?: number
-          unit_cost_pesewas?: number | null
-          updated_at?: string
-          vet_id: string
-        }
-        Update: {
-          batch_lot_number?: string | null
-          created_at?: string
-          created_by_device_id?: string | null
-          deleted_at?: string | null
-          expiry_date?: string | null
-          id?: string
-          item_id?: string
-          last_modified_by_device_id?: string | null
-          quantity_on_hand?: number
-          received_at?: string
-          server_version?: number
-          unit_cost_pesewas?: number | null
-          updated_at?: string
-          vet_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_batches_created_by_device_id_fkey"
-            columns: ["created_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "vet_devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_batches_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_item_stock"
-            referencedColumns: ["item_id"]
-          },
-          {
-            foreignKeyName: "inventory_batches_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_batches_last_modified_by_device_id_fkey"
-            columns: ["last_modified_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "vet_devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_batches_vet_id_fkey"
-            columns: ["vet_id"]
-            isOneToOne: false
-            referencedRelation: "vets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       inventory_items: {
         Row: {
           active: boolean
@@ -678,7 +304,6 @@ export type Database = {
           item_name: string
           item_type: string
           last_modified_by_device_id: string | null
-          reorder_threshold: number | null
           server_version: number
           unit: string
           updated_at: string
@@ -700,7 +325,6 @@ export type Database = {
           item_name: string
           item_type: string
           last_modified_by_device_id?: string | null
-          reorder_threshold?: number | null
           server_version?: number
           unit: string
           updated_at?: string
@@ -722,7 +346,6 @@ export type Database = {
           item_name?: string
           item_type?: string
           last_modified_by_device_id?: string | null
-          reorder_threshold?: number | null
           server_version?: number
           unit?: string
           updated_at?: string
@@ -751,74 +374,6 @@ export type Database = {
             columns: ["vet_id"]
             isOneToOne: false
             referencedRelation: "vets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_movements: {
-        Row: {
-          batch_id: string
-          created_at: string
-          created_by_device_id: string | null
-          id: string
-          movement_type: string
-          notes: string | null
-          quantity: number
-          server_version: number
-          vet_id: string
-          visit_id: string | null
-        }
-        Insert: {
-          batch_id: string
-          created_at?: string
-          created_by_device_id?: string | null
-          id: string
-          movement_type: string
-          notes?: string | null
-          quantity: number
-          server_version?: number
-          vet_id: string
-          visit_id?: string | null
-        }
-        Update: {
-          batch_id?: string
-          created_at?: string
-          created_by_device_id?: string | null
-          id?: string
-          movement_type?: string
-          notes?: string | null
-          quantity?: number
-          server_version?: number
-          vet_id?: string
-          visit_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_movements_batch_id_fkey"
-            columns: ["batch_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_batches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_movements_created_by_device_id_fkey"
-            columns: ["created_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "vet_devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_movements_vet_id_fkey"
-            columns: ["vet_id"]
-            isOneToOne: false
-            referencedRelation: "vets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_movements_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visits"
             referencedColumns: ["id"]
           },
         ]
@@ -1395,7 +950,6 @@ export type Database = {
           duration_days: number | null
           eggs_withhold_until: string | null
           id: string
-          inventory_batch_id: string | null
           inventory_item_id: string | null
           last_modified_by_device_id: string | null
           meat_withhold_until: string | null
@@ -1428,7 +982,6 @@ export type Database = {
           duration_days?: number | null
           eggs_withhold_until?: string | null
           id: string
-          inventory_batch_id?: string | null
           inventory_item_id?: string | null
           last_modified_by_device_id?: string | null
           meat_withhold_until?: string | null
@@ -1461,7 +1014,6 @@ export type Database = {
           duration_days?: number | null
           eggs_withhold_until?: string | null
           id?: string
-          inventory_batch_id?: string | null
           inventory_item_id?: string | null
           last_modified_by_device_id?: string | null
           meat_withhold_until?: string | null
@@ -1484,20 +1036,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vet_devices"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "treatments_inventory_batch_id_fkey"
-            columns: ["inventory_batch_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_batches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "treatments_inventory_item_id_fkey"
-            columns: ["inventory_item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_item_stock"
-            referencedColumns: ["item_id"]
           },
           {
             foreignKeyName: "treatments_inventory_item_id_fkey"
@@ -1814,7 +1352,6 @@ export type Database = {
       }
       visits: {
         Row: {
-          appointment_id: string | null
           body_condition_score: string | null
           chief_complaint: string | null
           completed_at: string | null
@@ -1852,7 +1389,6 @@ export type Database = {
           workflow_status: string
         }
         Insert: {
-          appointment_id?: string | null
           body_condition_score?: string | null
           chief_complaint?: string | null
           completed_at?: string | null
@@ -1890,7 +1426,6 @@ export type Database = {
           workflow_status?: string
         }
         Update: {
-          appointment_id?: string | null
           body_condition_score?: string | null
           chief_complaint?: string | null
           completed_at?: string | null
@@ -1960,30 +1495,7 @@ export type Database = {
       }
     }
     Views: {
-      inventory_item_stock: {
-        Row: {
-          active: boolean | null
-          available_quantity: number | null
-          expired_quantity: number | null
-          is_low_stock: boolean | null
-          item_id: string | null
-          item_name: string | null
-          item_type: string | null
-          reorder_threshold: number | null
-          total_quantity_on_hand: number | null
-          unit: string | null
-          vet_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_items_vet_id_fkey"
-            columns: ["vet_id"]
-            isOneToOne: false
-            referencedRelation: "vets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       add_invoice_item: {
@@ -1995,27 +1507,6 @@ export type Database = {
           p_quantity: number
           p_sequence_number?: number
           p_unit_price_pesewas: number
-        }
-        Returns: string
-      }
-      add_route_stop: {
-        Args: {
-          p_appointment_id: string
-          p_device_id?: string
-          p_estimated_arrival?: string
-          p_id: string
-          p_route_id: string
-          p_sequence_number?: number
-        }
-        Returns: string
-      }
-      adjust_inventory: {
-        Args: {
-          p_batch_id: string
-          p_device_id?: string
-          p_movement_id: string
-          p_quantity_delta: number
-          p_reason: string
         }
         Returns: string
       }
@@ -2040,26 +1531,6 @@ export type Database = {
         Args: { p_checksum_sha256: string; p_device_id?: string; p_id: string }
         Returns: undefined
       }
-      create_appointment: {
-        Args: {
-          p_appointment_type: string
-          p_client_id?: string
-          p_contact_name?: string
-          p_contact_phone_display?: string
-          p_contact_phone_e164?: string
-          p_device_id?: string
-          p_id: string
-          p_patient_id?: string
-          p_reason_for_visit?: string
-          p_scheduled_end?: string
-          p_scheduled_start?: string
-          p_travel_notes?: string
-          p_visit_address?: string
-          p_visit_latitude?: number
-          p_visit_longitude?: number
-        }
-        Returns: string
-      }
       create_client: {
         Args: {
           p_address?: string
@@ -2076,17 +1547,6 @@ export type Database = {
           p_phone_e164: string
           p_whatsapp_display?: string
           p_whatsapp_e164?: string
-        }
-        Returns: string
-      }
-      create_inventory_item: {
-        Args: {
-          p_device_id?: string
-          p_id: string
-          p_item_name: string
-          p_item_type: string
-          p_reorder_threshold?: number
-          p_unit: string
         }
         Returns: string
       }
@@ -2142,7 +1602,6 @@ export type Database = {
       }
       create_visit: {
         Args: {
-          p_appointment_id?: string
           p_chief_complaint?: string
           p_device_id?: string
           p_id: string
@@ -2192,10 +1651,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      inventory_available_quantity: {
-        Args: { p_item_id: string }
-        Returns: number
-      }
       issue_invoice: {
         Args: { p_device_id?: string; p_due_at?: string; p_id: string }
         Returns: undefined
@@ -2221,17 +1676,6 @@ export type Database = {
           p_resolution: string
         }
         Returns: undefined
-      }
-      record_inventory_consumption: {
-        Args: {
-          p_batch_id: string
-          p_device_id?: string
-          p_movement_id: string
-          p_notes?: string
-          p_quantity: number
-          p_visit_id: string
-        }
-        Returns: string
       }
       record_invoice_payment: {
         Args: {
@@ -2330,34 +1774,6 @@ export type Database = {
         Args: { p_device_id?: string; p_id: string; p_reason?: string }
         Returns: undefined
       }
-      remove_route_stop: {
-        Args: { p_device_id?: string; p_id: string; p_reason?: string }
-        Returns: undefined
-      }
-      resequence_route_stops: {
-        Args: {
-          p_device_id?: string
-          p_optimization_method?: string
-          p_route_id: string
-          p_stop_ids: string[]
-        }
-        Returns: undefined
-      }
-      restock_inventory_batch: {
-        Args: {
-          p_batch_id: string
-          p_batch_lot_number?: string
-          p_device_id?: string
-          p_expiry_date?: string
-          p_item_id: string
-          p_movement_id: string
-          p_notes?: string
-          p_quantity: number
-          p_received_at?: string
-          p_unit_cost_pesewas?: number
-        }
-        Returns: string
-      }
       revoke_current_device: {
         Args: { p_device_id: string; p_reason: string }
         Returns: undefined
@@ -2406,39 +1822,6 @@ export type Database = {
         Args: { p_app_version?: string; p_device_id: string }
         Returns: undefined
       }
-      transition_appointment_status: {
-        Args: {
-          p_device_id?: string
-          p_expected_status?: string
-          p_id: string
-          p_reason?: string
-          p_scheduled_end?: string
-          p_scheduled_start?: string
-          p_to_status: string
-          p_visit_id?: string
-        }
-        Returns: string
-      }
-      update_appointment_details: {
-        Args: {
-          p_appointment_type: string
-          p_client_id?: string
-          p_contact_name?: string
-          p_contact_phone_display?: string
-          p_contact_phone_e164?: string
-          p_device_id?: string
-          p_id: string
-          p_patient_id?: string
-          p_reason_for_visit?: string
-          p_scheduled_end?: string
-          p_scheduled_start?: string
-          p_travel_notes?: string
-          p_visit_address?: string
-          p_visit_latitude?: number
-          p_visit_longitude?: number
-        }
-        Returns: undefined
-      }
       update_client: {
         Args: {
           p_address?: string
@@ -2455,18 +1838,6 @@ export type Database = {
           p_phone_e164: string
           p_whatsapp_display?: string
           p_whatsapp_e164?: string
-        }
-        Returns: undefined
-      }
-      update_inventory_item: {
-        Args: {
-          p_active?: boolean
-          p_device_id?: string
-          p_id: string
-          p_item_name: string
-          p_item_type: string
-          p_reorder_threshold?: number
-          p_unit: string
         }
         Returns: undefined
       }
@@ -2537,15 +1908,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      upsert_daily_route: {
-        Args: {
-          p_device_id?: string
-          p_id: string
-          p_notes?: string
-          p_route_date: string
-        }
-        Returns: string
-      }
       upsert_product: {
         Args: {
           p_active?: boolean
@@ -2571,15 +1933,6 @@ export type Database = {
       void_visit: {
         Args: { p_device_id?: string; p_reason: string; p_visit_id: string }
         Returns: undefined
-      }
-      write_off_expired_batch: {
-        Args: {
-          p_batch_id: string
-          p_device_id?: string
-          p_movement_id: string
-          p_notes?: string
-        }
-        Returns: string
       }
     }
     Enums: {

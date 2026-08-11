@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NewPatientForm } from "./new-patient-form";
-import { NewAppointmentForm } from "./new-appointment-form";
 
 export const dynamic = "force-dynamic";
 
@@ -79,20 +78,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <h2>Add an animal</h2>
         <NewPatientForm clientId={client.id} />
       </section>
-
-      {patients.length ? (
-        <section className="card stack">
-          <h2>Request a house call</h2>
-          <NewAppointmentForm
-            clientId={client.id}
-            defaultAddress={client.address ?? ""}
-            patients={patients.map((row) => ({
-              id: row.patient!.id,
-              name: row.patient!.name
-            }))}
-          />
-        </section>
-      ) : null}
     </>
   );
 }

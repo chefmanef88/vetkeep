@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatDateTime } from "@/lib/practice/format";
-import { FollowUpForm } from "./follow-up-form";
 
 export const dynamic = "force-dynamic";
 
@@ -41,13 +40,16 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
     .is("deleted_at", null)
     .order("visit_date", { ascending: false });
 
-  const { data: upcoming } = await supabase
-    .from("appointments")
-    .select("id, scheduled_start, status, appointment_type, reason_for_visit")
+  // Follow-up intent lives on the record, not in a booking (brief §11). What is
+  // "due" is a review date a veterinarian wrote down, not a slot anyone agreed.
+  const { data: due } = await supabase
+    .from("visits")
+    .select("id, next_review_date, follow_up_plan, visit_date")
     .eq("patient_id", id)
     .is("deleted_at", null)
-    .in("status", ["requested", "confirmed", "rescheduled"])
-    .order("scheduled_start", { ascending: true });
+    .not("next_review_date", "is", null)
+    .gte("next_review_date", new Date().toISOString().slice(0, 10))
+    .order("next_review_date", { ascending: true });
 
   return (
     <>
@@ -82,31 +84,26 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
       </section>
 
       <section className="card stack">
-        <h2>Upcoming</h2>
-        {upcoming?.length ? (
+        <h2>Due for review</h2>
+        {due?.length ? (
           <ul className="record-list">
-            {upcoming.map((appointment) => (
-              <li key={appointment.id}>
+            {due.map((review) => (
+              <li key={review.id}>
                 <div className="row-head">
-                  <strong>{formatDateTime(appointment.scheduled_start)}</strong>
-                  <span className={`pill pill-${appointment.status}`}>{appointment.status}</span>
+                  <strong>{formatDate(review.next_review_date as string)}</strong>
+                  <Link href={`/practice/visits/${review.id}`}>
+                    from the record of {formatDate(review.visit_date)}
+                  </Link>
                 </div>
-                <span className="muted">
-                  {appointment.appointment_type.replace("_", " ")}
-                  {appointment.reason_for_visit ? ` · ${appointment.reason_for_visit}` : ""}
-                </span>
+                {review.follow_up_plan ? (
+                  <span className="muted">{review.follow_up_plan}</span>
+                ) : null}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="muted">Nothing scheduled.</p>
-        )}
-
-        {owner?.client_id ? (
-          <FollowUpForm patientId={patient.id} clientId={owner.client_id} />
-        ) : (
           <p className="muted">
-            This animal has no current owner, so a follow-up cannot be scheduled.
+            Nothing due. A review date is set on a record during the consultation, on the phone.
           </p>
         )}
       </section>

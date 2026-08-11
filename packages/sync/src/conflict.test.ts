@@ -38,12 +38,15 @@ describe("conflict policy", () => {
     expect(conflictPolicyFor("patient")).toBe("manual_compare");
   });
 
-  it("validates appointment status moves instead of merging them", () => {
-    expect(conflictPolicyFor("appointment")).toBe("validate_transition");
-  });
-
-  it("never merges anything carrying money or stock", () => {
-    for (const entityType of ["inventory_movement", "invoice", "invoice_payment"] as EntityType[]) {
+  it("never merges anything carrying money or a dose", () => {
+    // A treatment replayed and merged would record the dose twice, which on a
+    // food animal also doubles a withholding period somebody is relying on.
+    for (const entityType of [
+      "treatment",
+      "preventive_care",
+      "invoice",
+      "invoice_payment"
+    ] as EntityType[]) {
       expect(conflictPolicyFor(entityType)).toBe("idempotent_never_merge");
     }
   });
@@ -52,7 +55,11 @@ describe("conflict policy", () => {
     const lastWriteWins = ALL_ENTITY_TYPES.filter(
       (entityType) => conflictPolicyFor(entityType) === "last_write_wins"
     );
-    expect(lastWriteWins.sort()).toEqual(["display_preference", "route_stop"]);
+    // Route stops used to sit here too. With scheduling gone, the only record
+    // whose loss costs nothing is a display setting — which is the point of
+    // asserting the whole list rather than one membership: a new entity type
+    // cannot quietly acquire last-write-wins without this failing.
+    expect(lastWriteWins.sort()).toEqual(["display_preference"]);
   });
 
   it("routes exactly the manual policies to the vet", () => {

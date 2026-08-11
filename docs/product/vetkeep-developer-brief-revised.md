@@ -39,12 +39,12 @@ rather than overwriting it.
 **Known divergences between this document and the built schema**, stated rather
 than quietly carried:
 
-- `appointments`, `daily_routes`, `daily_route_stops`, `inventory_batches` and
-  `inventory_movements` **still exist in the database**, along with their RPCs.
-  §11 says scheduling is removed from scope, and it is removed from the mobile
-  application, but the tables were never dropped and the web application still
-  calls them. Removing scope did not remove schema. Until they are dropped, this
-  document describes the intent and the schema describes the past.
+- ~~`appointments`, `daily_routes`, `daily_route_stops`, `inventory_batches` and
+  `inventory_movements` still exist in the database.~~ **Resolved 11 August 2026.** All five tables, their triggers, and the eighteen RPCs that reached
+  them are dropped, along with `visits.appointment_id`,
+  `treatments.inventory_batch_id` and `inventory_items.reorder_threshold`. The
+  web application's scheduling and stock screens are removed. Removing something
+  from scope does not remove it from the schema, and for a day it had not.
 - The `VK-R-` record code promised at the end of the 10 August note **is not
   implemented.** A shared document is currently identified by the patient code
   and the record date. The reasoning for a dedicated code stands; the code does
@@ -985,12 +985,12 @@ Rules:
 - **No quantities, no batches, no expiry, no low-stock warnings.**
   `inventory_batches` and `inventory_movements` leave the specification. A
   treatment does not deduct anything.
-- **The drug list is maintained on the web application, not on mobile.**
-  Entering a formulary is deskwork done once, sitting down, from a data sheet —
-  not something done on a phone in the sun with a dog under one arm. The mobile
-  application reads the list and never edits it, with one deliberate exception:
-  a missing strength may be filled in from the consultation that exposed it
-  (§7.10).
+- **The drug list is maintained on both applications**, through the same
+  controlled function. Entering a formulary from a data sheet is deskwork and
+  the web application suits it better, but a veterinarian who buys a new product
+  on the road must be able to add it there and then; a list that can only be
+  edited at a desk is a list that is wrong in the field. `authenticated` holds
+  no `UPDATE` on the table in either case — every edit goes through an RPC.
 - A product not on the list can still be administered and recorded. The list is
   a convenience, never a gate: a veterinarian who used a bottle a client
   supplied must be able to record that they used it.

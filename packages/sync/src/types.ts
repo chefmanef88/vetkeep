@@ -53,9 +53,8 @@ export type EntityType =
   | "visit_draft"
   | "exam_finding"
   | "visit_amendment"
-  | "appointment"
-  | "route_stop"
-  | "inventory_movement"
+  | "treatment"
+  | "preventive_care"
   | "invoice"
   | "invoice_payment"
   | "display_preference";

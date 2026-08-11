@@ -67,7 +67,7 @@ export function NewClientForm() {
       </label>
       <label className="checkbox">
         <input type="checkbox" name="consent" />
-        This client agreed to receive appointment and vaccination reminders
+        This client agreed to receive follow-up and vaccination reminders
       </label>
       {error ? (
         <p className="error" role="alert">

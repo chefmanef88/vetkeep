@@ -1,126 +1,100 @@
-import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/practice/format";
 import { NewItemForm } from "./new-item-form";
-import { RestockForm } from "./restock-form";
+
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const CONCENTRATION_LABELS: Record<string, string> = {
+  mg_per_ml: "mg/ml",
+  percent: "%",
+  iu_per_ml: "IU/ml",
+  mg_per_g: "mg/g"
+};
+
+/**
+ * The drug list. Not a stock count.
+ *
+ * This page used to sum live batches, exclude expired ones, and warn below a
+ * restock level. All of that was removed (brief §7.8): nobody counts what is in
+ * the boot of their car, and a low-stock warning derived from a quantity that
+ * stopped being maintained in week one is not useless but wrong.
+ *
+ * What a product entry is for now is the opposite direction. It does not say how
+ * much is left. It says what the product *obliges* — its strength, so a dose can
+ * be calculated, and its withholding periods, so a treatment can work out when
+ * milk and meat are safe again. Those are properties of the product, and they
+ * are the ones a record cannot be written correctly without.
+ */
 export default async function InventoryPage() {
   const supabase = await createClient();
 
-  // Stock is derived, never stored: this view sums live batches and excludes
-  // anything expired, so the number here is what is actually usable today.
-  const { data: stock, error } = await supabase
-    .from("inventory_item_stock")
+  const { data: products, error } = await supabase
+    .from("inventory_items")
     .select(
-      "item_id, item_name, item_type, unit, available_quantity, expired_quantity, reorder_threshold, is_low_stock, active"
+      "id, item_name, item_type, unit, active_ingredient, default_route, concentration_value, concentration_unit, withdrawal_meat_days, withdrawal_milk_days, withdrawal_eggs_days, active"
     )
+    .is("deleted_at", null)
+    .eq("active", true)
     .order("item_name", { ascending: true });
 
-  if (error) throw new Error("Unable to load the stock position.");
+  if (error) throw new Error("Unable to load the drug list.");
 
-  const { data: batches } = await supabase
-    .from("inventory_batches")
-    .select("id, item_id, batch_lot_number, expiry_date, quantity_on_hand")
-    .is("deleted_at", null)
-    .gt("quantity_on_hand", 0)
-    .order("expiry_date", { ascending: true, nullsFirst: false });
-
-  // Every column on a view is nullable as far as the generated types are
-  // concerned, so narrow to the rows that actually carry an item before use
-  // rather than asserting non-null.
-  const items = (stock ?? [])
-    .filter((row) => row.active && row.item_id !== null && row.item_name !== null)
-    .map((row) => ({
-      ...row,
-      itemId: row.item_id as string,
-      itemName: row.item_name as string,
-      unit: row.unit ?? ""
-    }));
-  const lowStock = items.filter((row) => row.is_low_stock);
-  const today = new Date().toISOString().slice(0, 10);
+  const items = products ?? [];
 
   return (
     <>
       <section className="card stack">
-        <h1>What you are carrying</h1>
+        <h1>Products</h1>
         <p className="muted">
-          The drugs and consumables in your vehicle. Expired batches are excluded from what is
-          available, even while they are still physically in the bag.
+          What you use, and what each one obliges. Quantities are deliberately not tracked — a count
+          nobody maintains is worse than no count, because the warning drawn from it stops being
+          true.
         </p>
-
-        {lowStock.length ? (
-          <p className="warning" role="status">
-            {lowStock.length} item{lowStock.length === 1 ? "" : "s"} at or below the restock level:{" "}
-            {lowStock.map((row) => row.itemName).join(", ")}.
-          </p>
-        ) : null}
 
         {items.length ? (
           <ul className="record-list">
             {items.map((row) => {
-              const itemBatches = (batches ?? []).filter((b) => b.item_id === row.itemId);
+              const strength =
+                row.concentration_value !== null && row.concentration_unit !== null
+                  ? `${row.concentration_value} ${
+                      CONCENTRATION_LABELS[row.concentration_unit] ?? row.concentration_unit
+                    }`
+                  : null;
+
+              const withdrawals = [
+                row.withdrawal_meat_days !== null ? `meat ${row.withdrawal_meat_days} d` : null,
+                row.withdrawal_milk_days !== null ? `milk ${row.withdrawal_milk_days} d` : null,
+                row.withdrawal_eggs_days !== null ? `eggs ${row.withdrawal_eggs_days} d` : null
+              ].filter((entry): entry is string => entry !== null);
+
               return (
-                <li key={row.itemId}>
+                <li key={row.id}>
                   <div className="row-head">
-                    <strong>{row.itemName}</strong>
-                    <span className={row.is_low_stock ? "stock-low" : "stock-ok"}>
-                      {row.available_quantity} {row.unit}
-                    </span>
+                    <strong>{row.item_name}</strong>
+                    <span className="muted">{strength ?? "no strength on file"}</span>
                   </div>
                   <span className="muted">
                     {row.item_type}
-                    {row.reorder_threshold !== null
-                      ? ` · restock at ${row.reorder_threshold} ${row.unit}`
-                      : ""}
-                    {Number(row.expired_quantity) > 0
-                      ? ` · ${row.expired_quantity} ${row.unit} expired`
-                      : ""}
+                    {row.active_ingredient ? ` · ${row.active_ingredient}` : ""}
+                    {row.default_route ? ` · ${row.default_route}` : ""}
                   </span>
-                  {itemBatches.length ? (
-                    <ul className="batch-list">
-                      {itemBatches.map((batch) => (
-                        <li
-                          key={batch.id}
-                          className={
-                            batch.expiry_date && batch.expiry_date < today ? "batch-expired" : ""
-                          }
-                        >
-                          <span className="code">{batch.batch_lot_number ?? "no lot number"}</span>
-                          <span>
-                            {batch.quantity_on_hand} {row.unit}
-                          </span>
-                          <span className="muted">
-                            {batch.expiry_date
-                              ? `expires ${formatDate(batch.expiry_date)}`
-                              : "no expiry recorded"}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="muted">No stock on hand.</span>
-                  )}
+                  {/* The half of this record with a food-safety consequence. */}
+                  <span className="muted">
+                    {withdrawals.length
+                      ? `Withholding: ${withdrawals.join(" · ")}`
+                      : "No withholding periods on file"}
+                  </span>
                 </li>
               );
             })}
           </ul>
         ) : (
-          <p className="muted">Nothing recorded yet. Add the first item below.</p>
+          <p className="muted">Nothing recorded yet. Add the first product below.</p>
         )}
       </section>
 
-      {items.length ? (
-        <section className="card stack">
-          <h2>Receive stock</h2>
-          <RestockForm
-            items={items.map((row) => ({ id: row.itemId, name: row.itemName, unit: row.unit }))}
-          />
-        </section>
-      ) : null}
-
       <section className="card stack">
-        <h2>Add an item</h2>
+        <h2>Add a product</h2>
         <NewItemForm />
       </section>
     </>
