@@ -89,8 +89,44 @@ turned out to be an abandoned VetKeep: the same tables, the same `audit_events`
 comment as this repository, this repository's first three migrations, and **zero
 rows in every table.** Nothing is lost by bringing it current.
 
-Renaming it to `vetkeep-staging` in the dashboard is worthwhile so a future
-reader of the project list is not misled by the old name.
+Renamed to `vetkeep-staging` in the dashboard on 11 August so the project list
+stops describing it as something else.
+
+### Reusing a project: what "empty" does not cover
+
+The assessment above — no rows, known migration history, same product — was not
+sufficient, and it is worth recording why.
+
+`vettrack` had an earlier life before those three migrations. Left behind from it
+was a trigger, `on_auth_user_created` on **`auth.users`**, calling
+`private.handle_new_staff_signup()`, which inserted into a `public.staff_profiles`
+table that no longer existed. Migrations only ever added to this project, so
+nothing removed it. Every signup returned:
+
+```
+500  relation "public.staff_profiles" does not exist (SQLSTATE 42P01)
+```
+
+Nothing in the schema hints at it. `db push` succeeds, the tables are right, the
+advisors are clean, and authentication fails at the first real use. The trigger,
+the function and the empty `private` schema were dropped on 11 August.
+
+**Before reusing any existing project, check beyond the public schema:**
+
+```sql
+select tgname, tgrelid::regclass::text, pg_get_triggerdef(oid)
+from pg_trigger where not tgisinternal and tgrelid::regclass::text like 'auth.%';
+```
+
+```sql
+select nspname from pg_namespace
+where nspname not like 'pg_%'
+  and nspname not in ('information_schema','public','auth','storage','extensions',
+                      'graphql','graphql_public','realtime','vault','supabase_migrations',
+                      'app_private','pgbouncer','net','cron','supabase_functions');
+```
+
+Row counts describe the data. Neither describes what runs on insert.
 
 ## 3. Push the schema
 
