@@ -11,6 +11,7 @@ export {
 export { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder, type ExamSystem } from "./exam";
 
 export {
+  CONCENTRATION_SOURCES,
   CONCENTRATION_UNITS,
   DOSE_RATE_UNITS,
   calculateDose,
@@ -20,6 +21,7 @@ export {
   toKilograms,
   toMgPerMl,
   type Concentration,
+  type ConcentrationSource,
   type ConcentrationUnit,
   type DoseRateUnit,
   type DoseResult

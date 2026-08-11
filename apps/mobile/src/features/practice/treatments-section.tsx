@@ -6,8 +6,12 @@ import {
   concentrationLabel,
   defaultTreatmentRoute,
   requiredWithdrawals,
+  strengthWarning,
   treatmentRouteLabel,
   treatmentRoutesFor,
+  type Concentration,
+  type ConcentrationSource,
+  type ConcentrationUnit,
   type WithdrawalKind
 } from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
@@ -44,6 +48,14 @@ const RATE_UNITS = [
   { value: "mg_per_kg", label: "mg/kg" },
   { value: "ml_per_kg", label: "ml/kg" },
   { value: "iu_per_kg", label: "IU/kg" }
+];
+
+/** Percent sits beside mg/ml because that is the confusion worth making visible. */
+const STRENGTH_UNITS = [
+  { value: "mg_per_ml", label: "mg/ml" },
+  { value: "percent", label: "%" },
+  { value: "iu_per_ml", label: "IU/ml" },
+  { value: "mg_per_g", label: "mg/g" }
 ];
 
 type TreatmentRow = {
@@ -104,6 +116,10 @@ export function TreatmentsSection({
   const [rateValue, setRateValue] = useState("");
   const [rateUnit, setRateUnit] = useState("mg_per_kg");
   const [weightKg, setWeightKg] = useState("");
+  // Typed off the bottle when the drug list has nothing to offer.
+  const [strengthValue, setStrengthValue] = useState("");
+  const [strengthUnit, setStrengthUnit] = useState("mg_per_ml");
+  const [keepStrength, setKeepStrength] = useState(false);
   const [durationDays, setDurationDays] = useState("");
   const [animalsTreated, setAnimalsTreated] = useState("");
   const [meatUntil, setMeatUntil] = useState("");
@@ -147,6 +163,8 @@ export function TreatmentsSection({
   const treatments = data?.treatments ?? [];
   const carried = data?.carried ?? [];
   const chosen = carried.find((item) => item.id === itemId) ?? null;
+  /** The drug list vouches for this one; anything else was read off the bottle. */
+  const onFile = chosen?.concentration_value != null && chosen.concentration_unit != null;
 
   /**
    * A carried product with periods on file resolves its own dates server-side.
@@ -161,10 +179,34 @@ export function TreatmentsSection({
 
   const mustAsk = required.filter((kind) => !formularyCovers(kind)) as WithdrawalKind[];
 
-  const concentration =
-    chosen?.concentration_value != null && chosen.concentration_unit != null
-      ? { value: chosen.concentration_value, unit: chosen.concentration_unit as never }
+  /**
+   * A strength on file is used as it stands. Otherwise the vet types what the
+   * label says, because the alternative — refusing to calculate for an
+   * unfamiliar product — withholds the arithmetic exactly where an unfamiliar
+   * product makes it most worth having.
+   */
+  const typedStrength = optionalNumber(strengthValue);
+  const concentration: Concentration | null = onFile
+    ? {
+        value: chosen?.concentration_value as number,
+        unit: chosen?.concentration_unit as ConcentrationUnit
+      }
+    : typedStrength !== undefined
+      ? { value: typedStrength, unit: strengthUnit as ConcentrationUnit }
       : null;
+
+  const concentrationSource: ConcentrationSource | null = concentration
+    ? onFile
+      ? "formulary"
+      : "manual"
+    : null;
+
+  // Gross unit confusion only; it cannot catch 20 entered for a 20% bottle,
+  // which is what the working beside the result is for.
+  const warning = concentration && !onFile ? strengthWarning(concentration) : null;
+
+  /** A carried product missing its strength should not need retyping next visit. */
+  const canKeepStrength = chosen !== null && !onFile && typedStrength !== undefined;
 
   /**
    * The sum a vet does in their head: rate times weight, divided by the strength
@@ -191,6 +233,10 @@ export function TreatmentsSection({
     setProductName(item.item_name);
     setDoseUnit(item.unit);
     if (item.default_route) setRoute(item.default_route);
+    // A strength typed for one product must not survive onto another.
+    setStrengthValue("");
+    setKeepStrength(false);
+    if (item.concentration_unit) setStrengthUnit(item.concentration_unit);
   }
 
   function reset() {
@@ -198,6 +244,8 @@ export function TreatmentsSection({
     setProductName("");
     setDose("");
     setRateValue("");
+    setStrengthValue("");
+    setKeepStrength(false);
     setDurationDays("");
     setAnimalsTreated("");
     setMeatUntil("");
@@ -243,14 +291,30 @@ export function TreatmentsSection({
         p_weight_kg_used:
           optionalNumber(rateValue) !== undefined ? optionalNumber(weightKg) : undefined,
         p_concentration_value: concentration?.value,
-        p_concentration_unit: chosen?.concentration_unit ?? undefined
+        p_concentration_unit: concentration?.unit,
+        // Whether the drug list vouched for the strength or it was read off the
+        // bottle. The dose is the same; what can be rechecked later is not.
+        p_concentration_source: concentrationSource ?? undefined
       })
     );
-    setBusy(false);
     if (rpcError) {
+      setBusy(false);
       setError(rpcError.message);
       return;
     }
+
+    // Filling the gap in the drug list is a convenience, not part of the
+    // record. If it fails the treatment is still recorded, so it must not
+    // report an error over a consultation that was saved.
+    if (keepStrength && canKeepStrength && concentration && chosen) {
+      await supabase.rpc("set_item_concentration", {
+        p_item_id: chosen.id,
+        p_concentration_value: concentration.value,
+        p_concentration_unit: concentration.unit
+      });
+    }
+
+    setBusy(false);
     reset();
     reload();
   }
@@ -363,25 +427,79 @@ export function TreatmentsSection({
               />
             </View>
           </View>
-          <View style={styles.pairRow}>
-            <View style={styles.pairCell}>
-              <FieldLabel>Weight in kg</FieldLabel>
-              <Field
-                value={weightKg}
-                onChangeText={setWeightKg}
-                keyboardType="decimal-pad"
-                placeholder="15"
-              />
-            </View>
-            <View style={styles.pairCell}>
-              <FieldLabel>Strength</FieldLabel>
-              <Text style={styles.strength}>
-                {concentration
-                  ? `${concentration.value} ${concentrationLabel(chosen?.concentration_unit ?? "")}`
-                  : "Not on file"}
+          <FieldLabel>Weight in kg</FieldLabel>
+          <Field
+            value={weightKg}
+            onChangeText={setWeightKg}
+            keyboardType="decimal-pad"
+            placeholder="15"
+          />
+
+          {/* On file, the drug list vouches for the number and it is shown
+              rather than asked for. Otherwise it is read off the bottle. */}
+          <FieldLabel>Strength</FieldLabel>
+          {onFile ? (
+            <View style={styles.strengthOnFile}>
+              <Ionicons name="lock-closed" size={14} color={palette.quiet} />
+              <Text style={styles.strengthValue}>
+                {chosen?.concentration_value} {concentrationLabel(chosen?.concentration_unit ?? "")}
               </Text>
+              <Text style={styles.strengthFrom}>from your drug list</Text>
             </View>
-          </View>
+          ) : (
+            <>
+              <View style={styles.pairRow}>
+                <View style={styles.pairCell}>
+                  <Field
+                    value={strengthValue}
+                    onChangeText={setStrengthValue}
+                    keyboardType="decimal-pad"
+                    placeholder="200"
+                    accessibilityLabel="Strength of the product"
+                  />
+                </View>
+                <View style={styles.pairCellWide}>
+                  <Segmented
+                    options={STRENGTH_UNITS}
+                    value={strengthUnit}
+                    onChange={setStrengthUnit}
+                    accessibilityLabel="Strength unit"
+                  />
+                </View>
+              </View>
+              <Muted>
+                {chosen
+                  ? `${chosen.item_name} has no strength on file. Read it off the label.`
+                  : "Read it off the label of the bottle you used."}
+              </Muted>
+
+              {/* A warning, never a refusal: unusual products exist. */}
+              {warning ? (
+                <View style={styles.warn}>
+                  <Ionicons name="alert-circle" size={16} color={palette.amber} />
+                  <Text style={styles.warnText}>{warning}</Text>
+                </View>
+              ) : null}
+
+              {canKeepStrength ? (
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: keepStrength }}
+                  style={styles.assert}
+                  onPress={() => setKeepStrength(!keepStrength)}
+                >
+                  <Ionicons
+                    name={keepStrength ? "checkbox" : "square-outline"}
+                    size={20}
+                    color={keepStrength ? palette.brandInk : palette.quiet}
+                  />
+                  <Text style={styles.assertText}>
+                    Save this strength to {chosen?.item_name} so it is not retyped next visit.
+                  </Text>
+                </Pressable>
+              ) : null}
+            </>
+          )}
 
           {calculated ? (
             calculated.ok ? (
@@ -579,7 +697,26 @@ const styles = StyleSheet.create({
   withheldActive: { fontFamily: fonts.semibold, color: palette.amber },
   pairRow: { flexDirection: "row", gap: space.md },
   pairCellWide: { flex: 2, gap: space.xs, justifyContent: "flex-end" },
-  strength: { ...type.small, color: palette.quiet, paddingVertical: space.md },
+  strengthOnFile: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    backgroundColor: palette.ground,
+    borderRadius: radiusControl,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm
+  },
+  strengthValue: { fontFamily: fonts.semibold, fontSize: 15, color: palette.ink },
+  strengthFrom: { ...type.small, fontSize: 11, color: palette.quiet },
+  warn: {
+    flexDirection: "row",
+    gap: space.sm,
+    alignItems: "flex-start",
+    backgroundColor: palette.amberSoft,
+    borderRadius: radiusControl,
+    padding: space.md
+  },
+  warnText: { ...type.small, fontSize: 12, color: palette.amber, flex: 1 },
   result: {
     flexDirection: "row",
     gap: space.md,

@@ -1382,6 +1382,7 @@ export type Database = {
           active_ingredient: string | null
           administered_at: string
           animals_treated: number | null
+          concentration_source: string | null
           concentration_unit: string | null
           concentration_value: number | null
           created_at: string
@@ -1414,6 +1415,7 @@ export type Database = {
           active_ingredient?: string | null
           administered_at: string
           animals_treated?: number | null
+          concentration_source?: string | null
           concentration_unit?: string | null
           concentration_value?: number | null
           created_at?: string
@@ -1446,6 +1448,7 @@ export type Database = {
           active_ingredient?: string | null
           administered_at?: string
           animals_treated?: number | null
+          concentration_source?: string | null
           concentration_unit?: string | null
           concentration_value?: number | null
           created_at?: string
@@ -2277,6 +2280,7 @@ export type Database = {
           p_active_ingredient?: string
           p_administered_at?: string
           p_animals_treated?: number
+          p_concentration_source?: string
           p_concentration_unit?: string
           p_concentration_value?: number
           p_device_id?: string
@@ -2366,6 +2370,15 @@ export type Database = {
           p_status: string
           p_system_name: string
           p_visit_id: string
+        }
+        Returns: undefined
+      }
+      set_item_concentration: {
+        Args: {
+          p_concentration_unit: string
+          p_concentration_value: number
+          p_device_id?: string
+          p_item_id: string
         }
         Returns: undefined
       }

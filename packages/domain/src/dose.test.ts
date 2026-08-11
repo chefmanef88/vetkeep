@@ -129,7 +129,7 @@ describe("calculateDose", () => {
     expect(bad.ok).toBe(false);
   });
 
-  it("says so rather than guessing when the product has no strength", () => {
+  it("asks for the strength rather than guessing when none is given", () => {
     const result = calculateDose({
       rate: 20,
       rateUnit: "mg_per_kg",
@@ -137,7 +137,29 @@ describe("calculateDose", () => {
       concentration: null
     });
     expect(result).toMatchObject({ ok: false });
-    expect(!result.ok && result.reason).toContain("no strength");
+    // The strength can be typed off the bottle, so the message names something
+    // the vet can do rather than reporting a dead end.
+    expect(!result.ok && result.reason).toContain("Enter the strength");
+  });
+
+  it("does not care where a strength came from, only what it is", () => {
+    // The same arithmetic whether the drug list supplied the number or the vet
+    // read it off the label; provenance is recorded, not calculated with.
+    const fromList = calculateDose({
+      rate: 20,
+      rateUnit: "mg_per_kg",
+      weightKg: 30,
+      concentration: { value: 200, unit: "mg_per_ml" }
+    });
+    const typed = calculateDose({
+      rate: 20,
+      rateUnit: "mg_per_kg",
+      weightKg: 30,
+      concentration: { value: 20, unit: "percent" }
+    });
+    expect(fromList).toMatchObject({ ok: true, volumeMl: 3 });
+    // 20% is the same 200 mg/ml, reached the other way.
+    expect(typed).toMatchObject({ ok: true, volumeMl: 3 });
   });
 
   it("refuses a missing weight, which would otherwise compute a dose of nothing", () => {

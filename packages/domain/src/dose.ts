@@ -20,6 +20,17 @@ export type DoseRateUnit = (typeof DOSE_RATE_UNITS)[number];
 
 export type Concentration = { value: number; unit: ConcentrationUnit };
 
+/**
+ * Where a strength came from.
+ *
+ * "formulary" is the drug list vouching for the number; "manual" is a vet
+ * reading it off the bottle in their hand. Both give the same arithmetic, but
+ * only the first can be re-derived later if the product's entry is corrected,
+ * so a record that does not distinguish them loses something it cannot recover.
+ */
+export const CONCENTRATION_SOURCES = ["formulary", "manual"] as const;
+export type ConcentrationSource = (typeof CONCENTRATION_SOURCES)[number];
+
 const CONCENTRATION_LABELS: Record<ConcentrationUnit, string> = {
   mg_per_ml: "mg/ml",
   percent: "%",
@@ -128,7 +139,7 @@ export function calculateDose(input: {
   if (!input.concentration) {
     return {
       ok: false,
-      reason: "This product has no strength on file, so the volume cannot be worked out."
+      reason: "Enter the strength of the product to work out the volume."
     };
   }
 
