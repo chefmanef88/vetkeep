@@ -12,15 +12,49 @@ protections a production project is given in `environment-separation.md`.
 
 ---
 
-## 1. The trap: migrations do not carry the auth configuration
+## 1. The trap: `db push` does not carry the auth configuration
 
 This is the part that silently goes wrong, so it comes first.
 
-`supabase/config.toml` governs the **local** stack only. Pushing migrations to a
-hosted project applies schema, functions, policies and grants — and nothing
-else. Every setting below lives in the hosted project's dashboard, and if it is
-not set there, staging quietly falls back to Supabase defaults that are weaker
-than what Phase 1 was accepted on.
+`supabase db push` applies schema, functions, policies and grants — and nothing
+else. It does **not** touch authentication settings. Without the step below,
+staging falls back to Supabase defaults weaker than what Phase 1 was accepted
+on, and the schema gives no hint that anything is wrong.
+
+**The fix is one command, not a dashboard visit:**
+
+```bash
+npx supabase config push
+```
+
+It sends the `[auth]`, `[api]` and `[storage]` blocks of `config.toml` to the
+linked project and prints a diff of what it is about to change. This is worth
+preferring over the dashboard for a reason beyond convenience: a value clicked
+into a web form is a value nobody can review, diff, or reproduce on the next
+project. In `config.toml` it is in version control with everything else.
+
+The diff it printed the first time it ran against staging, which is exactly the
+drift this section warns about:
+
+```
+-jwt_expiry = 3600            +jwt_expiry = 900
+-minimum_password_length = 6  +minimum_password_length = 12
+-additional_redirect_urls = []
++additional_redirect_urls = ["http://localhost:3000/auth/confirm", "vetkeep://auth/confirm"]
+```
+
+Two things to know about it:
+
+- **`storage.vector` must be disabled explicitly.** The CLI defaults it on, a
+  free-tier project cannot have it, and the resulting 402 aborts the whole
+  storage push — silently leaving the file size limit at the 50MiB default
+  rather than the 25MiB the attachments specification calls for. `config.toml`
+  now sets it to `false`.
+- **`site_url` is `http://localhost:3000`**, which is right while the web
+  application runs locally. When it is deployed, change it there and push again
+  rather than editing the dashboard.
+
+For reference, these are the settings involved and what they cost if missed:
 
 | Setting                 | Required value  | Supabase default | Why it matters                                                                                     |
 | ----------------------- | --------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
