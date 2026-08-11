@@ -44,22 +44,41 @@ never resolves:
 
 ---
 
-## 2. Create the project
+## 2. The project
 
-Free tier, `eu-west-1` to match the organisation's other projects. Name it
-`vetkeep-staging` so it can never be mistaken for production in a project list.
+**Decided 11 August 2026: `vettrack`, ref `bnpokpjsencpxaetyfko`, `eu-west-1`.**
 
-Record the project ref; everything below needs it.
+A new project was refused — the free tier allows two active projects per
+administrator and the organisation already had two. Rather than pause an
+unrelated product or upgrade the account, staging reuses `vettrack`, which
+turned out to be an abandoned VetKeep: the same tables, the same `audit_events`
+comment as this repository, this repository's first three migrations, and **zero
+rows in every table.** Nothing is lost by bringing it current.
+
+Renaming it to `vetkeep-staging` in the dashboard is worthwhile so a future
+reader of the project list is not misled by the old name.
 
 ## 3. Push the schema
 
+This step needs the CLI authenticated. The MCP connector cannot substitute:
+`apply_migration` stamps a version of its own choosing, which would desynchronise
+the migration history from this repository and make every future `db push`
+attempt to replay work already done.
+
 ```bash
-npx supabase link --project-ref <ref>
+npx supabase login
+```
+
+```bash
+npx supabase link --project-ref bnpokpjsencpxaetyfko
 ```
 
 ```bash
 npx supabase db push
 ```
+
+Eighteen migrations are outstanding — everything from `202608020002_phase2_visits`
+onward.
 
 `db push` applies migrations that have not run yet. It does **not** reset, so it
 is safe against a project that already holds data — unlike `db reset`, which
@@ -84,19 +103,16 @@ Both keys are publishable and safe in a client bundle. The service role key is
 **not**, is not needed by either application, and must never enter this
 repository.
 
-`apps/mobile/.env.local`
+Both files are already written, with the real URL and publishable key in them:
+`apps/mobile/.env.staging` and `apps/web/.env.staging`. They are deliberately
+**not** `.env.local`, because pointing the applications at a project whose schema
+is still at Phase 2 produces an application that signs in and then fails on every
+clinical call.
 
-```
-EXPO_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key>
-```
+Once the push in section 3 has run:
 
-`apps/web/.env.local`
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key>
-NEXT_PUBLIC_APP_URL=<web origin>
+```bash
+cp apps/mobile/.env.staging apps/mobile/.env.local && cp apps/web/.env.staging apps/web/.env.local
 ```
 
 A rebuild of the mobile development client is required: `EXPO_PUBLIC_*` values
