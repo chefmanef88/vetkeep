@@ -2,9 +2,53 @@
 
 **Document status:** Technical build specification  
 **Product stage:** Pre-development architecture baseline  
-**Revision date:** 11 July 2026 (Phase 2 scope correction 2 August 2026; product model correction 10 August 2026)  
+**Revision date:** 11 July 2026 (Phase 2 scope correction 2 August 2026; product model correction 10 August 2026; build corrections 11 August 2026)  
 **Primary market:** Independent solo veterinarians in Ghana and West Africa  
 **Primary platforms:** Mobile application for clinical work; web application for account, public passport, and platform workflows
+
+### Revision note — 11 August 2026
+
+Corrections made after building §7. Earlier revision notes are left as written:
+they record what was decided on the day, and this document follows the same rule
+it imposes on clinical records — a later correction sits beside the original
+rather than overwriting it.
+
+1. **Stock counting is removed; the drug list stays.** The 10 August note (item 6)
+   said administering a product would deduct a batch and record its lot number.
+   That was built and then reversed. A solo veterinarian on a farm does not
+   count what is in the boot of their car, and a quantity nobody maintains is
+   worse than no quantity at all, because the low-stock warning derived from it
+   becomes a lie. `inventory_items` remains as a **drug list**: what this
+   veterinarian uses, what it contains, and what it obliges. Quantities,
+   batches, expiry and low-stock warnings leave the specification. See §7.8.
+2. **The examination set is derived from the species.** §7.3 previously fixed
+   eleven mammalian systems for every animal. A budgerigar was offered Lymphatic
+   and Urogenital and had nowhere to record a crop. A checklist that asks the
+   wrong questions is worse than a short one: it invites "normal" against
+   something that does not exist on the animal. See §7.3.
+3. **Vaccination and deworming are one table.** `vaccinations` is replaced by
+   `preventive_care`, which carries both. They are the same clinical act from
+   the record's point of view — a product, a date, and a next due date — and
+   splitting them would have duplicated every query. See §7.7.
+4. **Dose is calculated, and the working is shown.** A dose rate and a body
+   weight give a volume. The strength may come from the drug list or be typed
+   off the bottle, and the record says which. See §7.10.
+5. **Stock is not in the mobile application at all.** It was never a field task.
+   The drug list is maintained on the web application.
+
+**Known divergences between this document and the built schema**, stated rather
+than quietly carried:
+
+- `appointments`, `daily_routes`, `daily_route_stops`, `inventory_batches` and
+  `inventory_movements` **still exist in the database**, along with their RPCs.
+  §11 says scheduling is removed from scope, and it is removed from the mobile
+  application, but the tables were never dropped and the web application still
+  calls them. Removing scope did not remove schema. Until they are dropped, this
+  document describes the intent and the schema describes the past.
+- The `VK-R-` record code promised at the end of the 10 August note **is not
+  implemented.** A shared document is currently identified by the patient code
+  and the record date. The reasoning for a dedicated code stands; the code does
+  not exist yet.
 
 ### Revision note — 10 August 2026
 
@@ -93,7 +137,7 @@ A solo veterinarian must be able to:
 2. Open the folder and read the relevant history before knocking on the door.
 3. Document a complete consultation offline, in the form the species calls for.
 4. Capture diagnostic files and photographs offline.
-5. Record vaccinations and due dates.
+5. Record vaccinations and dewormings with their due dates.
 6. Record a treatment and be told, without calculating it, when milk, meat, or eggs are safe again.
 7. Record a follow-up intention and be reminded of it.
 8. Send reminders through WhatsApp when connected.
@@ -362,7 +406,7 @@ A user who forgets the local PIN must re-authenticate online. Local PIN recovery
 
 A patient row is the head of a **folder**. The folder is not a separate table: it
 is the patient together with everything that references it — ownership history,
-consultation records, attachments, vaccinations, treatments.
+consultation records, attachments, preventive care, treatments.
 
 ```text
 Client                    VK-C-3E1TA8
@@ -681,21 +725,45 @@ create table physical_exam_findings (
 );
 ```
 
-Create the following 11 rows when a visit is created:
+**The set is derived from the folder's species and kind, never fixed.** A single
+list for every animal asks a budgerigar about its lymphatic system and gives it
+nowhere to record a crop; it asks a rabbit about everything except the teeth
+that are the commonest reason a rabbit is presented at all. That is not merely
+untidy. A checklist carrying systems the animal does not have invites `normal`
+against something nobody looked at, because there was nothing to look at.
 
-- General.
-- Cardiovascular.
-- Respiratory.
-- Gastrointestinal.
-- Musculoskeletal.
-- Integumentary.
-- Neurological.
-- Ocular.
-- Aural.
-- Urogenital.
-- Lymphatic.
+`system_name` is constrained to the union of every set below. Which subset is
+seeded is decided on the server when the record is created, from the patient
+row — not chosen by the veterinarian, and not sent by the client.
 
-All rows start as `not_examined`.
+**Mammalian — dog, cat, and food animals.** The original eleven: General,
+Cardiovascular, Respiratory, Gastrointestinal, Musculoskeletal, Integumentary,
+Neurological, Ocular, Aural, Urogenital, Lymphatic.
+
+**Rabbit.** The mammalian eleven **plus Dental**.
+
+**Pet bird.** Eleven of its own: General, Beak and cere, Ocular, Crop,
+Respiratory, Plumage, Keel, Wings, Vent, Musculoskeletal, Neurological. Aural,
+Gastrointestinal and Lymphatic are not seeded.
+
+**Group — flock, herd, pen.** **No systems at all.** A flock is assessed by head
+count, number affected, mortality and post-mortem findings (§7.9), not by
+palpating four hundred birds one at a time. The examination section is absent
+from the record rather than present and empty; "all 0 examined" is not a
+clinical statement.
+
+All seeded rows start as `not_examined`.
+
+Recording a finding validates against the same species-derived set, so a crop
+finding is accepted on a bird and refused on a dog. The validation and the
+seeding must read from one function; two lists drift.
+
+Ordering is a display concern and belongs to the client, which sorts findings
+head to tail — general impression, head, neck, chest, abdomen, hindquarters,
+limbs. A query returns them alphabetically, which puts Aural before
+Cardiovascular before Gastrointestinal, an order no clinician works in. An
+examination followed down a screen is a checklist; one that jumps around the
+animal is a lookup exercise, and systems get missed.
 
 The user interface may provide an explicit **Mark all examined systems normal** action. This action must:
 
@@ -783,39 +851,89 @@ Storage paths must begin with the tenant's `vet_id`. Access is granted through s
 
 The mobile app must preserve the local file until the server confirms the checksum and marks the upload complete.
 
-### 7.7 Vaccinations
+### 7.7 Preventive care — vaccination and deworming
+
+Vaccination and deworming are one table, not two. From the record's point of
+view they are the same act: a product, a dose, a date, and a date it is next
+due. Splitting them would duplicate every query that asks the only question
+that matters here — _what is this animal due for?_ — and that question does not
+care which of the two it is.
 
 ```sql
-create table vaccinations (
+create table preventive_care (
   id uuid primary key,
   vet_id uuid not null references vets(id) on delete restrict,
   patient_id uuid not null references patients(id) on delete restrict,
   visit_id uuid references visits(id) on delete restrict,
-  vaccine_name text not null,
+
+  kind text not null check (kind in ('vaccination', 'deworming')),
+  -- Vaccination only, and filtered by species: DHLPP and anti-rabies for a dog,
+  -- FPL and Tricat for a cat. Offering a cat DHLPP is an error the list should
+  -- not permit in the first place.
+  vaccine_type text,
+  product_name text not null,
   manufacturer text,
   batch_lot_number text,
-  expiry_date date,
   dose text,
   route text,
-  administration_site text,
+  -- Group treatment: how many animals received it.
+  animals_treated integer check (animals_treated is null or animals_treated > 0),
+
   date_given date not null,
   next_due_date date,
-  certificate_number text,
-  adverse_reaction text,
-  administered_by_name text not null,
+  notes text,
+
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
   server_version bigint not null default 1,
   created_by_device_id uuid,
   last_modified_by_device_id uuid,
-  check (next_due_date is null or next_due_date >= date_given)
+  check (next_due_date is null or next_due_date >= date_given),
+  check (kind = 'vaccination' or vaccine_type is null)
 );
 ```
 
-### 7.8 Field inventory
+Rules:
 
-VetKeep tracks only the drugs and consumables a single veterinarian personally carries and uses during house calls. This is not a pharmacy, procurement, or multi-location stock system — see the boundary note in §21.
+- **The batch or serial number is the point.** In a vaccine failure or a rabies
+  investigation, the batch is the first thing asked for. It is a field, not a
+  line in `notes`.
+- **`vaccine_type` is filtered by species.** A record must not offer a vaccine
+  that is not given to the animal in front of the veterinarian.
+- **Routes differ by kind.** Deworming includes **oral**, which most tablets and
+  suspensions are; a route list borrowed from injectable vaccines would have
+  omitted the commonest case.
+- `next_due_date` is what drives the reminders in §12. A preventive care row
+  with no next due date is a completed act with no future obligation, which is
+  a legitimate state and not a missing field.
+
+**Expiry date is not recorded here.** It belonged to the batch tracking removed
+in §7.8. The batch number identifies the product; the expiry of a vial already
+administered changes nothing that can now be acted on.
+
+### 7.8 The drug list
+
+**This is a list of products, not a count of them.** Stock tracking was
+specified, built, and removed. The reasoning is worth keeping, because the
+feature is an easy one to propose again.
+
+A solo veterinarian restocking from the boot of their car does not count
+anything. Quantities would be maintained on the first day, sporadically in the
+first week, and never afterwards. That is not a small failure: a low-stock
+warning derived from an unmaintained quantity is not merely useless, it is
+wrong, and a warning that is wrong trains the person reading it to ignore
+warnings. Deducting stock automatically at the point of treatment does not
+rescue it either, because it only counts what leaves through a recorded
+consultation — not what was spilled, expired, given away, or used on the
+veterinarian's own animals.
+
+What the drug list is for is the opposite direction. It does not tell the
+veterinarian what they have. It tells the record what a product **obliges**:
+its active ingredient, its usual route, its strength, and the withholding
+periods it imposes on a food animal. Those are properties of the product, they
+do not change with use, and they are the ones a record cannot be written
+correctly without.
 
 ```sql
 create table inventory_items (
@@ -824,8 +942,34 @@ create table inventory_items (
   item_name text not null,
   item_type text not null check (item_type in ('drug', 'consumable', 'vaccine', 'other')),
   unit text not null,
-  reorder_threshold numeric(10,2),
   active boolean not null default true,
+
+  active_ingredient text,
+  default_route text
+    check (default_route is null or default_route in (
+      'oral', 'im', 'iv', 'sc', 'topical', 'intramammary', 'in_water', 'in_feed'
+    )),
+
+  -- Strength, for the dose calculation in §7.10. Percentage is w/v and is
+  -- converted once, centrally: 20% is 200 mg/ml, and getting that wrong by a
+  -- factor of ten is the classic way to overdose an animal.
+  concentration_value numeric(10,3) check (concentration_value is null or concentration_value > 0),
+  concentration_unit text
+    check (concentration_unit is null or concentration_unit in (
+      'mg_per_ml', 'percent', 'iu_per_ml', 'mg_per_g'
+    )),
+  check (
+    (concentration_value is null and concentration_unit is null)
+    or (concentration_value is not null and concentration_unit is not null)
+  ),
+
+  -- Standard withholding periods for this product, in days. Null means the
+  -- product carries none; it does not mean zero, and the two must not be
+  -- conflated when a treatment is recorded.
+  withdrawal_meat_days integer check (withdrawal_meat_days is null or withdrawal_meat_days >= 0),
+  withdrawal_milk_days integer check (withdrawal_milk_days is null or withdrawal_milk_days >= 0),
+  withdrawal_eggs_days integer check (withdrawal_eggs_days is null or withdrawal_eggs_days >= 0),
+
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
@@ -834,45 +978,25 @@ create table inventory_items (
   last_modified_by_device_id uuid,
   unique (vet_id, item_name)
 );
-
-create table inventory_batches (
-  id uuid primary key,
-  vet_id uuid not null references vets(id) on delete restrict,
-  item_id uuid not null references inventory_items(id) on delete restrict,
-  batch_lot_number text,
-  expiry_date date,
-  quantity_on_hand numeric(10,2) not null default 0 check (quantity_on_hand >= 0),
-  unit_cost_pesewas bigint,
-  received_at timestamptz not null default now(),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  deleted_at timestamptz,
-  server_version bigint not null default 1,
-  created_by_device_id uuid,
-  last_modified_by_device_id uuid
-);
-
-create table inventory_movements (
-  id uuid primary key,
-  vet_id uuid not null references vets(id) on delete restrict,
-  batch_id uuid not null references inventory_batches(id) on delete restrict,
-  visit_id uuid references visits(id) on delete restrict,
-  movement_type text not null
-    check (movement_type in ('restock', 'consumption', 'adjustment', 'expired_writeoff')),
-  quantity numeric(10,2) not null check (quantity <> 0),
-  notes text,
-  created_at timestamptz not null default now(),
-  created_by_device_id uuid
-);
 ```
 
 Rules:
 
-- `inventory_movements` is append-only; stock changes are derived from movement rows, not edited in place. A correction is a new `adjustment` movement, not an update to a prior movement.
-- A `consumption` movement created during a visit must reference that `visit_id` and decrement the linked batch's `quantity_on_hand` through a controlled database function, not a direct client update.
-- Low-stock status is derived, not stored: sum `quantity_on_hand` across active, non-expired batches for an item and compare against `reorder_threshold`.
-- Expired batches must be excluded from available quantity even if `quantity_on_hand` is still positive; a scheduled or manual `expired_writeoff` movement reconciles the two.
-- Offline behavior follows §15: `inventory_movements` created during an offline visit sync using the same outbound-mutation and idempotency-key mechanism as other visit data, so a retried sync cannot double-deduct stock.
+- **No quantities, no batches, no expiry, no low-stock warnings.**
+  `inventory_batches` and `inventory_movements` leave the specification. A
+  treatment does not deduct anything.
+- **The drug list is maintained on the web application, not on mobile.**
+  Entering a formulary is deskwork done once, sitting down, from a data sheet —
+  not something done on a phone in the sun with a dog under one arm. The mobile
+  application reads the list and never edits it, with one deliberate exception:
+  a missing strength may be filled in from the consultation that exposed it
+  (§7.10).
+- A product not on the list can still be administered and recorded. The list is
+  a convenience, never a gate: a veterinarian who used a bottle a client
+  supplied must be able to record that they used it.
+
+**Not in scope, and deliberately:** purchasing, pricing, suppliers, reorder
+levels, multi-location stock, or anything resembling a pharmacy. See §21.
 
 ### 7.9 Species pathways
 
@@ -923,25 +1047,10 @@ Free text cannot answer the question a farmer actually asks: _when is the milk
 safe?_ A treatment must therefore be a structured row, not a sentence inside
 `treatment_plan`.
 
-**The formulary is the field inventory.** `inventory_items` (§7.8) is extended
-rather than duplicated: what the veterinarian carries is what the veterinarian
-can administer. Administering a product deducts the batch, records the lot
-number against the animal, and computes the withholding dates in one action.
-
-```sql
-alter table inventory_items
-  add column active_ingredient text,
-  add column default_route text
-    check (default_route is null or default_route in (
-      'oral', 'im', 'iv', 'sc', 'topical', 'intramammary', 'in_water', 'in_feed'
-    )),
-  -- Standard withholding periods for this product, in days. Null means the
-  -- product carries none; it does not mean zero, and the two must not be
-  -- conflated when a treatment is recorded.
-  add column withdrawal_meat_days integer check (withdrawal_meat_days is null or withdrawal_meat_days >= 0),
-  add column withdrawal_milk_days integer check (withdrawal_milk_days is null or withdrawal_milk_days >= 0),
-  add column withdrawal_eggs_days integer check (withdrawal_eggs_days is null or withdrawal_eggs_days >= 0);
-```
+**The formulary is the drug list** (§7.8), extended rather than duplicated.
+Selecting a carried product fills in its route, its strength and its withholding
+periods; it does **not** deduct anything, and nothing is counted. See §7.8 for
+why stock tracking was removed after being built.
 
 ```sql
 create table treatments (
@@ -952,7 +1061,6 @@ create table treatments (
 
   -- Products carried are linked; a product the client buys elsewhere is named.
   inventory_item_id uuid references inventory_items(id) on delete restrict,
-  inventory_batch_id uuid references inventory_batches(id) on delete restrict,
   product_name text not null,
   active_ingredient text,
 
@@ -964,6 +1072,27 @@ create table treatments (
   duration_days integer check (duration_days is null or duration_days > 0),
   -- For group treatment: how many animals received it.
   animals_treated integer check (animals_treated is null or animals_treated > 0),
+
+  -- How the volume was arrived at, stored so the dose can be rechecked later.
+  -- A volume on its own cannot be: 12 ml is not a claim anyone can verify.
+  dose_rate_value numeric(10,3) check (dose_rate_value is null or dose_rate_value > 0),
+  dose_rate_unit text
+    check (dose_rate_unit is null or dose_rate_unit in ('mg_per_kg', 'ml_per_kg', 'iu_per_kg')),
+  weight_kg_used numeric(8,3) check (weight_kg_used is null or weight_kg_used > 0),
+  concentration_value numeric(10,3) check (concentration_value is null or concentration_value > 0),
+  concentration_unit text
+    check (concentration_unit is null or concentration_unit in (
+      'mg_per_ml', 'percent', 'iu_per_ml', 'mg_per_g'
+    )),
+  -- Whether the drug list vouched for the strength or it was read off the
+  -- bottle at the visit. Only a formulary strength can be re-derived if the
+  -- product's entry is later corrected, so the two are not interchangeable.
+  concentration_source text
+    check (concentration_source is null or concentration_source in ('formulary', 'manual')),
+  check (
+    (concentration_value is null and concentration_source is null)
+    or (concentration_value is not null and concentration_source is not null)
+  ),
 
   -- Computed on write from the product's standard periods and the last day of
   -- administration, then stored. Storing the resolved date rather than the
@@ -995,8 +1124,48 @@ Rules:
   first.
 - Active withholding must be displayed on the folder, on the consultation record,
   and on the client's copy. A date buried in a list is not displayed.
-- Treatments follow §15 offline rules and use the same idempotency mechanism as
-  inventory movements, so a retried sync cannot record a dose twice.
+- Treatments follow §15 offline rules and use the same client-minted identifier
+  and idempotency mechanism as the rest of a consultation, so a retried sync
+  cannot record a dose twice.
+
+#### Dose calculation
+
+Rate times weight gives the amount of drug; divided by the strength of the
+bottle it gives the volume in the syringe. A veterinarian does this in their
+head all day, and it is also where a decimal point goes missing at the end of a
+long day, on a phone, in the sun, holding a dog.
+
+- **The working is shown beside the result**, always. `20 mg/kg × 30 kg = 600 mg
+÷ 200 mg/ml = 3 ml`. A calculated number with no derivation is a number nobody
+  can check, and an uncheckable number in a clinical record is worse than an
+  arithmetic error, because it carries the authority of having been computed.
+- **The calculated volume is never written into the dose silently.** It is
+  offered, and the veterinarian taps to accept it.
+- **Percentage is w/v and is converted centrally**: 20% is 20 g in 100 ml, which
+  is 200 mg/ml. This conversion must exist in exactly one place. It is displayed
+  as `20% (200 mg/ml)`, because that conversion is the step a reader most needs
+  to be able to check.
+- **A rate in ml/kg needs no strength.** When the label says how much liquid to
+  give, the concentration of the bottle is irrelevant.
+- **IU and mg do not convert.** An IU dose requires a strength in IU/ml; there
+  is no ratio between them that holds without knowing the specific product.
+- **The strength may be typed** when the product is not on the drug list, or is
+  on it without a strength. Refusing to calculate for an unfamiliar product
+  withholds the arithmetic precisely where an unfamiliar product makes it most
+  valuable. A strength typed against a carried product may be saved back to the
+  drug list, but only where the field was empty — correcting a strength already
+  on file is a deliberate act belonging on the products screen, not a side
+  effect of a consultation.
+- **Implausible strengths warn; they never refuse.** Unusual products exist and
+  a veterinarian who knows their bottle must not be argued with.
+
+**A limit worth stating plainly.** No range check can catch a bottle of 20%
+entered as `20 mg/ml`. That understates the strength tenfold and so gives ten
+times the volume — but 20 mg/ml is itself a perfectly ordinary strength, and
+nothing distinguishes the two readings. Validation cannot solve this. The
+defence is the working shown beside the result, where `20 mg/ml` and
+`20% (200 mg/ml)` read differently at a glance. Any future claim that the app
+"validates" doses should be measured against this case.
 
 ---
 
@@ -1042,9 +1211,33 @@ Avoid storing unnecessary sensitive data in logs. Structured application logs mu
 ### 8.2 Deletion policy
 
 - Draft records may be soft-deleted.
-- Completed visits, vaccinations, invoices, payment records, and audit events cannot be hard-deleted through the tenant application.
+- Completed visits, preventive care, invoices, payment records, and audit events cannot be hard-deleted through the tenant application.
 - An erroneous completed visit is voided with a reason; it is not erased.
 - Account closure follows the documented retention and export policy.
+
+**Three distinct actions, deliberately not merged.** "Delete" means different
+things to a veterinarian depending on what is in front of them, and collapsing
+them would either forbid something reasonable or permit something irreversible.
+
+| Action              | What it does                                                                                | Reversible                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Discard a **draft** | Removes a consultation that was never signed                                                | No, but nothing clinical is lost — an unsigned record was never a record |
+| **Void a record**   | A signed consultation is marked void with a stated reason and stays visible, struck through | Not erased; the void is itself the record                                |
+| **Delete a folder** | The whole patient folder is soft-deleted with its records                                   | Recoverable server-side; audited                                         |
+
+Every one of the three writes an audit event carrying the reason. A signed
+record is never silently removed, and no action erases clinical history: voiding
+adds a statement that something was wrong, which is more informative than the
+absence a deletion would leave.
+
+**Drafts in progress are a separate mechanism.** Typing that has not been saved
+is held on the device so that navigating away or closing the application does
+not lose it. This is deliberately not the offline sync queue: the queue owns
+work the veterinarian has committed to and that is owed to the server, whereas
+an in-progress draft is owed to nobody and must never sync. Once the queue owns
+the work, the device-local draft is cleared. Conflating the two would either
+push half-typed clinical notes to the server or lose a note that was never
+pushed.
 
 ---
 
@@ -1167,7 +1360,7 @@ Never expose:
 
 ### 10.4 Public access architecture
 
-Anonymous users must not receive direct `SELECT` access to `patients`, `clients`, `visits`, `vaccinations`, or `attachments`.
+Anonymous users must not receive direct `SELECT` access to `patients`, `clients`, `visits`, `preventive_care`, or `attachments`.
 
 Implement a server-side passport endpoint that:
 
@@ -1243,6 +1436,13 @@ Removed from scope:
 A consultation record no longer references an appointment. It is created by the
 act of attending; see §7.
 
+**Removed from scope is not removed from the schema.** As of 11 August 2026 all
+of the tables and functions listed above still exist in the database, and the
+web application still calls them. What has actually happened is that the mobile
+application no longer offers scheduling and a consultation no longer depends on
+a booking. Dropping the tables is outstanding work, and until it is done a
+reader should treat this section as the intent and the migrations as the record.
+
 **What survives.** Follow-up intent does not require an appointment. A record
 carries `follow_up_plan` and `next_review_date` (§7), and those drive reminders
 through §12. The veterinarian is reminded that an animal is due; nothing
@@ -1272,7 +1472,7 @@ create table client_reminders (
   reminder_type text not null
     check (reminder_type in ('follow_up', 'vaccination_due', 'withdrawal_ends')),
   visit_id uuid references visits(id) on delete cascade,
-  vaccination_id uuid references vaccinations(id) on delete cascade,
+  preventive_care_id uuid references preventive_care(id) on delete cascade,
   treatment_id uuid references treatments(id) on delete cascade,
   patient_id uuid not null references patients(id) on delete cascade,
   send_at timestamptz not null,
@@ -1649,7 +1849,7 @@ Must work fully offline:
 - Create and edit clients and patients.
 - Create and edit draft visits.
 - Complete a visit locally and queue the signed transition.
-- Record examinations, diagnostics, vaccinations, and invoices.
+- Record examinations, diagnostics, preventive care, and invoices.
 - Capture photos and files for later upload.
 - View cached folders and their recent consultation records.
 
@@ -2050,14 +2250,14 @@ Reprioritized 2 August 2026. Phase 2 now delivers one complete, working workflow
 3. **The folder.** A patient folder that is either an individual or a group; standing information editable for the life of the folder; an append-only series of dated consultation records beneath it; `VK-R-` record codes (§6, §7).
 4. **Mobile medical records.** Presenting complaint and history, exam vitals and the examination set for the species, problem list and differentials, diagnostics and attachments, assessment and treatment, prescriptions, procedures, discharge/home-care instructions, follow-up intent, record signing, locking, and amendments (§7).
 5. **Species pathways.** Companion, pet bird, food animal, and group, each with its own objective findings and examination set (§7.9).
-6. **Treatments, formulary, and withdrawal.** Structured treatment rows linked to the carried batch; withdrawal periods on `inventory_items`; computed and displayed milk, meat, and egg withholding dates for every food-producing folder (§7.10).
+6. **Treatments, formulary, and withdrawal.** Structured treatment rows linked to the drug list; dose calculated from rate, weight and strength with the working shown; withdrawal periods on `inventory_items`; computed and displayed milk, meat, and egg withholding dates for every food-producing folder (§7.10).
 7. **Payments and records — basic slice.** Service, medication, and call-out charges; cash/mobile-money/card status; receipts; outstanding balances; simple income/expense summary (§14, basic path only — VetKeep's own subscription billing stays in Phase 6).
-8. **Field inventory.** Drugs and consumables carried, batch/expiry tracking, low-stock warnings, per-consultation consumption, restocking records (§7.8).
+8. **The drug list.** What each product contains, its usual route, its strength, and the withholding it imposes — maintained on the web application and read on mobile. No quantities, batches, expiry, or low-stock warnings; see §7.8 for why stock counting was built and then removed.
 9. **The client's copy.** On-device generation of a signed consultation record, shareable and saveable, with active withholding shown; disclosure audited (§10.6).
 10. **Communication and follow-up — basic slice.** Vaccination and follow-up reminders, withdrawal-end reminders, WhatsApp-friendly delivery, communication history (§12, basic path only — delivery-state/callback maturity stays in Phase 4).
 11. **Offline resilience — basic slice.** Draft consultations offline, safe local storage, sync on reconnect, conflict prevention, visible sync status, retry without duplicates (§15, basic path only — full local schema, resumable uploads at scale, and schema-migration-with-unsynced-data testing stay in Phase 3).
 
-**Exit gate — first complete vertical slice:** create a client and a folder for one dog and one poultry flock; attend and document a consultation on each on mobile, offline, using the examination set the species calls for; administer a product from carried stock and see the withholding dates computed for the flock; sign both records; hand the client a copy; record payment; and set a follow-up — end to end, before broadening to any other module.
+**Exit gate — first complete vertical slice:** create a client and a folder for one dog and one poultry flock; attend and document a consultation on each on mobile, offline, using the examination set the species calls for; administer a product from the drug list, let the dose be calculated from rate and weight, and see the withholding dates computed for the flock; sign both records; hand the client a copy; record payment; and set a follow-up — end to end, before broadening to any other module.
 
 ### Phase 3 — Offline mobile hardening
 
