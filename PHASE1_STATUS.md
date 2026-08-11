@@ -151,9 +151,13 @@ is not a regression, but it should never shrink silently.
 - **`VK-R-` record codes are not implemented.** A shared document is currently
   identified by the patient code and the record date. The reasoning for a
   dedicated code stands.
-- **No hosted staging.** The mobile application points at a Supabase instance on
-  the development laptop, whose address changes with the network. Every change
-  requires editing two `.env.local` files and restarting Metro.
+- ~~**No hosted staging.**~~ **Resolved 11 August 2026.** Staging is
+  `vetkeep-staging` (ref `bnpokpjsencpxaetyfko`, eu-west-1), carrying all 22
+  migrations. Signup, email confirmation, TOTP enrolment, onboarding and device
+  registration were all verified against it end to end. Both applications point
+  there; the local Supabase firewall rule is removed. Auth settings are applied
+  with `supabase config push` from `config.toml`, not by hand in the dashboard —
+  see `docs/runbooks/staging-setup.md`.
 - **`supabase db reset` destroys the local account and all local data.** It is
   run routinely while developing migrations. Local data is test data, but the
   account has to be created again afterwards, in the application.
