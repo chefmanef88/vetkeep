@@ -52,3 +52,11 @@ otp_expiry = 900
 [storage]
 enabled = true
 file_size_limit = "25MiB"
+
+# S3 vector buckets are a paid feature and VetKeep stores no embeddings. The CLI
+# defaults this to enabled, so `config push` asks a free-tier project to turn on
+# something it cannot have and fails with a 402 — taking the file size limit
+# above with it. Stated explicitly so the intent is in version control rather
+# than depending on a CLI default.
+[storage.vector]
+enabled = false
