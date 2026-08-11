@@ -16,6 +16,7 @@ export {
   calculateDose,
   concentrationLabel,
   doseRateLabel,
+  strengthWarning,
   toKilograms,
   toMgPerMl,
   type Concentration,

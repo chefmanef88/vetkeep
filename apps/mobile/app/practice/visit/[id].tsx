@@ -521,37 +521,41 @@ export default function VisitScreen() {
         </Card>
       )}
 
-      <Collapsible
-        title="Examination"
-        icon="body"
-        hint={
-          notExamined === 0
-            ? `All ${findings.length} examined`
-            : `${notExamined} still not examined`
-        }
-        tone={notExamined === 0 ? "good" : "warn"}
-      >
-        <Muted>
-          Every system starts unexamined. Marking one normal says you looked and found nothing
-          wrong.
-        </Muted>
-        {findings.map((finding) => (
-          <ExamRow
-            key={finding.id}
-            finding={finding}
-            editable={isDraft}
-            onChange={(next, remarks) =>
-              void setFinding(finding.system_name, next, remarks, finding.server_version)
-            }
-          />
-        ))}
-        {isDraft && notExamined > 0 ? (
-          <SecondaryButton
-            label={`Mark the ${notExamined} remaining normal`}
-            onPress={() => void markRemainingNormal()}
-          />
-        ) : null}
-      </Collapsible>
+      {/* A group carries no system checklist at all: a flock is assessed by
+          counts and post-mortem, not by palpating four hundred birds. */}
+      {findings.length === 0 ? null : (
+        <Collapsible
+          title="Examination"
+          icon="body"
+          hint={
+            notExamined === 0
+              ? `All ${findings.length} examined`
+              : `${notExamined} still not examined`
+          }
+          tone={notExamined === 0 ? "good" : "warn"}
+        >
+          <Muted>
+            Every system starts unexamined. Marking one normal says you looked and found nothing
+            wrong.
+          </Muted>
+          {findings.map((finding) => (
+            <ExamRow
+              key={finding.id}
+              finding={finding}
+              editable={isDraft}
+              onChange={(next, remarks) =>
+                void setFinding(finding.system_name, next, remarks, finding.server_version)
+              }
+            />
+          ))}
+          {isDraft && notExamined > 0 ? (
+            <SecondaryButton
+              label={`Mark the ${notExamined} remaining normal`}
+              onPress={() => void markRemainingNormal()}
+            />
+          ) : null}
+        </Collapsible>
+      )}
 
       {isDraft ? (
         <Collapsible

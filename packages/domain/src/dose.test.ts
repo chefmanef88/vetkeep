@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { calculateDose, concentrationLabel, doseRateLabel, toKilograms, toMgPerMl } from "./dose";
+import {
+  calculateDose,
+  concentrationLabel,
+  doseRateLabel,
+  strengthWarning,
+  toKilograms,
+  toMgPerMl
+} from "./dose";
 
 describe("toMgPerMl", () => {
   it("reads a percentage as grams per hundred millilitres", () => {
@@ -164,6 +171,69 @@ describe("calculateDose", () => {
     });
     // 23.1 mg ÷ 150 = 0.154 ml, which is 0.15 on any syringe.
     expect(result).toMatchObject({ ok: true, volumeMl: 0.15 });
+  });
+});
+
+describe("strengthWarning", () => {
+  it("cannot catch a plausible value under the wrong unit, and does not pretend to", () => {
+    // 20% is 200 mg/ml, so entering 20 mg/ml is a tenfold understatement. But
+    // 20 mg/ml is an ordinary strength in its own right, so no range check can
+    // separate the two. The defence is the working shown beside the result.
+    expect(strengthWarning({ value: 20, unit: "mg_per_ml" })).toBeNull();
+
+    const asMgPerMl = calculateDose({
+      rate: 20,
+      rateUnit: "mg_per_kg",
+      weightKg: 15,
+      concentration: { value: 20, unit: "mg_per_ml" }
+    });
+    const asPercent = calculateDose({
+      rate: 20,
+      rateUnit: "mg_per_kg",
+      weightKg: 15,
+      concentration: { value: 20, unit: "percent" }
+    });
+    // The two read differently at a glance, which is what a vet checks.
+    expect(asMgPerMl.ok && asMgPerMl.working).toContain("20 mg/ml");
+    expect(asPercent.ok && asPercent.working).toContain("20% (200 mg/ml)");
+    expect(asMgPerMl.ok && asMgPerMl.volumeMl).toBe(15);
+    expect(asPercent.ok && asPercent.volumeMl).toBe(1.5);
+  });
+
+  it("catches a strength too weak to be a product off a shelf", () => {
+    const warning = strengthWarning({ value: 0.2, unit: "mg_per_ml" });
+    expect(warning).toContain("unusually weak");
+    expect(warning).toContain("2 mg/ml");
+  });
+
+  it("catches mg/ml entered as a percentage", () => {
+    expect(strengthWarning({ value: 200, unit: "percent" })).toContain("unusually strong");
+  });
+
+  it("says nothing about an ordinary strength", () => {
+    expect(strengthWarning({ value: 200, unit: "mg_per_ml" })).toBeNull();
+    expect(strengthWarning({ value: 20, unit: "percent" })).toBeNull();
+    expect(strengthWarning({ value: 50, unit: "mg_per_ml" })).toBeNull();
+  });
+
+  it("refuses more milligrams than fit in a gram", () => {
+    expect(strengthWarning({ value: 1500, unit: "mg_per_g" })).toContain("cannot hold");
+  });
+
+  it("leaves international units alone, where the range is genuinely wide", () => {
+    // Penicillin runs to the millions per millilitre; there is no useful bound.
+    expect(strengthWarning({ value: 1000000, unit: "iu_per_ml" })).toBeNull();
+  });
+
+  it("warns without refusing, since unusual products exist", () => {
+    // A warning is a string, not a failure: the calculation still runs.
+    const result = calculateDose({
+      rate: 20,
+      rateUnit: "mg_per_kg",
+      weightKg: 15,
+      concentration: { value: 20, unit: "mg_per_ml" }
+    });
+    expect(result.ok).toBe(true);
   });
 });
 

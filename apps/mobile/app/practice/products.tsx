@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { concentrationLabel, treatmentRouteLabel, treatmentRoutesFor } from "@vetkeep/domain";
+import {
+  concentrationLabel,
+  strengthWarning,
+  treatmentRouteLabel,
+  treatmentRoutesFor
+} from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
@@ -98,6 +103,13 @@ export default function ProductsScreen() {
   }, []);
 
   const products = data ?? [];
+
+  // Said as the strength is typed, where it can still be corrected without
+  // rereading the label.
+  const strengthNote =
+    optionalNumber(strength) !== undefined
+      ? strengthWarning({ value: optionalNumber(strength) as number, unit: strengthUnit as never })
+      : null;
 
   function reset() {
     setName("");
@@ -251,8 +263,10 @@ export default function ProductsScreen() {
             />
           </View>
         </View>
+        {strengthNote ? <ErrorText>{strengthNote}</ErrorText> : null}
         <Muted>
-          A percentage is grams per hundred millilitres, so 20% is 200 mg/ml. Enter it either way.
+          A percentage is grams per hundred millilitres, so 20% is 200 mg/ml. Enter it either way,
+          but check which one the bottle says.
         </Muted>
 
         <FieldLabel>Withholding periods, in days</FieldLabel>

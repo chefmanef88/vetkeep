@@ -12,24 +12,39 @@
  * lookup exercise, and systems get missed.
  */
 
+/**
+ * One order covering every system any species uses.
+ *
+ * A single sequence rather than one per pathway: each species is handed a
+ * subset by the database, and sorting that subset by this list leaves it head
+ * to tail whichever animal it is. A bird's set comes out beak, eye, crop,
+ * chest, keel, wings, vent; a rabbit's gains teeth after the ears.
+ */
 export const EXAM_SYSTEM_ORDER = [
   // Standing back and looking at the animal before touching it.
   "General",
-  // Head.
+  // Head, front to back.
+  "Beak and cere",
   "Ocular",
   "Aural",
-  // Neck and the drainage the head empties into.
+  "Dental",
+  // Neck: the crop in a bird, the nodes the head drains into in a mammal.
+  "Crop",
   "Lymphatic",
   // Chest.
   "Cardiovascular",
   "Respiratory",
+  "Keel",
+  "Wings",
   // Abdomen, front to back.
   "Gastrointestinal",
   "Urogenital",
+  "Vent",
   // Limbs.
   "Musculoskeletal",
   // Assessed throughout the examination and concluded at the end.
   "Neurological",
+  "Plumage",
   "Integumentary"
 ] as const;
 

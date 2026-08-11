@@ -183,6 +183,49 @@ export function calculateDose(input: {
   };
 }
 
+/**
+ * Whether a strength looks like a typing mistake.
+ *
+ * This catches gross unit confusion only, and it is worth being clear about
+ * what it cannot catch. Entering 20 as mg/ml for a bottle that is really 20%
+ * understates the strength tenfold, which means ten times the volume — but 20
+ * mg/ml is itself an ordinary strength, so no range check can tell the two
+ * apart. The defence against that one is the working shown beside the result,
+ * where "20 mg/ml" and "20% (200 mg/ml)" read differently at a glance.
+ *
+ * What is caught here is the obvious: a percentage that could not be a
+ * solution, a strength too weak to be a veterinary product, more milligrams
+ * than fit in a gram.
+ *
+ * A warning, never a refusal: unusual products exist, and a vet who knows their
+ * bottle should not be argued with.
+ */
+export function strengthWarning(concentration: Concentration): string | null {
+  const { value, unit } = concentration;
+  if (!Number.isFinite(value) || value <= 0) return null;
+
+  if (unit === "percent") {
+    // Above roughly half, a solution is no longer a solution.
+    if (value > 50) return `${value}% is unusually strong. Did you mean ${value} mg/ml?`;
+    return null;
+  }
+
+  if (unit === "mg_per_ml") {
+    // Below a milligram per millilitre is a dilution, not a product off a shelf.
+    if (value < 1) {
+      return `${value} mg/ml is unusually weak. If the label says ${value}%, that is ${value * 10} mg/ml.`;
+    }
+    if (value > 1000) return `${value} mg/ml is unusually strong. Check the label.`;
+    return null;
+  }
+
+  if (unit === "mg_per_g" && value > 1000) {
+    return "A gram cannot hold more than 1000 mg. Check the unit.";
+  }
+
+  return null;
+}
+
 /** Birds are weighed in grams; the arithmetic is always done in kilograms. */
 export function toKilograms(value: number, unit: string): number | null {
   if (!Number.isFinite(value) || value <= 0) return null;

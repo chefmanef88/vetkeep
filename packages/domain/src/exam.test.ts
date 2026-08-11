@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder } from "./exam";
 
-/** The eleven the database constrains system_name to. */
+/** Everything the database constrains system_name to, across every species. */
 const DATABASE_SYSTEMS = [
   "General",
   "Cardiovascular",
@@ -13,6 +13,43 @@ const DATABASE_SYSTEMS = [
   "Ocular",
   "Aural",
   "Urogenital",
+  "Lymphatic",
+  "Dental",
+  "Beak and cere",
+  "Crop",
+  "Plumage",
+  "Keel",
+  "Vent",
+  "Wings"
+];
+
+/** The sets the database seeds, mirrored so the ordering can be checked. */
+const AVIAN_SET = [
+  "General",
+  "Beak and cere",
+  "Ocular",
+  "Crop",
+  "Respiratory",
+  "Plumage",
+  "Keel",
+  "Wings",
+  "Vent",
+  "Musculoskeletal",
+  "Neurological"
+];
+
+const RABBIT_SET = [
+  "General",
+  "Ocular",
+  "Aural",
+  "Dental",
+  "Cardiovascular",
+  "Respiratory",
+  "Gastrointestinal",
+  "Urogenital",
+  "Musculoskeletal",
+  "Neurological",
+  "Integumentary",
   "Lymphatic"
 ];
 
@@ -77,7 +114,47 @@ describe("exam system order", () => {
   });
 
   it("keeps two unknown systems in a stable order", () => {
-    const findings = [{ system_name: "Zoological" }, { system_name: "Dental" }];
-    expect(sortByExamOrder(findings).map((f) => f.system_name)).toEqual(["Dental", "Zoological"]);
+    const findings = [{ system_name: "Zoological" }, { system_name: "Aviary" }];
+    expect(sortByExamOrder(findings).map((f) => f.system_name)).toEqual(["Aviary", "Zoological"]);
+  });
+
+  it("runs a bird beak to vent, not alphabetically", () => {
+    const shuffled = [...AVIAN_SET]
+      .sort((a, b) => a.localeCompare(b))
+      .map((s) => ({
+        system_name: s
+      }));
+    expect(sortByExamOrder(shuffled).map((f) => f.system_name)).toEqual([
+      "General",
+      "Beak and cere",
+      "Ocular",
+      "Crop",
+      "Respiratory",
+      "Keel",
+      "Wings",
+      "Vent",
+      "Musculoskeletal",
+      "Neurological",
+      "Plumage"
+    ]);
+  });
+
+  it("puts a rabbit's teeth with its head, where they are examined", () => {
+    const shuffled = [...RABBIT_SET]
+      .sort((a, b) => a.localeCompare(b))
+      .map((s) => ({
+        system_name: s
+      }));
+    const ordered = sortByExamOrder(shuffled).map((f) => f.system_name);
+    expect(ordered.indexOf("Dental")).toBeLessThan(ordered.indexOf("Cardiovascular"));
+    expect(ordered.indexOf("Aural")).toBeLessThan(ordered.indexOf("Dental"));
+  });
+
+  it("keeps the mammalian order it always had", () => {
+    const rank = (system: string) => examSystemRank(system);
+    expect(rank("General")).toBeLessThan(rank("Ocular"));
+    expect(rank("Ocular")).toBeLessThan(rank("Cardiovascular"));
+    expect(rank("Respiratory")).toBeLessThan(rank("Gastrointestinal"));
+    expect(rank("Urogenital")).toBeLessThan(rank("Musculoskeletal"));
   });
 });
