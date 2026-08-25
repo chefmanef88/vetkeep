@@ -25,8 +25,8 @@ port = 54324
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/confirm", "vetkeep://auth/confirm"]
+site_url = "https://vetkeep-liart.vercel.app"
+additional_redirect_urls = ["https://vetkeep-liart.vercel.app/auth/confirm", "http://localhost:3000/auth/confirm", "vetkeep://auth/confirm"]
 jwt_expiry = 900
 enable_signup = true
 enable_anonymous_sign_ins = false
