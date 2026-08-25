@@ -20,7 +20,19 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      // The passport is the only page a stranger can reach (§10.4). It must not
+      // be indexed, and it must not be held in any cache: a revoked passport
+      // that a CDN keeps serving is a revocation that did not happen.
+      {
+        source: "/passport/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Cache-Control", value: "no-store, max-age=0, must-revalidate" }
+        ]
+      }
+    ];
   }
 };
 

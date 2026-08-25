@@ -589,6 +589,32 @@ export type Database = {
           },
         ]
       }
+      passport_access_events: {
+        Row: {
+          accessed_at: string
+          id: number
+          passport_id: string
+        }
+        Insert: {
+          accessed_at?: string
+          id?: number
+          passport_id: string
+        }
+        Update: {
+          accessed_at?: string
+          id?: number
+          passport_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passport_access_events_passport_id_fkey"
+            columns: ["passport_id"]
+            isOneToOne: false
+            referencedRelation: "patient_passports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_owners: {
         Row: {
           client_id: string
@@ -669,6 +695,75 @@ export type Database = {
           },
           {
             foreignKeyName: "patient_owners_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_passports: {
+        Row: {
+          consent_confirmed: boolean
+          consent_confirmed_at: string | null
+          consent_notes: string | null
+          created_at: string
+          enabled: boolean
+          enabled_at: string | null
+          id: string
+          owner_name_visibility: string
+          patient_id: string
+          revoked_at: string | null
+          rotated_at: string | null
+          show_microchip: boolean
+          token_hash: string
+          updated_at: string
+          vet_id: string
+        }
+        Insert: {
+          consent_confirmed?: boolean
+          consent_confirmed_at?: string | null
+          consent_notes?: string | null
+          created_at?: string
+          enabled?: boolean
+          enabled_at?: string | null
+          id: string
+          owner_name_visibility?: string
+          patient_id: string
+          revoked_at?: string | null
+          rotated_at?: string | null
+          show_microchip?: boolean
+          token_hash: string
+          updated_at?: string
+          vet_id: string
+        }
+        Update: {
+          consent_confirmed?: boolean
+          consent_confirmed_at?: string | null
+          consent_notes?: string | null
+          created_at?: string
+          enabled?: boolean
+          enabled_at?: string | null
+          id?: string
+          owner_name_visibility?: string
+          patient_id?: string
+          revoked_at?: string | null
+          rotated_at?: string | null
+          show_microchip?: boolean
+          token_hash?: string
+          updated_at?: string
+          vet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_passports_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: true
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_passports_vet_id_fkey"
             columns: ["vet_id"]
             isOneToOne: false
             referencedRelation: "vets"
@@ -1425,6 +1520,7 @@ export type Database = {
           last_modified_by_device_id: string | null
           next_review_date: string | null
           pain_score: string | null
+          passport_visible: boolean
           past_medical_history: string | null
           patient_id: string
           prescriptions: string | null
@@ -1463,6 +1559,7 @@ export type Database = {
           last_modified_by_device_id?: string | null
           next_review_date?: string | null
           pain_score?: string | null
+          passport_visible?: boolean
           past_medical_history?: string | null
           patient_id: string
           prescriptions?: string | null
@@ -1501,6 +1598,7 @@ export type Database = {
           last_modified_by_device_id?: string | null
           next_review_date?: string | null
           pain_score?: string | null
+          passport_visible?: boolean
           past_medical_history?: string | null
           patient_id?: string
           prescriptions?: string | null
@@ -1716,6 +1814,19 @@ export type Database = {
         Args: { p_device_id?: string; p_id: string; p_reason: string }
         Returns: undefined
       }
+      enable_patient_passport: {
+        Args: {
+          p_consent_confirmed: boolean
+          p_consent_notes?: string
+          p_device_id?: string
+          p_id: string
+          p_owner_name_visibility?: string
+          p_patient_id: string
+          p_show_microchip?: boolean
+          p_token: string
+        }
+        Returns: string
+      }
       end_patient_owner: {
         Args: {
           p_device_id?: string
@@ -1745,6 +1856,7 @@ export type Database = {
         Args: { p_device_id?: string; p_visit_id: string }
         Returns: number
       }
+      passport_by_token: { Args: { p_token: string }; Returns: Json }
       record_conflict_resolution: {
         Args: {
           p_device_id?: string
@@ -1856,6 +1968,14 @@ export type Database = {
         Args: { p_device_id: string; p_reason: string }
         Returns: undefined
       }
+      revoke_patient_passport: {
+        Args: { p_device_id?: string; p_patient_id: string }
+        Returns: undefined
+      }
+      rotate_passport_token: {
+        Args: { p_device_id?: string; p_patient_id: string; p_token: string }
+        Returns: undefined
+      }
       set_exam_finding: {
         Args: {
           p_base_server_version?: number
@@ -1894,6 +2014,10 @@ export type Database = {
           p_device_id?: string
           p_patient_id: string
         }
+        Returns: undefined
+      }
+      set_visit_passport_visible: {
+        Args: { p_device_id?: string; p_visible: boolean; p_visit_id: string }
         Returns: undefined
       }
       touch_current_device: {

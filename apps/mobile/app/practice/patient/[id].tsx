@@ -407,6 +407,23 @@ export default function PatientFolderScreen() {
         </Card>
       ) : null}
 
+      {/* The passport is a different disclosure from the client's copy: a
+          public link for a third party, restricted to identity and vaccination
+          status. The two never share an implementation (§10.6). */}
+      <Card>
+        <FieldLabel>Public health passport</FieldLabel>
+        <Muted>
+          A link a groomer or boarding kennel can open to check {folder.name} is vaccinated. It
+          shows no clinical detail, and it needs the owner&rsquo;s consent.
+        </Muted>
+        <SecondaryButton
+          label="Manage the passport"
+          onPress={() =>
+            router.push({ pathname: "/practice/passport/[id]", params: { id: folder.id } })
+          }
+        />
+      </Card>
+
       <Collapsible title="Remove this folder" icon="trash" tone="bad">
         <Muted>
           The folder stops appearing in your lists. Its {records.length} record
