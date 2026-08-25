@@ -11,7 +11,24 @@ function buildCsp(nonce: string) {
 
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+    // 'strict-dynamic' is deliberately absent, and its absence is the whole
+    // reason this line has a comment.
+    //
+    // It was here, and it silently broke every production build: with
+    // 'strict-dynamic' present a browser ignores 'self', trusting only scripts
+    // carrying the nonce and whatever those load. Next.js is not applying the
+    // nonce to its own script tags here — 0 of 16 on the deployed page — so
+    // every script was blocked, React never hydrated, and the login form fell
+    // back to a native submit that cleared the fields and did nothing.
+    //
+    // It survived because development mode behaves differently, and the whole
+    // signup flow was only ever exercised there.
+    //
+    // What remains is still strict: same-origin scripts only, no
+    // 'unsafe-inline', and the nonce kept so any inline script Next does emit
+    // must carry it. Restoring 'strict-dynamic' requires first proving the
+    // nonce reaches the rendered script tags.
+    `script-src 'self' 'nonce-${nonce}'${isDevelopment ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",
