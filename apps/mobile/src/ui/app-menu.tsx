@@ -115,7 +115,12 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
   const licenceVerified = profile?.license_verified === true;
 
   function go(
-    path: "/practice/clients" | "/practice/products" | "/practice/sync" | "/practice/close-account"
+    path:
+      | "/practice/clients"
+      | "/practice/products"
+      | "/practice/sync"
+      | "/practice/export"
+      | "/practice/close-account"
   ) {
     onClose();
     router.push(path);
@@ -216,6 +221,12 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
           />
 
           <Text style={styles.groupLabel}>Account</Text>
+          <MenuRow
+            icon="download-outline"
+            label="Export your practice"
+            detail="A complete copy of everything you have recorded"
+            onPress={() => go("/practice/export")}
+          />
           <MenuRow
             icon="log-out-outline"
             label="Sign out"

@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { Card, Muted, ScrollScreen } from "@/ui/practice-components";
 import { PageHeader } from "@/ui/elements";
-import { ErrorText, Field, PrimaryButton } from "@/ui/components";
+import { ErrorText, Field, PrimaryButton, SecondaryButton } from "@/ui/components";
 import { fonts, hairline, palette, radiusControl, space, type } from "@/ui/tokens";
 
 /**
@@ -26,6 +27,7 @@ import { fonts, hairline, palette, radiusControl, space, type } from "@/ui/token
 const CONFIRMATION = "CLOSE MY ACCOUNT";
 
 export default function CloseAccountScreen() {
+  const router = useRouter();
   const [confirmation, setConfirmation] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -135,13 +137,14 @@ export default function CloseAccountScreen() {
           <Ionicons name="download-outline" size={20} color={palette.quiet} />
           <Text style={styles.headTitle}>Take a copy first</Text>
         </View>
-        {/* Honest about the gap rather than silent about it: a full practice
-            export is specified in §17.1 and is not built. Saying so is better
-            than letting someone close and then discover it. */}
         <Muted>
-          A full practice export is not available yet. You can still share any individual folder or
-          record as a PDF from that folder, and it is worth doing before you close.
+          Export everything first — clients, folders, every consultation, treatments and their
+          withholding dates. You keep the file; closing does not take it away.
         </Muted>
+        <SecondaryButton
+          label="Export your practice"
+          onPress={() => router.push("/practice/export")}
+        />
       </Card>
 
       <Card>

@@ -290,6 +290,57 @@ export type Database = {
           },
         ]
       }
+      export_jobs: {
+        Row: {
+          completed_at: string | null
+          created_by_device_id: string | null
+          downloaded_at: string | null
+          failure_reason: string | null
+          id: string
+          record_counts: Json
+          requested_at: string
+          status: string
+          vet_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_by_device_id?: string | null
+          downloaded_at?: string | null
+          failure_reason?: string | null
+          id: string
+          record_counts?: Json
+          requested_at?: string
+          status?: string
+          vet_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_by_device_id?: string | null
+          downloaded_at?: string | null
+          failure_reason?: string | null
+          id?: string
+          record_counts?: Json
+          requested_at?: string
+          status?: string
+          vet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_jobs_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_jobs_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           active: boolean
@@ -1519,6 +1570,7 @@ export type Database = {
         }
         Returns: string
       }
+      build_practice_export: { Args: { p_job_id: string }; Returns: Json }
       close_vet_account: {
         Args: {
           p_confirmation: string
@@ -1565,6 +1617,10 @@ export type Database = {
           p_whatsapp_display?: string
           p_whatsapp_e164?: string
         }
+        Returns: string
+      }
+      create_export_job: {
+        Args: { p_device_id?: string; p_id: string }
         Returns: string
       }
       create_invoice: {
@@ -1679,6 +1735,10 @@ export type Database = {
       }
       mark_attachment_uploading: {
         Args: { p_device_id?: string; p_id: string }
+        Returns: undefined
+      }
+      mark_export_downloaded: {
+        Args: { p_device_id?: string; p_job_id: string }
         Returns: undefined
       }
       mark_remaining_systems_normal: {
