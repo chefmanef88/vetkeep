@@ -25,7 +25,11 @@ export default async function TodayPage() {
   const { data: records, error } = await supabase
     .from("visits")
     .select(
-      "id, visit_date, visit_type, workflow_status, chief_complaint, patients(name, species, patient_code), clients:patients(clients(name, phone_display))"
+      // patients is embedded once. An earlier version also embedded it a second
+      // time under an alias to reach the owner — clients:patients(clients(...)) —
+      // which PostgREST rejects, and which nothing on this page ever rendered.
+      // The owner's name belongs on the folder, not on a list of today's work.
+      "id, visit_date, visit_type, workflow_status, chief_complaint, patients(name, species, patient_code)"
     )
     .is("deleted_at", null)
     .gte("visit_date", startOfDay.toISOString())
