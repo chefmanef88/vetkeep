@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { generatePatientCode } from "@vetkeep/domain";
+import { SPECIES, generatePatientCode, speciesProfile } from "@vetkeep/domain";
 import { createClient } from "@/lib/supabase/browser";
 import { readableError } from "@/lib/practice/format";
 import { definedArgs, optionalText } from "@/lib/practice/rpc-args";
@@ -79,7 +79,16 @@ export function NewPatientForm({ clientId }: { clientId: string }) {
         </label>
         <label>
           Species
-          <input name="species" required placeholder="Dog" maxLength={60} />
+          {/* A list rather than a text box. The old input took free text with a
+              placeholder of "Dog", which the database rejected for its capital
+              letter — an interface that asks for something it will refuse. */}
+          <select name="species" required defaultValue="dog">
+            {SPECIES.map((value) => (
+              <option key={value} value={value}>
+                {speciesProfile(value).label}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
       <div className="grid">

@@ -30,6 +30,19 @@ type Vaccination = {
   next_due_date: string | null;
 };
 
+type Deworming = {
+  product_name: string | null;
+  date_given: string | null;
+  next_due_date: string | null;
+};
+
+type ParasiteControl = {
+  product_name: string | null;
+  target_parasites: string[] | null;
+  date_given: string | null;
+  next_due_date: string | null;
+};
+
 type Care = {
   visit_date: string | null;
   reason: string | null;
@@ -52,6 +65,8 @@ type Passport = {
   };
   owner_name: string | null;
   vaccinations: Vaccination[];
+  dewormings: Deworming[];
+  parasite_control: ParasiteControl[];
   recent_care: Care[];
   verified_by: {
     veterinarian: string | null;
@@ -157,6 +172,57 @@ export default async function PassportPage({ params }: { params: Promise<{ token
           </ul>
         ) : (
           <p className="muted">No vaccinations recorded on this passport.</p>
+        )}
+      </section>
+
+      <section className="card stack">
+        <h2>Worming</h2>
+        {passport.dewormings.length ? (
+          <ul className="record-list">
+            {passport.dewormings.map((entry, index) => (
+              <li key={`${entry.date_given}-${index}`}>
+                <div className="row-head">
+                  <strong>{entry.product_name ?? "Dewormer"}</strong>
+                  <span className="muted">{formatDate(entry.date_given)}</span>
+                </div>
+                {entry.next_due_date ? (
+                  <span className={isOverdue(entry.next_due_date) ? "stock-low" : "muted"}>
+                    {isOverdue(entry.next_due_date) ? "Overdue since " : "Next due "}
+                    {formatDate(entry.next_due_date)}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">No worming recorded on this passport.</p>
+        )}
+      </section>
+
+      <section className="card stack">
+        <h2>Ticks, fleas and mites</h2>
+        {passport.parasite_control.length ? (
+          <ul className="record-list">
+            {passport.parasite_control.map((entry, index) => (
+              <li key={`${entry.date_given}-${index}`}>
+                <div className="row-head">
+                  <strong>{entry.product_name ?? "Parasite control"}</strong>
+                  <span className="muted">{formatDate(entry.date_given)}</span>
+                </div>
+                {entry.target_parasites?.length ? (
+                  <span>{entry.target_parasites.join(", ")}</span>
+                ) : null}
+                {entry.next_due_date ? (
+                  <span className={isOverdue(entry.next_due_date) ? "stock-low" : "muted"}>
+                    {isOverdue(entry.next_due_date) ? "Overdue since " : "Next due "}
+                    {formatDate(entry.next_due_date)}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">No parasite control recorded on this passport.</p>
         )}
       </section>
 

@@ -989,6 +989,7 @@ export type Database = {
           product_name: string
           route: string | null
           server_version: number
+          target_parasites: string[] | null
           updated_at: string
           vaccine_type: string | null
           vet_id: string
@@ -1012,6 +1013,7 @@ export type Database = {
           product_name: string
           route?: string | null
           server_version?: number
+          target_parasites?: string[] | null
           updated_at?: string
           vaccine_type?: string | null
           vet_id: string
@@ -1035,6 +1037,7 @@ export type Database = {
           product_name?: string
           route?: string | null
           server_version?: number
+          target_parasites?: string[] | null
           updated_at?: string
           vaccine_type?: string | null
           vet_id?: string
@@ -1895,6 +1898,7 @@ export type Database = {
           p_patient_id: string
           p_product_name: string
           p_route?: string
+          p_target_parasites?: string[]
           p_vaccine_type?: string
           p_visit_id?: string
         }

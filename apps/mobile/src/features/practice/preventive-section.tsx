@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
   defaultRouteFor,
@@ -8,7 +8,10 @@ import {
   routesFor,
   suggestedNextDue,
   vaccineLabel,
-  vaccinesForSpecies
+  vaccinesForSpecies,
+  PARASITE_TARGETS,
+  parasiteLabel,
+  type PreventiveKind
 } from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
@@ -29,6 +32,7 @@ import { fonts, hairline, palette, radiusControl, radiusPill, space, type } from
 type PreventiveRow = {
   id: string;
   kind: string;
+  target_parasites: string[] | null;
   vaccine_type: string | null;
   product_name: string;
   manufacturer: string | null;
@@ -41,7 +45,9 @@ type PreventiveRow = {
 
 const KINDS = [
   { value: "vaccination", label: "Vaccination" },
-  { value: "deworming", label: "Deworming" }
+  { value: "deworming", label: "Deworming" },
+  // Shortened deliberately: "Tick, flea and mite control" does not fit a chip.
+  { value: "ectoparasite_control", label: "Ticks and fleas" }
 ];
 
 function isoToday(): string {
@@ -66,6 +72,7 @@ export function PreventiveSection({
   isGroup: boolean;
 }) {
   const [kind, setKind] = useState("vaccination");
+  const [parasites, setParasites] = useState<string[]>([]);
   const [vaccineType, setVaccineType] = useState<string | null>(null);
   const [productName, setProductName] = useState("");
   const [manufacturer, setManufacturer] = useState("");
@@ -82,7 +89,7 @@ export function PreventiveSection({
     const { data: rows, error: queryError } = await supabase
       .from("preventive_care")
       .select(
-        "id, kind, vaccine_type, product_name, manufacturer, batch_lot_number, dose, animals_treated, date_given, next_due_date"
+        "id, kind, vaccine_type, product_name, manufacturer, batch_lot_number, dose, animals_treated, date_given, next_due_date, target_parasites"
       )
       .eq("patient_id", patientId)
       .is("deleted_at", null)
@@ -98,8 +105,9 @@ export function PreventiveSection({
   });
 
   const isVaccination = kind === "vaccination";
+  const isParasiteControl = kind === "ectoparasite_control";
   const vaccines = vaccinesForSpecies(species);
-  const routes = routesFor({ kind: isVaccination ? "vaccination" : "deworming", isGroup });
+  const routes = routesFor({ kind: kind as PreventiveKind, isGroup });
 
   /**
    * A vaccine is injected and a wormer is swallowed, so the route carried over
@@ -108,7 +116,7 @@ export function PreventiveSection({
    */
   function chooseKind(next: string) {
     setKind(next);
-    const nextKind = next === "vaccination" ? "vaccination" : "deworming";
+    const nextKind = next as PreventiveKind;
     const allowed = routesFor({ kind: nextKind, isGroup });
     if (!allowed.includes(route as (typeof allowed)[number])) {
       setRoute(defaultRouteFor({ kind: nextKind, isGroup }));
@@ -144,7 +152,13 @@ export function PreventiveSection({
       return;
     }
     if (productName.trim() === "") {
-      setError(isVaccination ? "Name the brand that was used." : "Name the dewormer used.");
+      setError(
+        isVaccination
+          ? "Name the brand that was used."
+          : isParasiteControl
+            ? "Name the product used."
+            : "Name the dewormer used."
+      );
       return;
     }
 
@@ -163,7 +177,9 @@ export function PreventiveSection({
         p_dose: optionalText(dose),
         p_route: route,
         p_animals_treated: isGroup ? optionalNumber(animalsTreated) : undefined,
-        p_next_due_date: optionalText(nextDue)
+        p_next_due_date: optionalText(nextDue),
+        // Only ever sent for parasite control; the server refuses it otherwise.
+        p_target_parasites: isParasiteControl && parasites.length > 0 ? parasites : undefined
       })
     );
     setBusy(false);
@@ -177,7 +193,7 @@ export function PreventiveSection({
 
   return (
     <Collapsible
-      title="Vaccination and deworming"
+      title="Vaccination, worming and parasites"
       icon="shield-checkmark"
       hint={
         outstanding.length > 0
@@ -212,7 +228,11 @@ export function PreventiveSection({
             </Text>
             <View style={[styles.tag, entry.kind === "deworming" && styles.tagWorm]}>
               <Text style={styles.tagText}>
-                {entry.kind === "vaccination" ? "Vaccine" : "Dewormer"}
+                {entry.kind === "vaccination"
+                  ? "Vaccine"
+                  : entry.kind === "deworming"
+                    ? "Dewormer"
+                    : "Parasite control"}
               </Text>
             </View>
           </View>
@@ -242,6 +262,40 @@ export function PreventiveSection({
         accessibilityLabel="What kind"
       />
 
+      {isParasiteControl ? (
+        <>
+          <FieldLabel>What is being treated</FieldLabel>
+          {/* Multi-select, unlike the vaccine picker: one spot-on routinely
+              covers ticks and fleas together, and recording only one of them
+              would misstate what the animal is protected against. */}
+          <View style={styles.parasiteRow}>
+            {PARASITE_TARGETS.map((target) => {
+              const picked = parasites.includes(target);
+              return (
+                <Pressable
+                  key={target}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: picked }}
+                  accessibilityLabel={parasiteLabel(target)}
+                  style={[styles.parasiteChip, picked && styles.parasiteChipOn]}
+                  onPress={() =>
+                    setParasites((current) =>
+                      current.includes(target)
+                        ? current.filter((entry) => entry !== target)
+                        : [...current, target]
+                    )
+                  }
+                >
+                  <Text style={[styles.parasiteText, picked && styles.parasiteTextOn]}>
+                    {parasiteLabel(target)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      ) : null}
+
       {isVaccination ? (
         <>
           <FieldLabel>Vaccine</FieldLabel>
@@ -254,11 +308,19 @@ export function PreventiveSection({
         </>
       ) : null}
 
-      <FieldLabel>{isVaccination ? "Brand" : "Dewormer used"}</FieldLabel>
+      <FieldLabel>
+        {isVaccination ? "Brand" : isParasiteControl ? "Product used" : "Dewormer used"}
+      </FieldLabel>
       <Field
         value={productName}
         onChangeText={setProductName}
-        placeholder={isVaccination ? "Nobivac, Rabisin" : "Albendazole, Ivermectin"}
+        placeholder={
+          isVaccination
+            ? "Nobivac, Rabisin"
+            : isParasiteControl
+              ? "Frontline, Amitraz, Ivermectin"
+              : "Albendazole, Ivermectin"
+        }
       />
 
       {isVaccination ? (
@@ -338,6 +400,18 @@ export function PreventiveSection({
 }
 
 const styles = StyleSheet.create({
+  parasiteRow: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  parasiteChip: {
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radiusPill,
+    borderWidth: hairline,
+    borderColor: palette.line,
+    backgroundColor: palette.surface
+  },
+  parasiteChipOn: { backgroundColor: palette.brandSoft, borderColor: palette.brand },
+  parasiteText: { ...type.small, fontSize: 12, color: palette.quiet },
+  parasiteTextOn: { color: palette.brandInk, fontFamily: fonts.semibold },
   due: {
     flexDirection: "row",
     gap: space.md,

@@ -120,10 +120,52 @@ export function routeLabel(route: string): string {
  * the common choice harder to find, and offering the wrong four makes it
  * impossible.
  */
+export const PREVENTIVE_KINDS = ["vaccination", "deworming", "ectoparasite_control"] as const;
+export type PreventiveKind = (typeof PREVENTIVE_KINDS)[number];
+
+/**
+ * What tick, flea and mite control is aimed at.
+ *
+ * Recorded because it is what an owner asks about six months later — "you did
+ * something for ticks in March, when is it due?" — and because a product that
+ * clears fleas may do nothing for mange.
+ */
+export const PARASITE_TARGETS = ["ticks", "fleas", "mites", "lice", "flies", "other"] as const;
+export type ParasiteTarget = (typeof PARASITE_TARGETS)[number];
+
+const PARASITE_LABELS: Record<ParasiteTarget, string> = {
+  ticks: "Ticks",
+  fleas: "Fleas",
+  mites: "Mites and mange",
+  lice: "Lice",
+  flies: "Flies",
+  other: "Other"
+};
+
+export function parasiteLabel(target: string): string {
+  return PARASITE_LABELS[target as ParasiteTarget] ?? target;
+}
+
+const PREVENTIVE_KIND_LABELS: Record<PreventiveKind, string> = {
+  vaccination: "Vaccination",
+  deworming: "Deworming",
+  ectoparasite_control: "Tick, flea and mite control"
+};
+
+export function preventiveKindLabel(kind: string): string {
+  return PREVENTIVE_KIND_LABELS[kind as PreventiveKind] ?? kind;
+}
+
 export function routesFor(input: {
-  kind: "vaccination" | "deworming";
+  kind: PreventiveKind;
   isGroup: boolean;
 }): readonly PreventiveRoute[] {
+  // Spot-on and pour-on carry nearly all parasite control. An injectable
+  // macrocyclic lactone is the exception rather than the default, and a dip is
+  // a group job.
+  if (input.kind === "ectoparasite_control") {
+    return input.isGroup ? ["topical", "sc", "in_water", "oral"] : ["topical", "sc", "oral", "im"];
+  }
   if (input.kind === "deworming") {
     return input.isGroup
       ? ["in_water", "in_feed", "oral", "topical"]
@@ -137,7 +179,7 @@ export function routesFor(input: {
 
 /** The route to start on, which is the one most often used for that case. */
 export function defaultRouteFor(input: {
-  kind: "vaccination" | "deworming";
+  kind: PreventiveKind;
   isGroup: boolean;
 }): PreventiveRoute {
   return routesFor(input)[0] ?? "oral";

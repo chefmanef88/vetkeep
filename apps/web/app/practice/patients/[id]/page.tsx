@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { NewRecordForm } from "./new-record-form";
 import { PassportForm, type PassportState } from "./passport-form";
+import { PreventiveForm, type PreventiveEntry } from "./preventive-form";
 import { formatDate, formatDateTime } from "@/lib/practice/format";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +42,23 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
     .eq("patient_id", id)
     .is("deleted_at", null)
     .order("visit_date", { ascending: false });
+
+  const { data: preventiveRows } = await supabase
+    .from("preventive_care")
+    .select("id, kind, vaccine_type, product_name, date_given, next_due_date, target_parasites")
+    .eq("patient_id", id)
+    .is("deleted_at", null)
+    .order("date_given", { ascending: false });
+
+  const preventive: PreventiveEntry[] = (preventiveRows ?? []).map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    vaccineType: row.vaccine_type,
+    productName: row.product_name,
+    dateGiven: row.date_given,
+    nextDueDate: row.next_due_date,
+    targetParasites: row.target_parasites
+  }));
 
   const { data: passportRow } = await supabase
     .from("patient_passports")
@@ -130,6 +149,25 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
             Nothing due. A review date is set on a record during the consultation, on the phone.
           </p>
         )}
+      </section>
+
+      <section className="card stack">
+        <h2>Start a record</h2>
+        <p className="muted">
+          A consultation is created by attending. Records are normally written on the phone beside
+          the animal, but a folder you can read and never add to is a filing cabinet.
+        </p>
+        <NewRecordForm patientId={patient.id} />
+      </section>
+
+      <section className="card stack">
+        <h2>Vaccination, worming and parasites</h2>
+        <PreventiveForm
+          patientId={patient.id}
+          species={patient.species}
+          isGroup={patient.kind === "group"}
+          history={preventive}
+        />
       </section>
 
       <section className="card stack">

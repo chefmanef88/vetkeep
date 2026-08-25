@@ -39,16 +39,22 @@ export {
 } from "./treatment";
 
 export {
+  PARASITE_TARGETS,
+  PREVENTIVE_KINDS,
   PREVENTIVE_ROUTES,
   VACCINE_PROFILES,
   VACCINE_TYPES,
   defaultRouteFor,
   dueState,
+  parasiteLabel,
+  preventiveKindLabel,
   routeLabel,
   routesFor,
   suggestedNextDue,
   vaccineLabel,
   vaccinesForSpecies,
+  type ParasiteTarget,
+  type PreventiveKind,
   type PreventiveRoute,
   type VaccineProfile,
   type VaccineType
