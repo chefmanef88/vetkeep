@@ -1,0 +1,11 @@
+// Build config. tsconfig.json includes the tests so typecheck covers them;
+// this one does not, because a published build must never compile a test file.
+// Doing so drags vitest into the dependency graph of a production build, which
+// is how the first Vercel deploy failed: "Cannot find module vitest".
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
+}
