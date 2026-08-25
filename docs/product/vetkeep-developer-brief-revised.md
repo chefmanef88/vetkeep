@@ -1330,9 +1330,16 @@ Passports are disabled by default until owner consent is recorded.
 
 ### 10.3 Allowed public fields
 
+**Built 11 August 2026.** Two items below are deliberately not implemented, and
+both are noted where they appear rather than left to be discovered.
+
 The public response may include only:
 
-- Patient photo.
+- ~~Patient photo.~~ **Not implemented.** The attachments bucket is private, and
+  the only ways to serve a photograph publicly are to make that bucket public —
+  which would expose every clinical document in it — or to put a service role
+  key in the web application. Neither is worth doing for a photograph. The page
+  reads correctly without it.
 - Patient name.
 - Species.
 - Breed.
@@ -1365,7 +1372,11 @@ Anonymous users must not receive direct `SELECT` access to `patients`, `clients`
 Implement a server-side passport endpoint that:
 
 1. Validates and hashes the supplied token.
-2. Applies IP and token rate limits.
+2. Applies IP and token rate limits. **Token-level throttling is implemented in
+   the database. IP limiting is not, and does not belong there:** the database
+   sees whatever address the edge chooses to pass it, so a limit enforced on
+   that value is a limit that can be lied to. It belongs in front of the
+   application.
 3. Loads an explicit public DTO through a restricted database function or trusted server query.
 4. Returns only allow-listed fields.
 5. Records a privacy-safe access event.
