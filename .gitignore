@@ -16,3 +16,6 @@ apps/mobile/android/
 apps/mobile/ios/
 .turbo/
 *.tsbuildinfo
+
+.vercel
+.env*
