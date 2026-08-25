@@ -4,8 +4,5 @@
 // is how the first Vercel deploy failed: "Cannot find module vitest".
 {
   "extends": "./tsconfig.json",
-  "exclude": [
-    "**/*.test.ts",
-    "**/*.test.tsx"
-  ]
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }

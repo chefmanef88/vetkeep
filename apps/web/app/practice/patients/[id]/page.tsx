@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { PassportForm, type PassportState } from "./passport-form";
 import { formatDate, formatDateTime } from "@/lib/practice/format";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,29 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
     .eq("patient_id", id)
     .is("deleted_at", null)
     .order("visit_date", { ascending: false });
+
+  const { data: passportRow } = await supabase
+    .from("patient_passports")
+    .select("id, enabled, owner_name_visibility, show_microchip")
+    .eq("patient_id", id)
+    .maybeSingle();
+
+  let passportViews = 0;
+  if (passportRow) {
+    const { count } = await supabase
+      .from("passport_access_events")
+      .select("id", { count: "exact", head: true })
+      .eq("passport_id", passportRow.id);
+    passportViews = count ?? 0;
+  }
+
+  const passport: PassportState = passportRow
+    ? {
+        enabled: passportRow.enabled,
+        ownerNameVisibility: passportRow.owner_name_visibility,
+        showMicrochip: passportRow.show_microchip
+      }
+    : null;
 
   // Follow-up intent lives on the record, not in a booking (brief §11). What is
   // "due" is a review date a veterinarian wrote down, not a slot anyone agreed.
@@ -106,6 +130,16 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
             Nothing due. A review date is set on a record during the consultation, on the phone.
           </p>
         )}
+      </section>
+
+      <section className="card stack">
+        <h2>Public health passport</h2>
+        <PassportForm
+          patientId={patient.id}
+          patientName={patient.name}
+          passport={passport}
+          views={passportViews}
+        />
       </section>
 
       <section className="card stack">
