@@ -312,9 +312,10 @@ export default function ClientScreen() {
             }
           />
         ) : null}
-      </Card>
 
-      <EditClientSection client={data.client as EditableClient} onSaved={reload} />
+        {/* The last line of this card, not a block of its own. */}
+        <EditClientSection client={data.client as EditableClient} onSaved={reload} />
+      </Card>
 
       {data.patients.length > 0 ? (
         <ListHeader title="Folders" count={data.patients.length} />

@@ -325,12 +325,10 @@ export default function PatientFolderScreen() {
             {profile.withdrawals.join(" and ")} withholding periods.
           </Muted>
         ) : null}
-      </Card>
 
-      {/* Sits with the details it edits, not at the foot of the screen. A vet
-          correcting a microchip number should not have to scroll past every
-          record to reach the field. */}
-      <EditPatientSection patient={folder as EditablePatient} onSaved={reload} />
+        {/* The last line of this card, not a block of its own. */}
+        <EditPatientSection patient={folder as EditablePatient} onSaved={reload} />
+      </Card>
 
       {/* Creating a record is the point of opening a folder, so it sits above
           the history rather than below it. */}

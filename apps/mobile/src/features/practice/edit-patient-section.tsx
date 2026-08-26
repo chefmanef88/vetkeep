@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { SPECIES, speciesProfile } from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
-import { FieldLabel, Muted, Segmented } from "@/ui/practice-components";
-import { Collapsible, OptionChips } from "@/ui/elements";
+import { FieldLabel, Segmented } from "@/ui/practice-components";
+import { OptionChips } from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
-import { palette, type } from "@/ui/tokens";
+import { fonts, hairline, palette, space, type } from "@/ui/tokens";
 
 /**
  * Correcting an animal's standing details, on the phone.
@@ -75,6 +76,7 @@ export function EditPatientSection({
   const [headCount, setHeadCount] = useState(
     patient.head_count === null ? "" : String(patient.head_count)
   );
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -114,12 +116,24 @@ export function EditPatientSection({
     onSaved();
   }
 
-  return (
-    <Collapsible title="Correct these details" icon="create">
-      <Muted>
-        How the animal is identified stays editable. The signed records beneath it do not change.
-      </Muted>
+  // Rendered inside the details card rather than as a block of its own: this
+  // is one more line of that card, and the control sits at the end of it.
+  if (!open) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Edit these details"
+        style={styles.editRow}
+        onPress={() => setOpen(true)}
+      >
+        <Ionicons name="create-outline" size={15} color={palette.brandInk} />
+        <Text style={styles.editText}>Edit</Text>
+      </Pressable>
+    );
+  }
 
+  return (
+    <View style={styles.editing}>
       <FieldLabel>Name</FieldLabel>
       <Field value={name} onChangeText={setName} />
 
@@ -185,10 +199,34 @@ export function EditPatientSection({
         disabled={busy}
         onPress={() => void save()}
       />
-    </Collapsible>
+      <Pressable accessibilityRole="button" onPress={() => setOpen(false)} disabled={busy}>
+        <Text style={styles.cancel}>Cancel</Text>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  editRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-end",
+    gap: 5,
+    paddingTop: space.sm
+  },
+  editText: { ...type.small, fontSize: 13, color: palette.brandInk, fontFamily: fonts.semibold },
+  editing: {
+    gap: space.xs,
+    borderTopWidth: hairline,
+    borderTopColor: palette.line,
+    paddingTop: space.md
+  },
+  cancel: {
+    ...type.small,
+    fontSize: 12,
+    color: palette.quiet,
+    textAlign: "center",
+    paddingTop: space.sm
+  },
   saved: { ...type.small, fontSize: 12, color: palette.green }
 });
