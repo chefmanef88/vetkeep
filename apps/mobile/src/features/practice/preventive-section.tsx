@@ -17,7 +17,7 @@ import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { PreventiveEdit } from "@/features/practice/preventive-edit";
 import { useQuery } from "@/features/practice/use-query";
-import { FieldLabel, Muted, Segmented } from "@/ui/practice-components";
+import { FieldLabel, Segmented } from "@/ui/practice-components";
 import { Collapsible, OptionChips } from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
 import { fonts, hairline, palette, radiusControl, radiusPill, space, type } from "@/ui/tokens";
@@ -49,9 +49,17 @@ type PreventiveRow = {
 const KINDS = [
   { value: "vaccination", label: "Vaccination" },
   { value: "deworming", label: "Deworming" },
-  // Shortened deliberately: "Tick, flea and mite control" does not fit a chip.
-  { value: "ectoparasite_control", label: "Ticks and fleas" }
+  // "Ectoparasite control" is the correct term and does not fit a chip; this is
+  // the shortest wording that still says what it is.
+  { value: "ectoparasite_control", label: "Parasite control" }
 ];
+
+/** The order they are read in, and the heading each group carries. */
+const KIND_SECTIONS = [
+  { kind: "vaccination", heading: "Vaccination" },
+  { kind: "deworming", heading: "Deworming" },
+  { kind: "ectoparasite_control", heading: "Ectoparasite control" }
+] as const;
 
 function isoToday(): string {
   return new Date().toISOString().slice(0, 10);
@@ -102,10 +110,12 @@ export function PreventiveSection({
   }, [patientId]);
 
   const history = data ?? [];
-  const outstanding = history.filter((entry) => {
-    const state = dueState(entry.next_due_date);
-    return state === "overdue" || state === "due_soon";
-  });
+  // Counted separately, because they are not the same claim. Saying "3 due"
+  // about doses that are weeks away is simply untrue, and a header that cries
+  // wolf is one a vet stops reading.
+  const overdue = history.filter((entry) => dueState(entry.next_due_date) === "overdue");
+  const dueSoon = history.filter((entry) => dueState(entry.next_due_date) === "due_soon");
+  const outstanding = [...overdue, ...dueSoon];
 
   const isVaccination = kind === "vaccination";
   const isParasiteControl = kind === "ectoparasite_control";
@@ -196,16 +206,18 @@ export function PreventiveSection({
 
   return (
     <Collapsible
-      title="Vaccination, worming and parasites"
+      title="Vaccination, deworming and parasite control"
       icon="shield-checkmark"
       hint={
-        outstanding.length > 0
-          ? `${outstanding.length} due`
-          : history.length === 0
-            ? "None recorded"
-            : `${history.length} recorded`
+        overdue.length > 0
+          ? `${overdue.length} overdue`
+          : dueSoon.length > 0
+            ? `${dueSoon.length} due soon`
+            : history.length === 0
+              ? "None recorded"
+              : `${history.length} recorded`
       }
-      tone={outstanding.length > 0 ? "warn" : "good"}
+      tone={overdue.length > 0 ? "warn" : "good"}
     >
       {outstanding.length > 0 ? (
         <View style={styles.due}>
@@ -215,7 +227,7 @@ export function PreventiveSection({
               <Text key={entry.id} style={styles.dueLine}>
                 {entry.vaccine_type ? vaccineLabel(entry.vaccine_type) : entry.product_name}
                 {" — "}
-                {dueState(entry.next_due_date) === "overdue" ? "overdue since " : "due "}
+                {dueState(entry.next_due_date) === "overdue" ? "overdue since " : "due on "}
                 {formatDay(entry.next_due_date as string)}
               </Text>
             ))}
@@ -223,57 +235,55 @@ export function PreventiveSection({
         </View>
       ) : null}
 
-      {history.map((entry) => (
-        <View key={entry.id} style={styles.entry}>
-          <View style={styles.entryHead}>
-            <Text style={styles.entryTitle}>
-              {entry.vaccine_type ? vaccineLabel(entry.vaccine_type) : entry.product_name}
-            </Text>
-            <View style={[styles.tag, entry.kind === "deworming" && styles.tagWorm]}>
-              <Text style={styles.tagText}>
-                {entry.kind === "vaccination"
-                  ? "Vaccine"
-                  : entry.kind === "deworming"
-                    ? "Dewormer"
-                    : "Parasite control"}
-              </Text>
-            </View>
+      {KIND_SECTIONS.map(({ kind: sectionKind, heading }) => {
+        const entries = history.filter((entry) => entry.kind === sectionKind);
+        return (
+          <View key={sectionKind}>
+            <Text style={styles.sectionHeading}>{heading}</Text>
+            {entries.length === 0 ? <Text style={styles.sectionEmpty}>None recorded.</Text> : null}
+            {entries.map((entry) => (
+              <View key={entry.id} style={styles.entry}>
+                <View style={styles.entryHead}>
+                  <Text style={styles.entryTitle}>
+                    {entry.vaccine_type ? vaccineLabel(entry.vaccine_type) : entry.product_name}
+                  </Text>
+                </View>
+                <Text style={styles.entryMeta}>
+                  {formatDay(entry.date_given)}
+                  {entry.vaccine_type ? ` · ${entry.product_name}` : ""}
+                  {entry.manufacturer ? ` · ${entry.manufacturer}` : ""}
+                  {entry.dose ? ` · ${entry.dose}` : ""}
+                  {entry.animals_treated ? ` · ${entry.animals_treated} animals` : ""}
+                </Text>
+                {entry.batch_lot_number ? (
+                  <Text style={styles.entryBatch}>Batch {entry.batch_lot_number}</Text>
+                ) : null}
+                {entry.next_due_date ? (
+                  <Text style={styles.entryMeta}>Next due {formatDay(entry.next_due_date)}</Text>
+                ) : null}
+                <PreventiveEdit
+                  entry={{
+                    id: entry.id,
+                    kind: entry.kind,
+                    vaccine_type: entry.vaccine_type,
+                    product_name: entry.product_name,
+                    batch_lot_number: entry.batch_lot_number,
+                    dose: entry.dose,
+                    date_given: entry.date_given,
+                    next_due_date: entry.next_due_date,
+                    target_parasites: entry.target_parasites,
+                    server_version: entry.server_version,
+                    // Standing on its own or on a draft it is correctable; signed with
+                    // a consultation it is part of a signed record.
+                    locked: entry.visits !== null && entry.visits.workflow_status !== "draft"
+                  }}
+                  onSaved={reload}
+                />
+              </View>
+            ))}
           </View>
-          <Text style={styles.entryMeta}>
-            {formatDay(entry.date_given)}
-            {entry.vaccine_type ? ` · ${entry.product_name}` : ""}
-            {entry.manufacturer ? ` · ${entry.manufacturer}` : ""}
-            {entry.dose ? ` · ${entry.dose}` : ""}
-            {entry.animals_treated ? ` · ${entry.animals_treated} animals` : ""}
-          </Text>
-          {entry.batch_lot_number ? (
-            <Text style={styles.entryBatch}>Batch {entry.batch_lot_number}</Text>
-          ) : null}
-          {entry.next_due_date ? (
-            <Text style={styles.entryMeta}>Next due {formatDay(entry.next_due_date)}</Text>
-          ) : null}
-          <PreventiveEdit
-            entry={{
-              id: entry.id,
-              kind: entry.kind,
-              vaccine_type: entry.vaccine_type,
-              product_name: entry.product_name,
-              batch_lot_number: entry.batch_lot_number,
-              dose: entry.dose,
-              date_given: entry.date_given,
-              next_due_date: entry.next_due_date,
-              target_parasites: entry.target_parasites,
-              server_version: entry.server_version,
-              // Standing on its own or on a draft it is correctable; signed with
-              // a consultation it is part of a signed record.
-              locked: entry.visits !== null && entry.visits.workflow_status !== "draft"
-            }}
-            onSaved={reload}
-          />
-        </View>
-      ))}
-
-      {history.length === 0 ? <Muted>Nothing recorded yet for this animal.</Muted> : null}
+        );
+      })}
 
       <FieldLabel>Record</FieldLabel>
       <Segmented
@@ -421,6 +431,13 @@ export function PreventiveSection({
 }
 
 const styles = StyleSheet.create({
+  sectionHeading: {
+    ...type.label,
+    color: palette.ink,
+    fontFamily: fonts.semibold,
+    paddingTop: space.md
+  },
+  sectionEmpty: { ...type.small, fontSize: 12, color: palette.quiet, paddingBottom: space.xs },
   parasiteRow: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   parasiteChip: {
     paddingHorizontal: space.md,
@@ -454,14 +471,6 @@ const styles = StyleSheet.create({
   entryTitle: { ...type.strong, fontSize: 15, color: palette.ink, flex: 1 },
   entryMeta: { ...type.small, fontSize: 12, color: palette.quiet },
   entryBatch: { fontFamily: fonts.mono, fontSize: 11, color: palette.quiet },
-  tag: {
-    backgroundColor: palette.brandSoft,
-    borderRadius: radiusPill,
-    paddingHorizontal: space.sm,
-    paddingVertical: 2
-  },
-  tagWorm: { backgroundColor: palette.greenSoft },
-  tagText: { fontFamily: fonts.semibold, fontSize: 10, color: palette.quiet },
   pairRow: { flexDirection: "row", gap: space.md },
   pairCell: { flex: 1, gap: space.xs }
 });

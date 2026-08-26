@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { generateClientCode } from "@vetkeep/domain";
 import { definedArgs, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
@@ -8,6 +9,7 @@ import { useQuery } from "@/features/practice/use-query";
 import { ScrollScreen, FieldLabel } from "@/ui/practice-components";
 import { Collapsible, EmptyState, ListHeader, PersonRow, SearchField } from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
+import { palette, space, type } from "@/ui/tokens";
 
 type ClientRow = {
   id: string;
@@ -24,6 +26,7 @@ export default function ClientsScreen() {
   const [phoneDisplay, setPhoneDisplay] = useState("");
   const [phoneE164, setPhoneE164] = useState("");
   const [address, setAddress] = useState("");
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -65,7 +68,8 @@ export default function ClientsScreen() {
         p_name: name,
         p_phone_display: phoneDisplay,
         p_phone_e164: phoneE164,
-        p_address: optionalText(address)
+        p_address: optionalText(address),
+        p_communication_consent: consent
       })
     );
     setBusy(false);
@@ -77,6 +81,7 @@ export default function ClientsScreen() {
     setPhoneDisplay("");
     setPhoneE164("");
     setAddress("");
+    setConsent(false);
     reload();
   }
 
@@ -98,6 +103,22 @@ export default function ClientsScreen() {
         />
         <FieldLabel>Address or landmark</FieldLabel>
         <Field value={address} onChangeText={setAddress} placeholder="Optional" />
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: consent }}
+          style={styles.consentRow}
+          onPress={() => setConsent(!consent)}
+        >
+          <Ionicons
+            name={consent ? "checkbox" : "square-outline"}
+            size={20}
+            color={consent ? palette.brandInk : palette.quiet}
+          />
+          <Text style={styles.consentText}>
+            This client agreed to receive vaccination and follow-up reminders.
+          </Text>
+        </Pressable>
+
         {error ? <ErrorText>{error}</ErrorText> : null}
         <PrimaryButton
           label={busy ? "Saving…" : "Add client"}
@@ -147,3 +168,13 @@ export default function ClientsScreen() {
     </ScrollScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  consentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: space.sm,
+    paddingVertical: space.sm
+  },
+  consentText: { ...type.small, fontSize: 12, color: palette.ink, flex: 1, lineHeight: 17 }
+});

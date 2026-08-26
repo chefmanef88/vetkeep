@@ -227,14 +227,6 @@ export default function PatientFolderScreen() {
   const profile = speciesProfile(folder.species);
   const isGroup = folder.kind === "group";
   const age = describeAge(folder.date_of_birth, folder.date_of_birth_precision);
-  const identifier = folder.microchip_id ?? folder.ear_tag ?? folder.leg_ring;
-  const identifierLabel = folder.microchip_id
-    ? "Microchip"
-    : folder.ear_tag
-      ? "Ear tag"
-      : folder.leg_ring
-        ? "Leg ring"
-        : null;
   const openRecord = records.find((record) => record.workflow_status === "draft");
 
   return (
@@ -304,17 +296,33 @@ export default function PatientFolderScreen() {
               />
             ) : null}
             {age ? <InfoRow icon="time-outline" label="Age" value={age} /> : null}
-            {folder.color_markings ? (
-              <InfoRow
-                icon="color-palette-outline"
-                label="Markings"
-                value={folder.color_markings}
-              />
-            ) : null}
           </>
         )}
-        {identifier && identifierLabel ? (
-          <InfoRow icon="pricetag-outline" label={identifierLabel} value={identifier} />
+        {folder.color_markings ? (
+          <InfoRow icon="color-palette-outline" label="Markings" value={folder.color_markings} />
+        ) : null}
+        {folder.date_of_birth ? (
+          <InfoRow
+            icon="calendar-outline"
+            label="Date of birth"
+            value={
+              folder.date_of_birth_precision && folder.date_of_birth_precision !== "exact"
+                ? `${folder.date_of_birth} (${folder.date_of_birth_precision})`
+                : folder.date_of_birth
+            }
+          />
+        ) : null}
+        {/* Each identifier on its own row. An animal can carry a microchip and
+            an ear tag, and showing only the first hid the rest — which is no use
+            to whoever is trying to identify it. */}
+        {folder.microchip_id ? (
+          <InfoRow icon="pricetag-outline" label="Microchip" value={folder.microchip_id} />
+        ) : null}
+        {folder.ear_tag ? (
+          <InfoRow icon="pricetag-outline" label="Ear tag" value={folder.ear_tag} />
+        ) : null}
+        {folder.leg_ring ? (
+          <InfoRow icon="pricetag-outline" label="Leg ring" value={folder.leg_ring} />
         ) : null}
         {folder.identification_notes ? (
           <InfoRow icon="document-text-outline" label="Notes" value={folder.identification_notes} />

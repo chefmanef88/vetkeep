@@ -51,11 +51,9 @@ export function EditClientSection({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
   async function save() {
     setError(null);
-    setSaved(false);
     setBusy(true);
 
     const { error: rpcError } = await supabase.rpc(
@@ -82,7 +80,9 @@ export function EditClientSection({
       setError(rpcError.message);
       return;
     }
-    setSaved(true);
+    // Closing is the confirmation. A note that outlives the action is worse
+    // than none, because it is still there when the vet returns later.
+    setOpen(false);
     onSaved();
   }
 
@@ -144,7 +144,6 @@ export function EditClientSection({
       <Field value={notes} onChangeText={setNotes} multiline numberOfLines={2} />
 
       {error ? <ErrorText>{error}</ErrorText> : null}
-      {saved ? <Text style={styles.saved}>Saved.</Text> : null}
 
       <PrimaryButton
         label={busy ? "Saving…" : "Save changes"}
@@ -179,6 +178,5 @@ const styles = StyleSheet.create({
     color: palette.quiet,
     textAlign: "center",
     paddingTop: space.sm
-  },
-  saved: { ...type.small, fontSize: 12, color: palette.green }
+  }
 });
