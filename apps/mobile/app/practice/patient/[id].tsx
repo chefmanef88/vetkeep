@@ -327,6 +327,11 @@ export default function PatientFolderScreen() {
         ) : null}
       </Card>
 
+      {/* Sits with the details it edits, not at the foot of the screen. A vet
+          correcting a microchip number should not have to scroll past every
+          record to reach the field. */}
+      <EditPatientSection patient={folder as EditablePatient} onSaved={reload} />
+
       {/* Creating a record is the point of opening a folder, so it sits above
           the history rather than below it. */}
       <Card>
@@ -408,8 +413,6 @@ export default function PatientFolderScreen() {
           />
         </Card>
       ) : null}
-
-      <EditPatientSection patient={folder as EditablePatient} onSaved={reload} />
 
       {/* The passport is a different disclosure from the client's copy: a
           public link for a third party, restricted to identity and vaccination
