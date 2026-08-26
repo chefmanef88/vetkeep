@@ -1,17 +1,26 @@
 name: Database security
 
+# The paths are the job's real inputs, not just the migrations: this job also
+# checks the committed types file, which is produced by scripts/gen-types.mjs
+# and the db:types script in package.json. A change to either can break the
+# check without touching supabase/ at all, and did.
+#
+# The two lists below are duplicated on purpose: GitHub Actions does not
+# support YAML anchors, so there is no way to write them once.
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "supabase/**"
+      - "scripts/gen-types.mjs"
+      - "package.json"
       - ".github/workflows/database.yml"
   push:
     branches: [main]
     paths:
       - "supabase/**"
-      # As in the pull_request trigger above. Without this, a change to this
-      # file does not run the job it changes, and a broken check sits green
-      # until the next migration happens to land.
+      - "scripts/gen-types.mjs"
+      - "package.json"
       - ".github/workflows/database.yml"
 
 permissions:
