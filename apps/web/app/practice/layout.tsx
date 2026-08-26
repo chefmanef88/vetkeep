@@ -12,6 +12,7 @@ export default async function PracticeLayout({
     <main className="stack">
       <nav className="practice-nav" aria-label="Practice">
         <Link href="/practice/clients">Clients</Link>
+        <Link href="/practice/reminders">Reminders</Link>
         {/* The drug list, not a stock count. Quantities are not tracked (§7.8). */}
         <Link href="/practice/inventory">Products</Link>
         <Link href="/dashboard">Account</Link>

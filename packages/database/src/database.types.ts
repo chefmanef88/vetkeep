@@ -196,6 +196,120 @@ export type Database = {
           },
         ]
       }
+      client_reminders: {
+        Row: {
+          attempt_count: number
+          channel: string
+          created_at: string
+          delivered_at: string | null
+          id: string
+          idempotency_key: string
+          last_error_code: string | null
+          last_error_message: string | null
+          patient_id: string
+          preventive_care_id: string | null
+          provider_message_id: string | null
+          read_at: string | null
+          recipient_e164: string
+          reminder_type: string
+          send_at: string
+          sent_at: string | null
+          status: string
+          template_key: string
+          template_version: string
+          treatment_id: string | null
+          updated_at: string
+          vet_id: string
+          visit_id: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          channel?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          patient_id: string
+          preventive_care_id?: string | null
+          provider_message_id?: string | null
+          read_at?: string | null
+          recipient_e164: string
+          reminder_type: string
+          send_at: string
+          sent_at?: string | null
+          status?: string
+          template_key: string
+          template_version?: string
+          treatment_id?: string | null
+          updated_at?: string
+          vet_id: string
+          visit_id?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          channel?: string
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          patient_id?: string
+          preventive_care_id?: string | null
+          provider_message_id?: string | null
+          read_at?: string | null
+          recipient_e164?: string
+          reminder_type?: string
+          send_at?: string
+          sent_at?: string | null
+          status?: string
+          template_key?: string
+          template_version?: string
+          treatment_id?: string | null
+          updated_at?: string
+          vet_id?: string
+          visit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_reminders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reminders_preventive_care_id_fkey"
+            columns: ["preventive_care_id"]
+            isOneToOne: false
+            referencedRelation: "preventive_care"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reminders_treatment_id_fkey"
+            columns: ["treatment_id"]
+            isOneToOne: false
+            referencedRelation: "treatments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reminders_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reminders_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -1817,6 +1931,20 @@ export type Database = {
         Args: { p_device_id?: string; p_id: string; p_reason: string }
         Returns: undefined
       }
+      due_reminders: {
+        Args: { p_within_days?: number }
+        Returns: {
+          client_name: string
+          id: string
+          patient_id: string
+          patient_name: string
+          recipient_e164: string
+          reminder_type: string
+          send_at: string
+          status: string
+          template_key: string
+        }[]
+      }
       enable_patient_passport: {
         Args: {
           p_consent_confirmed: boolean
@@ -1859,6 +1987,7 @@ export type Database = {
         Args: { p_device_id?: string; p_visit_id: string }
         Returns: number
       }
+      mark_reminder_handled: { Args: { p_id: string }; Returns: undefined }
       passport_by_token: { Args: { p_token: string }; Returns: Json }
       record_conflict_resolution: {
         Args: {
@@ -2294,4 +2423,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

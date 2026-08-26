@@ -119,6 +119,7 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
       | "/practice/clients"
       | "/practice/products"
       | "/practice/sync"
+      | "/practice/reminders"
       | "/practice/export"
       | "/practice/close-account"
   ) {
@@ -190,6 +191,12 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
             label="Products"
             detail="What you use, and what it obliges"
             onPress={() => go("/practice/products")}
+          />
+          <MenuRow
+            icon="notifications-outline"
+            label="Reminders"
+            detail="What is due, and who to tell"
+            onPress={() => go("/practice/reminders")}
           />
           <MenuRow
             icon="sync-outline"

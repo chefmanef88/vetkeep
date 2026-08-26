@@ -19,7 +19,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "db:types": "supabase gen types typescript --local > packages/database/src/database.types.ts",
+    "db:types": "supabase gen types typescript --local | node -e \"let d=String.raw``;process.stdin.on('data',c=>d+=c).on('end',()=>{const out=d.split(String.fromCharCode(10)).filter(l=>!l.trimStart().startsWith(String.raw`{\"_tag\":\"Error\"`)).join(String.fromCharCode(10)).trimEnd();require('fs').writeFileSync('packages/database/src/database.types.ts',out+String.fromCharCode(10))})\"",
     "security:audit": "npm audit --audit-level=high"
   },
   "devDependencies": {
