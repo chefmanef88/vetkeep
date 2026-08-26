@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { EditClientForm } from "./edit-client-form";
 import { NewPatientForm } from "./new-patient-form";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,9 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   const { data: client, error } = await supabase
     .from("clients")
-    .select("id, client_code, name, phone_display, phone_e164, address, communication_consent")
+    .select(
+      "id, client_code, name, phone_display, phone_e164, whatsapp_display, whatsapp_e164, email, address, notes, communication_consent, server_version"
+    )
     .eq("id", id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -49,6 +52,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <p className="muted">
           Reminders: {client.communication_consent ? "consented" : "not consented"}
         </p>
+        <EditClientForm client={client} />
       </section>
 
       <section className="card stack">

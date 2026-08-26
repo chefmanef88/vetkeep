@@ -45,7 +45,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
     <>
       <section className="card stack">
         <p className="muted">
-          <Link href="/practice/today">← Today</Link>
+          <Link href="/practice/clients">← Clients</Link>
         </p>
         <div className="row-head">
           <h1>{visit.patients?.name ?? "Visit"}</h1>

@@ -37,7 +37,11 @@ export function NewPatientForm({ clientId }: { clientId: string }) {
         p_name: String(form.get("name") ?? ""),
         p_species: String(form.get("species") ?? ""),
         p_sex: String(form.get("sex") ?? "unknown"),
-        p_breed: optionalText(form.get("breed"))
+        p_breed: optionalText(form.get("breed")),
+        p_date_of_birth: optionalText(form.get("dateOfBirth")),
+        p_date_of_birth_precision: optionalText(form.get("dobPrecision")),
+        p_color_markings: optionalText(form.get("colorMarkings")),
+        p_microchip_id: optionalText(form.get("microchipId"))
       })
     );
 
@@ -107,6 +111,37 @@ export function NewPatientForm({ clientId }: { clientId: string }) {
           </select>
         </label>
       </div>
+      <div className="grid">
+        <label>
+          Date of birth
+          <input name="dateOfBirth" type="date" />
+        </label>
+        <label>
+          How exact is that?
+          <select name="dobPrecision" defaultValue="exact">
+            <option value="exact">Exact date</option>
+            <option value="month">Month known</option>
+            <option value="year">Year known</option>
+            <option value="estimated">Estimated</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="grid">
+        <label>
+          Colour and markings
+          <input
+            name="colorMarkings"
+            maxLength={300}
+            placeholder="Brindle, white chest, torn left ear"
+          />
+        </label>
+        <label>
+          Microchip number
+          <input name="microchipId" maxLength={60} placeholder="900123456789012" />
+        </label>
+      </div>
+
       {error ? (
         <p className="error" role="alert">
           {error}

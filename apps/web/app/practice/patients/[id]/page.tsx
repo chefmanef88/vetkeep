@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { EditPatientForm, type EditablePatient } from "./edit-patient-form";
 import { NewRecordForm } from "./new-record-form";
 import { PassportForm, type PassportState } from "./passport-form";
 import { PreventiveForm, type PreventiveEntry } from "./preventive-form";
@@ -15,7 +16,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
   const { data: patient, error } = await supabase
     .from("patients")
     .select(
-      "id, patient_code, name, species, breed, sex, date_of_birth, status, microchip_id, kind, purpose, head_count"
+      "id, patient_code, name, species, breed, sex, date_of_birth, date_of_birth_precision, color_markings, status, microchip_id, ear_tag, kind, purpose, head_count, server_version"
     )
     .eq("id", id)
     .is("deleted_at", null)
@@ -116,14 +117,21 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
           {patient.sex ? ` · ${patient.sex.replace("_", " ")}` : ""}
           {patient.head_count !== null ? ` · ${patient.head_count} head` : ""}
         </p>
+        {patient.color_markings ? <p className="muted">{patient.color_markings}</p> : null}
         {patient.date_of_birth ? (
-          <p className="muted">Born {formatDate(patient.date_of_birth)}</p>
+          <p className="muted">
+            Born {formatDate(patient.date_of_birth)}
+            {patient.date_of_birth_precision && patient.date_of_birth_precision !== "exact"
+              ? ` (${patient.date_of_birth_precision})`
+              : ""}
+          </p>
         ) : null}
         {patient.microchip_id ? (
           <p className="muted">
             Microchip <span className="code">{patient.microchip_id}</span>
           </p>
         ) : null}
+        <EditPatientForm patient={patient as EditablePatient} />
       </section>
 
       <section className="card stack">

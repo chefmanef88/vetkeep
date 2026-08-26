@@ -2073,6 +2073,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_preventive_care: {
+        Args: {
+          p_animals_treated?: number
+          p_base_server_version?: number
+          p_batch_lot_number?: string
+          p_date_given: string
+          p_device_id?: string
+          p_dose?: string
+          p_id: string
+          p_manufacturer?: string
+          p_next_due_date?: string
+          p_notes?: string
+          p_product_name: string
+          p_route?: string
+          p_target_parasites?: string[]
+          p_vaccine_type?: string
+        }
+        Returns: undefined
+      }
       update_vet_profile: {
         Args: {
           p_business_name?: string

@@ -33,7 +33,7 @@ export default async function DashboardPage() {
           {profile.license_verified ? "verified" : "verification pending"}
         </p>
         <div className="actions">
-          <Link className="button" href="/practice/today">
+          <Link className="button" href="/practice/clients">
             Open practice
           </Link>
           <SignOutButton />
