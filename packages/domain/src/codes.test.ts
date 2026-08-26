@@ -29,8 +29,19 @@ describe("record code generation", () => {
   });
 
   it("does not collide across a realistic single-account volume", () => {
+    // Tolerance rather than zero, and not because collisions are acceptable.
+    // The alphabet gives 32^6 = 1,073,741,824 codes, so 5000 draws form
+    // 12,497,500 pairs and collide with probability 1 - e^-0.0116, about 1.2%.
+    // Asserting exactly 5000 unique fails roughly one run in eighty-five, which
+    // is what it did on main rather than in anyone's editor.
+    //
+    // What this test is for is a generator that has stopped being random —
+    // a constant, a short period, a stubbed crypto source. Those produce
+    // duplicates by the hundred, so a handful of slack still catches them
+    // while making a false failure vanishingly unlikely. Real uniqueness is
+    // the database's unique index, which does not deal in probability.
     const generated = new Set(Array.from({ length: 5000 }, () => generateClientCode()));
-    expect(generated.size).toBe(5000);
+    expect(generated.size).toBeGreaterThanOrEqual(4995);
   });
 });
 
@@ -72,8 +83,12 @@ describe("generateVisitRecordCode", () => {
     // Not a uniqueness proof — the database holds a unique index for that. It
     // catches a generator that has stopped being random, which no constraint
     // would report until two records collided in the field.
+    //
+    // Same reasoning as the client-code volume test: 2000 draws collide about
+    // once in every 540 runs by chance, so this allows a little slack and still
+    // fails loudly on a generator that has genuinely stopped varying.
     const codes = new Set(Array.from({ length: 2000 }, generateVisitRecordCode));
-    expect(codes.size).toBe(2000);
+    expect(codes.size).toBeGreaterThanOrEqual(1997);
   });
 
   it("is a different series from the client and patient codes", () => {
