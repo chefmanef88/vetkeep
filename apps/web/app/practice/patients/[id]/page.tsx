@@ -46,7 +46,9 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
 
   const { data: preventiveRows } = await supabase
     .from("preventive_care")
-    .select("id, kind, vaccine_type, product_name, date_given, next_due_date, target_parasites")
+    .select(
+      "id, kind, vaccine_type, product_name, date_given, next_due_date, target_parasites, server_version, visits(workflow_status)"
+    )
     .eq("patient_id", id)
     .is("deleted_at", null)
     .order("date_given", { ascending: false });
@@ -58,7 +60,9 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
     productName: row.product_name,
     dateGiven: row.date_given,
     nextDueDate: row.next_due_date,
-    targetParasites: row.target_parasites
+    targetParasites: row.target_parasites,
+    serverVersion: row.server_version,
+    locked: row.visits !== null && row.visits.workflow_status !== "draft"
   }));
 
   const { data: passportRow } = await supabase

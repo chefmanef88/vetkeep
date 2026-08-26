@@ -15,6 +15,7 @@ import {
 } from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
+import { PreventiveEdit } from "@/features/practice/preventive-edit";
 import { useQuery } from "@/features/practice/use-query";
 import { FieldLabel, Muted, Segmented } from "@/ui/practice-components";
 import { Collapsible, OptionChips } from "@/ui/elements";
@@ -41,6 +42,8 @@ type PreventiveRow = {
   animals_treated: number | null;
   date_given: string;
   next_due_date: string | null;
+  server_version: number;
+  visits: { workflow_status: string } | null;
 };
 
 const KINDS = [
@@ -89,7 +92,7 @@ export function PreventiveSection({
     const { data: rows, error: queryError } = await supabase
       .from("preventive_care")
       .select(
-        "id, kind, vaccine_type, product_name, manufacturer, batch_lot_number, dose, animals_treated, date_given, next_due_date, target_parasites"
+        "id, kind, vaccine_type, product_name, manufacturer, batch_lot_number, dose, animals_treated, date_given, next_due_date, target_parasites, server_version, visits(workflow_status)"
       )
       .eq("patient_id", patientId)
       .is("deleted_at", null)
@@ -249,6 +252,24 @@ export function PreventiveSection({
           {entry.next_due_date ? (
             <Text style={styles.entryMeta}>Next due {formatDay(entry.next_due_date)}</Text>
           ) : null}
+          <PreventiveEdit
+            entry={{
+              id: entry.id,
+              kind: entry.kind,
+              vaccine_type: entry.vaccine_type,
+              product_name: entry.product_name,
+              batch_lot_number: entry.batch_lot_number,
+              dose: entry.dose,
+              date_given: entry.date_given,
+              next_due_date: entry.next_due_date,
+              target_parasites: entry.target_parasites,
+              server_version: entry.server_version,
+              // Standing on its own or on a draft it is correctable; signed with
+              // a consultation it is part of a signed record.
+              locked: entry.visits !== null && entry.visits.workflow_status !== "draft"
+            }}
+            onSaved={reload}
+          />
         </View>
       ))}
 

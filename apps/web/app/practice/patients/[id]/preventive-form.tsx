@@ -34,6 +34,9 @@ export type PreventiveEntry = {
   dateGiven: string;
   nextDueDate: string | null;
   targetParasites: string[] | null;
+  serverVersion: number;
+  /** Set once the consultation it belongs to has been signed. */
+  locked: boolean;
 };
 
 function isOverdue(value: string | null): boolean {
@@ -57,11 +60,54 @@ export function PreventiveForm({
   const [parasites, setParasites] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const isVaccination = kind === "vaccination";
   const isParasiteControl = kind === "ectoparasite_control";
   const vaccines = vaccinesForSpecies(species);
   const routes = routesFor({ kind, isGroup });
+
+  /**
+   * Correcting an entry in place. The alternative was delete and re-record,
+   * which loses the original and writes a deletion into the audit trail for
+   * what was a typing mistake.
+   */
+  async function correct(entry: PreventiveEntry, event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setEditError(null);
+    setBusy(true);
+
+    const form = new FormData(event.currentTarget);
+    const supabase = createClient();
+    const picked = PARASITE_TARGETS.filter((target) => form.get(`parasite-${target}`) === "on");
+
+    const { error: rpcError } = await supabase.rpc(
+      "update_preventive_care",
+      definedArgs({
+        p_id: entry.id,
+        p_product_name: String(form.get("productName") ?? ""),
+        p_date_given: String(form.get("dateGiven") ?? ""),
+        // Carried through unchanged: required for a vaccination, refused for
+        // anything else.
+        p_vaccine_type: entry.vaccineType ?? undefined,
+        p_batch_lot_number: optionalText(form.get("batch")),
+        p_dose: optionalText(form.get("dose")),
+        p_next_due_date: optionalText(form.get("nextDue")),
+        p_target_parasites:
+          entry.kind === "ectoparasite_control" && picked.length > 0 ? picked : undefined,
+        p_base_server_version: entry.serverVersion
+      })
+    );
+
+    setBusy(false);
+    if (rpcError) {
+      setEditError(readableError(rpcError.message));
+      return;
+    }
+    setEditing(null);
+    router.refresh();
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -127,6 +173,67 @@ export function PreventiveForm({
                   {formatDate(entry.nextDueDate)}
                 </span>
               ) : null}
+
+              {entry.locked ? (
+                <span className="muted">
+                  Signed with its consultation. Correcting it now is an amendment to the record.
+                </span>
+              ) : editing === entry.id ? (
+                <form className="stack" onSubmit={(event) => correct(entry, event)}>
+                  <div className="grid">
+                    <label>
+                      Product
+                      <input name="productName" required defaultValue={entry.productName} />
+                    </label>
+                    <label>
+                      Date given
+                      <input name="dateGiven" type="date" required defaultValue={entry.dateGiven} />
+                    </label>
+                  </div>
+                  <div className="grid">
+                    <label>
+                      Batch or serial number
+                      <input name="batch" />
+                    </label>
+                    <label>
+                      Next due
+                      <input name="nextDue" type="date" defaultValue={entry.nextDueDate ?? ""} />
+                    </label>
+                  </div>
+                  {entry.kind === "ectoparasite_control" ? (
+                    <fieldset className="stack">
+                      <legend>What is being treated</legend>
+                      {PARASITE_TARGETS.map((target) => (
+                        <label key={target}>
+                          <input
+                            type="checkbox"
+                            name={`parasite-${target}`}
+                            defaultChecked={entry.targetParasites?.includes(target) ?? false}
+                          />{" "}
+                          {parasiteLabel(target)}
+                        </label>
+                      ))}
+                    </fieldset>
+                  ) : null}
+                  {editError ? (
+                    <p className="error" role="alert">
+                      {editError}
+                    </p>
+                  ) : null}
+                  <div className="grid">
+                    <button type="submit" disabled={busy}>
+                      {busy ? "Saving…" : "Save the correction"}
+                    </button>
+                    <button type="button" onClick={() => setEditing(null)} disabled={busy}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button type="button" onClick={() => setEditing(entry.id)}>
+                  Correct this
+                </button>
+              )}
             </li>
           ))}
         </ul>

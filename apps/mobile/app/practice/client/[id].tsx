@@ -15,6 +15,7 @@ import {
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
+import { EditClientSection, type EditableClient } from "@/features/practice/edit-client-section";
 import { resolveDateOfBirth, type DobMode } from "@/features/practice/patient-dob";
 import { Card, FieldLabel, Muted, ScrollScreen, Segmented } from "@/ui/practice-components";
 import {
@@ -36,7 +37,14 @@ type Loaded = {
     client_code: string;
     name: string;
     phone_display: string;
+    phone_e164: string;
+    whatsapp_display: string | null;
+    whatsapp_e164: string | null;
+    email: string | null;
     address: string | null;
+    notes: string | null;
+    communication_consent: boolean;
+    server_version: number;
   };
   patients: {
     id: string;
@@ -128,7 +136,9 @@ export default function ClientScreen() {
     const [clientResult, ownerResult] = await Promise.all([
       supabase
         .from("clients")
-        .select("id, client_code, name, phone_display, address")
+        .select(
+          "id, client_code, name, phone_display, phone_e164, whatsapp_display, whatsapp_e164, email, address, notes, communication_consent, server_version"
+        )
         .eq("id", clientId)
         .is("deleted_at", null)
         .maybeSingle(),
@@ -303,6 +313,8 @@ export default function ClientScreen() {
           />
         ) : null}
       </Card>
+
+      <EditClientSection client={data.client as EditableClient} onSaved={reload} />
 
       {data.patients.length > 0 ? (
         <ListHeader title="Folders" count={data.patients.length} />
