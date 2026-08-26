@@ -2,9 +2,57 @@
 
 **Document status:** Technical build specification  
 **Product stage:** Pre-development architecture baseline  
-**Revision date:** 11 July 2026 (Phase 2 scope correction 2 August 2026; product model correction 10 August 2026; build corrections 11 August 2026)  
+**Revision date:** 11 July 2026 (Phase 2 scope correction 2 August 2026; product model correction 10 August 2026; build corrections 11 August 2026; product complete 26 August 2026)  
 **Primary market:** Independent solo veterinarians in Ghana and West Africa  
 **Primary platforms:** Mobile application for clinical work; web application for account, public passport, and platform workflows
+
+### Revision note — 26 August 2026
+
+Everything specified as product is now built. §12 and §17 were the last of it,
+and this note records what was added, what was corrected, and — for the two
+sections where it matters most — what is deliberately absent.
+
+Earlier revision notes are left as written, as before.
+
+1. **Ectoparasite control is the third kind of preventive care.** Tick, flea and
+   mite treatment is given on a schedule, carries a next-due date, and is asked
+   about in the same breath as worming; it had nowhere to go. `preventive_care`
+   gains `ectoparasite_control` and a `target_parasites` array, because one
+   spot-on routinely covers ticks and fleas together and a product that clears
+   fleas may do nothing for mange. See §7.7.
+2. **Species accepts what a veterinarian types.** It refused `canine`, and it
+   refused `Dog` — while the web form's own placeholder said "Dog". Case,
+   whitespace and unambiguous clinical synonyms are now normalised server-side:
+   canine, feline, bovine, ovine, caprine, porcine, lapine. `avian` is
+   deliberately **not** mapped, because this product distinguishes a pet bird
+   from poultry and guessing would put a budgerigar on a food animal pathway.
+3. **What is editable, and what is not.** Standing information — client details,
+   animal details — is editable for the life of the folder, and now actually is:
+   `update_client` and `update_patient` existed from Phase 2 and were wired to
+   nothing on either platform. Preventive care is correctable until the
+   consultation it belongs to is signed, at which point it is part of a signed
+   clinical record and locked with it (§8.2). Two fields are fixed at creation:
+   **kind and purpose**. An individual that becomes a group, or a pet that
+   becomes a food animal, changes which rules apply to every record already in
+   the folder, including withholding obligations on treatments already given.
+   That is a new folder, not an edit.
+4. **Reminders are built; sending is not.** See §12, which now states the limit
+   in the section rather than leaving it to be discovered.
+5. **Account closure and the practice export are built.** See §17.
+6. **The web application matches the phone.** Records can be started there,
+   clients and animals are searchable, and Today is gone — it was the last
+   surface still shaped around a day's schedule rather than a folder.
+
+**Known divergences**, carried forward and updated:
+
+- ~~The `VK-R-` record code is not implemented.~~ **Resolved 11 August 2026.**
+  Every consultation carries one, minted on the device so an offline record has
+  its reference from the moment it exists, and it can never change once set.
+- ~~No hosted staging.~~ **Resolved 11 August 2026.** `vetkeep-staging`
+  (`bnpokpjsencpxaetyfko`, eu-west-1), with the web application deployed. Note
+  that `supabase db push` carries schema and nothing else: the auth settings go
+  with `supabase config push`, and `docs/runbooks/staging-setup.md` explains why
+  that distinction has already caused one silent regression.
 
 ### Revision note — 11 August 2026
 
@@ -851,7 +899,7 @@ Storage paths must begin with the tenant's `vet_id`. Access is granted through s
 
 The mobile app must preserve the local file until the server confirms the checksum and marks the upload complete.
 
-### 7.7 Preventive care — vaccination and deworming
+### 7.7 Preventive care — vaccination, deworming and ectoparasite control
 
 Vaccination and deworming are one table, not two. From the record's point of
 view they are the same act: a product, a dose, a date, and a date it is next
@@ -866,7 +914,7 @@ create table preventive_care (
   patient_id uuid not null references patients(id) on delete restrict,
   visit_id uuid references visits(id) on delete restrict,
 
-  kind text not null check (kind in ('vaccination', 'deworming')),
+  kind text not null check (kind in ('vaccination', 'deworming', 'ectoparasite_control')),
   -- Vaccination only, and filtered by species: DHLPP and anti-rabies for a dog,
   -- FPL and Tricat for a cat. Offering a cat DHLPP is an error the list should
   -- not permit in the first place.
@@ -889,8 +937,14 @@ create table preventive_care (
   server_version bigint not null default 1,
   created_by_device_id uuid,
   last_modified_by_device_id uuid,
+  -- Ticks, fleas, mites, lice, flies. One spot-on routinely covers more than
+  -- one, and a product that clears fleas may do nothing for mange, so what was
+  -- treated is recorded rather than inferred from the product name.
+  target_parasites text[],
+
   check (next_due_date is null or next_due_date >= date_given),
-  check (kind = 'vaccination' or vaccine_type is null)
+  check (kind = 'vaccination' or vaccine_type is null),
+  check (kind = 'ectoparasite_control' or target_parasites is null)
 );
 ```
 
@@ -1464,6 +1518,26 @@ return by way of an appointment table.
 
 ## 12. WhatsApp Reminders and Messaging Outbox
 
+**Built 26 August 2026, except the sending.** The distinction matters enough to
+put at the top of the section:
+
+- **The queue is real.** Signing a record with a review date, recording
+  preventive care with a next due date, or giving a treatment that creates a
+  withholding period each queue a reminder — in the same transaction as the
+  thing that caused it, which is what §12.2 requires. They are cancelled when
+  the reason goes: a voided record, a deleted entry, a withdrawn consent.
+- **Nothing sends.** Delivery needs WhatsApp Business API credentials that do
+  not exist, so every row sits at `queued`. There is no worker. Both
+  applications say so on screen rather than letting a veterinarian infer from an
+  empty inbox that messages went out — one who assumes they sent will not make
+  the call.
+- **Until then the product is the list**: who to contact, why, the number, and a
+  way to mark it done that writes to the audit trail.
+
+Applying for WhatsApp Business API access is a waiting game in the same class as
+developer accounts and data protection registration. If reminders are launch
+scope, that application starts before the code is ready, not after.
+
 Do not use a single `sent boolean`.
 
 ### 12.1 Reminder definitions
@@ -1507,7 +1581,10 @@ create table client_reminders (
 
   constraint client_reminders_one_target check (
     (visit_id is not null)::int
-    + (vaccination_id is not null)::int
+    -- Was vaccination_id. That column became preventive_care_id when
+    -- vaccinations became preventive care on 11 August, and this constraint was
+    -- not updated with them; it would not have compiled.
+    + (preventive_care_id is not null)::int
     + (treatment_id is not null)::int = 1
   )
 );
@@ -1915,6 +1992,16 @@ Implement:
 ---
 
 ## 17. Privacy, Retention, Export, and Account Closure
+
+**§17.1 and §17.2 are built (26 August 2026).** The list immediately below is
+not: those are documents to write and publish, not code, and none of them
+exists yet. A privacy notice is a condition of both app stores.
+
+One thing the code deliberately does not decide: **the retention period**. That
+is a legal question for Ghana's Data Protection Act and the Veterinary Council,
+and it belongs in the published notice. Closure enforces the mechanism —
+account closed, devices revoked, clinical records retained — and leaves the
+duration to the policy.
 
 Before production, define and publish:
 
