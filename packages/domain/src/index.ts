@@ -15,6 +15,8 @@ export {
   normalizeRecordCode
 } from "./codes";
 
+export { describeAge, describeGroupAge, type DateOfBirthPrecision } from "./age";
+
 export { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder, type ExamSystem } from "./exam";
 
 export {

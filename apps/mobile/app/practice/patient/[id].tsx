@@ -3,6 +3,8 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import {
   callWithFreshCode,
+  describeAge,
+  describeGroupAge,
   generateVisitRecordCode,
   purposeLabel,
   speciesProfile
@@ -56,7 +58,9 @@ type RecordRow = {
   tentative_diagnosis: string | null;
 };
 
-type Loaded = { folder: Folder; records: RecordRow[] };
+// loadedAt travels with the data so age is derived from a timestamp captured
+// when the folder was read, not from the clock during render.
+type Loaded = { folder: Folder; records: RecordRow[]; loadedAt: number };
 
 /**
  * The kinds of attendance a house-call vet actually makes. Scheduling is gone
@@ -75,28 +79,6 @@ function formatDay(value: string): string {
     month: "short",
     year: "numeric"
   });
-}
-
-/** Age as a person would say it, from a stored date and its precision. */
-function describeAge(dob: string | null, precision: string): string | null {
-  if (!dob) return null;
-  const born = new Date(dob);
-  const now = new Date();
-  let months = (now.getFullYear() - born.getFullYear()) * 12 + (now.getMonth() - born.getMonth());
-  if (now.getDate() < born.getDate()) months -= 1;
-  if (months < 0) return null;
-
-  const years = Math.floor(months / 12);
-  const remainder = months % 12;
-  const spoken =
-    years === 0
-      ? `${remainder} month${remainder === 1 ? "" : "s"}`
-      : remainder === 0
-        ? `${years} year${years === 1 ? "" : "s"}`
-        : `${years}y ${remainder}m`;
-
-  // An estimate is never presented as though it were a certificate.
-  return precision === "exact" ? spoken : `about ${spoken}`;
 }
 
 export default function PatientFolderScreen() {
@@ -135,7 +117,8 @@ export default function PatientFolderScreen() {
     if (folderResult.error || !folderResult.data) throw new Error("Could not load this folder.");
     return {
       folder: folderResult.data as Folder,
-      records: (recordsResult.data ?? []) as RecordRow[]
+      records: (recordsResult.data ?? []) as RecordRow[],
+      loadedAt: Date.now()
     };
   }, [id]);
 
@@ -236,10 +219,10 @@ export default function PatientFolderScreen() {
     );
   }
 
-  const { folder, records } = data;
+  const { folder, records, loadedAt } = data;
   const profile = speciesProfile(folder.species);
   const isGroup = folder.kind === "group";
-  const age = describeAge(folder.date_of_birth, folder.date_of_birth_precision);
+  const age = describeAge(folder.date_of_birth, folder.date_of_birth_precision, new Date(loadedAt));
   const openRecord = records.find((record) => record.workflow_status === "draft");
 
   return (
@@ -292,8 +275,12 @@ export default function PatientFolderScreen() {
                 value={`${folder.head_count}`}
               />
             ) : null}
-            {folder.group_age_weeks !== null ? (
-              <InfoRow icon="time-outline" label="Age" value={`${folder.group_age_weeks} weeks`} />
+            {describeGroupAge(folder.group_age_weeks) ? (
+              <InfoRow
+                icon="time-outline"
+                label="Age"
+                value={describeGroupAge(folder.group_age_weeks) ?? ""}
+              />
             ) : null}
             {folder.housing ? (
               <InfoRow icon="home-outline" label="Housing" value={folder.housing} />

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { describeAge, describeGroupAge } from "@vetkeep/domain";
 import { createClient } from "@/lib/supabase/server";
 import { EditPatientForm, type EditablePatient } from "./edit-patient-form";
 import { NewRecordForm } from "./new-record-form";
@@ -16,7 +17,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
   const { data: patient, error } = await supabase
     .from("patients")
     .select(
-      "id, patient_code, name, species, breed, sex, date_of_birth, date_of_birth_precision, color_markings, status, microchip_id, ear_tag, kind, purpose, head_count, server_version"
+      "id, patient_code, name, species, breed, sex, date_of_birth, date_of_birth_precision, color_markings, status, microchip_id, ear_tag, kind, purpose, head_count, group_age_weeks, server_version"
     )
     .eq("id", id)
     .is("deleted_at", null)
@@ -24,6 +25,11 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
 
   if (error) throw new Error("Unable to load the animal.");
   if (!patient) notFound();
+
+  // This page renders per request, so the clock is read once here rather than
+  // during render of a cached tree.
+  const age = describeAge(patient.date_of_birth, patient.date_of_birth_precision, new Date());
+  const groupAge = describeGroupAge(patient.group_age_weeks);
 
   const { data: owner } = await supabase
     .from("patient_owners")
@@ -124,12 +130,18 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
         {patient.color_markings ? <p className="muted">{patient.color_markings}</p> : null}
         {patient.date_of_birth ? (
           <p className="muted">
-            Born {formatDate(patient.date_of_birth)}
+            {/* Age first: it is what the clinician reasons with, and working it
+                out from the date mid-consultation is arithmetic by hand. The
+                date stays, because it is what was actually recorded. */}
+            {age ? <strong>{age}</strong> : null}
+            {age ? " · " : ""}
+            born {formatDate(patient.date_of_birth)}
             {patient.date_of_birth_precision && patient.date_of_birth_precision !== "exact"
               ? ` (${patient.date_of_birth_precision})`
               : ""}
           </p>
         ) : null}
+        {groupAge ? <p className="muted">Age {groupAge}</p> : null}
         {patient.microchip_id ? (
           <p className="muted">
             Microchip <span className="code">{patient.microchip_id}</span>
