@@ -1,13 +1,17 @@
 export {
   CLIENT_CODE_PATTERN,
   CLIENT_CODE_PREFIX,
+  CODE_TAKEN,
+  CODE_TAKEN_MESSAGE,
   PATIENT_CODE_PATTERN,
   PATIENT_CODE_PREFIX,
   RECORD_CODE_PATTERN,
   RECORD_CODE_PREFIX,
+  callWithFreshCode,
   generateClientCode,
   generatePatientCode,
   generateVisitRecordCode,
+  isCodeCollision,
   normalizeRecordCode
 } from "./codes";
 

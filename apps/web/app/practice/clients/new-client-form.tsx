@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { generateClientCode } from "@vetkeep/domain";
+import { callWithFreshCode, generateClientCode } from "@vetkeep/domain";
 import { createClient } from "@/lib/supabase/browser";
 import { readableError } from "@/lib/practice/format";
 import { definedArgs, optionalText } from "@/lib/practice/rpc-args";
@@ -22,17 +22,21 @@ export function NewClientForm() {
 
     // The id and the code are both minted here rather than by the server, so the
     // same call works unchanged from a phone with no signal. Retrying it is safe.
-    const { error: rpcError } = await supabase.rpc(
-      "create_client",
-      definedArgs({
-        p_id: crypto.randomUUID(),
-        p_client_code: generateClientCode(),
-        p_name: String(form.get("name") ?? ""),
-        p_phone_display: String(form.get("phoneDisplay") ?? ""),
-        p_phone_e164: String(form.get("phoneE164") ?? ""),
-        p_address: optionalText(form.get("address")),
-        p_communication_consent: form.get("consent") === "on"
-      })
+    // The code is re-minted if it is already taken, which nobody has yet seen.
+    const clientId = crypto.randomUUID();
+    const { error: rpcError } = await callWithFreshCode(generateClientCode, (code) =>
+      supabase.rpc(
+        "create_client",
+        definedArgs({
+          p_id: clientId,
+          p_client_code: code,
+          p_name: String(form.get("name") ?? ""),
+          p_phone_display: String(form.get("phoneDisplay") ?? ""),
+          p_phone_e164: String(form.get("phoneE164") ?? ""),
+          p_address: optionalText(form.get("address")),
+          p_communication_consent: form.get("consent") === "on"
+        })
+      )
     );
 
     setBusy(false);

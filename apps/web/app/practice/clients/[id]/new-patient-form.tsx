@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { SPECIES, generatePatientCode, speciesProfile } from "@vetkeep/domain";
+import { SPECIES, callWithFreshCode, generatePatientCode, speciesProfile } from "@vetkeep/domain";
 import { createClient } from "@/lib/supabase/browser";
 import { readableError } from "@/lib/practice/format";
 import { definedArgs, optionalText } from "@/lib/practice/rpc-args";
@@ -29,20 +29,23 @@ export function NewPatientForm({ clientId }: { clientId: string }) {
     const supabase = createClient();
     const patientId = crypto.randomUUID();
 
-    const { error: patientError } = await supabase.rpc(
-      "create_patient",
-      definedArgs({
-        p_id: patientId,
-        p_patient_code: generatePatientCode(),
-        p_name: String(form.get("name") ?? ""),
-        p_species: String(form.get("species") ?? ""),
-        p_sex: String(form.get("sex") ?? "unknown"),
-        p_breed: optionalText(form.get("breed")),
-        p_date_of_birth: optionalText(form.get("dateOfBirth")),
-        p_date_of_birth_precision: optionalText(form.get("dobPrecision")),
-        p_color_markings: optionalText(form.get("colorMarkings")),
-        p_microchip_id: optionalText(form.get("microchipId"))
-      })
+    // Re-minted if the code is already taken; it has been shown to nobody yet.
+    const { error: patientError } = await callWithFreshCode(generatePatientCode, (code) =>
+      supabase.rpc(
+        "create_patient",
+        definedArgs({
+          p_id: patientId,
+          p_patient_code: code,
+          p_name: String(form.get("name") ?? ""),
+          p_species: String(form.get("species") ?? ""),
+          p_sex: String(form.get("sex") ?? "unknown"),
+          p_breed: optionalText(form.get("breed")),
+          p_date_of_birth: optionalText(form.get("dateOfBirth")),
+          p_date_of_birth_precision: optionalText(form.get("dobPrecision")),
+          p_color_markings: optionalText(form.get("colorMarkings")),
+          p_microchip_id: optionalText(form.get("microchipId"))
+        })
+      )
     );
 
     if (patientError) {

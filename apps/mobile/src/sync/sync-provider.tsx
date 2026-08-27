@@ -11,6 +11,7 @@ import {
 import { AppState } from "react-native";
 import { pushBatch, type EntityType, type OutboundMutation } from "@vetkeep/sync";
 import { supabase } from "@/lib/supabase";
+import { remedied } from "./code-remedy";
 import { createQueueStorage, QueueAtCapacityError, type DeadLetterEntry } from "./queue-storage";
 import { createSender } from "./send";
 
@@ -35,6 +36,8 @@ interface SyncContextValue {
   record: (input: RecordInput) => Promise<{ queued: true; sentNow: boolean }>;
   flush: () => Promise<void>;
   dismissDeadLetter: (mutationId: string) => Promise<void>;
+  /** Re-queues a dead-lettered write under a newly minted code. */
+  resendWithNewCode: (mutationId: string) => Promise<void>;
 }
 
 export interface RecordInput {
@@ -163,6 +166,31 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     [refreshCounts, storage]
   );
 
+  /**
+   * Queues a dead-lettered write again under a new code.
+   *
+   * The old dead letter is cleared only after the replacement is safely
+   * enqueued, so a failure in between leaves the vet with the entry they can
+   * still see rather than nothing at all.
+   */
+  const resendWithNewCode = useCallback(
+    async (mutationId: string) => {
+      const entry = (await storage.deadLetters()).find(
+        (candidate) => candidate.mutation.mutationId === mutationId
+      );
+      if (!entry) return;
+
+      const replacement = remedied(entry.mutation);
+      if (!replacement) return;
+
+      await storage.enqueue(replacement);
+      await storage.clearDeadLetter(mutationId);
+      await refreshCounts();
+      await flush();
+    },
+    [flush, refreshCounts, storage]
+  );
+
   useEffect(() => {
     // Reads the queue that survived the last app launch. The rule guards against
     // cascading renders from a synchronous setState, which this is not: every
@@ -189,9 +217,20 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       lastSyncAt,
       record,
       flush,
-      dismissDeadLetter
+      dismissDeadLetter,
+      resendWithNewCode
     }),
-    [status, pendingCount, conflicts, deadLetters, lastSyncAt, record, flush, dismissDeadLetter]
+    [
+      status,
+      pendingCount,
+      conflicts,
+      deadLetters,
+      lastSyncAt,
+      record,
+      flush,
+      dismissDeadLetter,
+      resendWithNewCode
+    ]
   );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;

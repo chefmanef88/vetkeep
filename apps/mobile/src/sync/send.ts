@@ -1,3 +1,4 @@
+import { CODE_TAKEN, CODE_TAKEN_MESSAGE, isCodeCollision } from "@vetkeep/domain";
 import type { OutboundMutation, PushResponse } from "@vetkeep/sync";
 
 /**
@@ -44,6 +45,17 @@ export function classifyRpcError(error: RpcError, serverVersion: number): PushRe
 
   if (isTransportFailure(error)) {
     return { status: "unavailable", message: error.message };
+  }
+
+  // A repeated code is the one rejection that would succeed if sent again,
+  // because the remedy is a different code. It is still not retried here: by
+  // the time a queued write reaches the server the vet may already have handed
+  // that reference to the client, and swapping it silently would leave the
+  // paper in their hand pointing at nothing. So it dead-letters like the rest,
+  // but carrying a code the sync screen can offer a remedy for, and a sentence
+  // a person can read instead of the constraint name.
+  if (isCodeCollision(error)) {
+    return { status: "rejected", code: CODE_TAKEN, message: CODE_TAKEN_MESSAGE };
   }
 
   // Everything else is the server refusing on its own terms: a revoked device,

@@ -4,6 +4,7 @@ import { ActivityIndicator, Linking, StyleSheet, Text, View } from "react-native
 import {
   PURPOSES,
   allowsGroup,
+  callWithFreshCode,
   generatePatientCode,
   purposeLabel,
   speciesProfile,
@@ -205,29 +206,33 @@ export default function ClientScreen() {
     setBusy(true);
     const patientId = globalThis.crypto.randomUUID();
 
-    const { error: patientError } = await supabase.rpc(
-      "create_patient",
-      definedArgs({
-        p_id: patientId,
-        p_patient_code: generatePatientCode(),
-        p_name: name,
-        p_species: species,
-        p_kind: kind,
-        p_purpose: purpose,
-        // A group carries no single sex, and the database rejects one.
-        p_sex: isGroup ? undefined : sex,
-        p_breed: optionalText(breed),
-        p_date_of_birth: dob.date ?? undefined,
-        p_date_of_birth_precision: dob.precision,
-        p_color_markings: optionalText(colorMarkings),
-        p_microchip_id: profile.identifier === "microchip" ? optionalText(identifier) : undefined,
-        p_ear_tag: profile.identifier === "ear_tag" ? optionalText(identifier) : undefined,
-        p_leg_ring: profile.identifier === "leg_ring" ? optionalText(identifier) : undefined,
-        p_identification_notes: optionalText(identificationNotes),
-        p_head_count: isGroup ? optionalNumber(headCount) : undefined,
-        p_group_age_weeks: isGroup ? optionalNumber(groupAgeWeeks) : undefined,
-        p_housing: isGroup ? optionalText(housing) : undefined
-      })
+    // Retried on the rare chance the code is already taken; it has been shown
+    // to nobody yet, so a replacement is invisible.
+    const { error: patientError } = await callWithFreshCode(generatePatientCode, (code) =>
+      supabase.rpc(
+        "create_patient",
+        definedArgs({
+          p_id: patientId,
+          p_patient_code: code,
+          p_name: name,
+          p_species: species,
+          p_kind: kind,
+          p_purpose: purpose,
+          // A group carries no single sex, and the database rejects one.
+          p_sex: isGroup ? undefined : sex,
+          p_breed: optionalText(breed),
+          p_date_of_birth: dob.date ?? undefined,
+          p_date_of_birth_precision: dob.precision,
+          p_color_markings: optionalText(colorMarkings),
+          p_microchip_id: profile.identifier === "microchip" ? optionalText(identifier) : undefined,
+          p_ear_tag: profile.identifier === "ear_tag" ? optionalText(identifier) : undefined,
+          p_leg_ring: profile.identifier === "leg_ring" ? optionalText(identifier) : undefined,
+          p_identification_notes: optionalText(identificationNotes),
+          p_head_count: isGroup ? optionalNumber(headCount) : undefined,
+          p_group_age_weeks: isGroup ? optionalNumber(groupAgeWeeks) : undefined,
+          p_housing: isGroup ? optionalText(housing) : undefined
+        })
+      )
     );
     if (patientError) {
       setBusy(false);

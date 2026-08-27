@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { generateVisitRecordCode } from "@vetkeep/domain";
+import { callWithFreshCode, generateVisitRecordCode } from "@vetkeep/domain";
 import { createClient } from "@/lib/supabase/browser";
 import { readableError } from "@/lib/practice/format";
 import { definedArgs, optionalText } from "@/lib/practice/rpc-args";
@@ -42,18 +42,21 @@ export function NewRecordForm({ patientId }: { patientId: string }) {
     const supabase = createClient();
     const recordId = crypto.randomUUID();
 
-    const { error: rpcError } = await supabase.rpc(
-      "create_visit",
-      definedArgs({
-        p_id: recordId,
-        p_patient_id: patientId,
-        p_visit_date: new Date().toISOString(),
-        p_visit_type: String(form.get("visitType") ?? "home_call"),
-        p_chief_complaint: optionalText(form.get("chiefComplaint")),
-        // Minted here so the record carries the reference the client will be
-        // given from the moment it exists, exactly as on the phone.
-        p_record_code: generateVisitRecordCode()
-      })
+    // Minted here so the record carries the reference the client will be given
+    // from the moment it exists, exactly as on the phone. Retried if that
+    // reference is already taken — safe only because nobody has seen it yet.
+    const { error: rpcError } = await callWithFreshCode(generateVisitRecordCode, (code) =>
+      supabase.rpc(
+        "create_visit",
+        definedArgs({
+          p_id: recordId,
+          p_patient_id: patientId,
+          p_visit_date: new Date().toISOString(),
+          p_visit_type: String(form.get("visitType") ?? "home_call"),
+          p_chief_complaint: optionalText(form.get("chiefComplaint")),
+          p_record_code: code
+        })
+      )
     );
 
     setBusy(false);

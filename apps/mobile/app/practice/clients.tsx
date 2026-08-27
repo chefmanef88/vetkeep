@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { generateClientCode } from "@vetkeep/domain";
+import { callWithFreshCode, generateClientCode } from "@vetkeep/domain";
 import { definedArgs, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
@@ -60,17 +60,24 @@ export default function ClientsScreen() {
     setError(null);
     // Id and code are minted on the device, so this works with no signal and a
     // retried sync cannot create the client twice.
-    const { error: rpcError } = await supabase.rpc(
-      "create_client",
-      definedArgs({
-        p_id: globalThis.crypto.randomUUID(),
-        p_client_code: generateClientCode(),
-        p_name: name,
-        p_phone_display: phoneDisplay,
-        p_phone_e164: phoneE164,
-        p_address: optionalText(address),
-        p_communication_consent: consent
-      })
+    //
+    // The code is retried on the rare chance it is already taken. Safe here and
+    // nowhere else: this one has existed for a few milliseconds and been shown
+    // to nobody, so replacing it is invisible.
+    const clientId = globalThis.crypto.randomUUID();
+    const { error: rpcError } = await callWithFreshCode(generateClientCode, (code) =>
+      supabase.rpc(
+        "create_client",
+        definedArgs({
+          p_id: clientId,
+          p_client_code: code,
+          p_name: name,
+          p_phone_display: phoneDisplay,
+          p_phone_e164: phoneE164,
+          p_address: optionalText(address),
+          p_communication_consent: consent
+        })
+      )
     );
     setBusy(false);
     if (rpcError) {

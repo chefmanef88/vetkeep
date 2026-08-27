@@ -1,7 +1,12 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { generateVisitRecordCode, purposeLabel, speciesProfile } from "@vetkeep/domain";
+import {
+  callWithFreshCode,
+  generateVisitRecordCode,
+  purposeLabel,
+  speciesProfile
+} from "@vetkeep/domain";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { EditPatientSection, type EditablePatient } from "@/features/practice/edit-patient-section";
@@ -150,15 +155,20 @@ export default function PatientFolderScreen() {
     setActionError(null);
     const recordId = globalThis.crypto.randomUUID();
     // No appointment is involved. A record is created by the act of attending.
-    const { error: rpcError } = await supabase.rpc("create_visit", {
-      p_id: recordId,
-      p_patient_id: String(id),
-      p_visit_date: new Date().toISOString(),
-      p_visit_type: recordType,
-      // Minted here, offline, so the record carries the reference the client
-      // will be given from the moment it exists.
-      p_record_code: generateVisitRecordCode()
-    });
+    //
+    // Minted here, offline, so the record carries the reference the client will
+    // be given from the moment it exists — and retried on the rare chance that
+    // reference is already taken, which is only safe because it has not yet
+    // been shown to anyone.
+    const { error: rpcError } = await callWithFreshCode(generateVisitRecordCode, (code) =>
+      supabase.rpc("create_visit", {
+        p_id: recordId,
+        p_patient_id: String(id),
+        p_visit_date: new Date().toISOString(),
+        p_visit_type: recordType,
+        p_record_code: code
+      })
+    );
     setBusy(false);
     if (rpcError) {
       setActionError(rpcError.message);

@@ -72,6 +72,76 @@ export function generateVisitRecordCode(): string {
 }
 
 /**
+ * The unique constraints that a repeated code lands on. Scoped per veterinarian
+ * — two practices never see each other's documents — so these fire on a
+ * collision inside one practice's own series.
+ */
+const CODE_CONSTRAINTS = [
+  "clients_vet_id_client_code_key",
+  "patients_vet_id_patient_code_key",
+  "visits_vet_record_code_idx"
+];
+
+/** PostgreSQL unique_violation. */
+const UNIQUE_VIOLATION = "23505";
+
+/** The code this project uses for a collision, in place of the raw SQLSTATE. */
+export const CODE_TAKEN = "code_taken";
+
+export const CODE_TAKEN_MESSAGE =
+  "This reference is already used by another record in your practice.";
+
+/**
+ * Whether a failed write is a repeated code rather than any other rejection.
+ *
+ * 32^6 is a little over a billion, so this is rare but not never: a practice
+ * that accumulates thirty thousand records has about a one in three chance of
+ * seeing it once. It matters because it is the only rejection that succeeds if
+ * simply sent again with a different code — every other one (revoked device,
+ * suspended account, failed validation) is settled and resending changes
+ * nothing.
+ */
+export function isCodeCollision(error: {
+  code?: string | undefined;
+  message?: string | undefined;
+  details?: string | null | undefined;
+}): boolean {
+  if (error.code !== UNIQUE_VIOLATION) return false;
+
+  // PostgREST puts the constraint name in the message and the offending values
+  // in the details. Checking both means a change to either alone is survivable.
+  const haystack = `${error.message ?? ""} ${error.details ?? ""}`;
+  return CODE_CONSTRAINTS.some((constraint) => haystack.includes(constraint));
+}
+
+/**
+ * Performs a write that carries a freshly minted code, retrying with a new one
+ * if that code was already taken.
+ *
+ * Only safe where the code has not yet left the device — that is, at the moment
+ * of creation, before it has been shown, printed or read out. A code that has
+ * already reached a client must not be swapped silently: the paper in their
+ * hand would stop matching the record. The offline queue therefore does not use
+ * this and asks the veterinarian instead.
+ */
+export async function callWithFreshCode<E extends { code?: string | undefined; message: string }>(
+  mint: () => string,
+  // PromiseLike rather than Promise: supabase-js returns a thenable builder,
+  // not a Promise, and awaiting it is the only thing done with it here.
+  call: (code: string) => PromiseLike<{ error: E | null }>,
+  attempts = 3
+): Promise<{ error: E | null }> {
+  let result = await call(mint());
+
+  for (let attempt = 1; attempt < attempts; attempt += 1) {
+    if (!result.error || !isCodeCollision(result.error)) return result;
+    result = await call(mint());
+  }
+
+  return result;
+}
+
+/**
  * Accepts the forms a code arrives in when a person types or pastes it: lower
  * case, surrounding whitespace, and the characters Crockford treats as aliases
  * (I and L for 1, O for zero). Returns null when the result is not a valid code,

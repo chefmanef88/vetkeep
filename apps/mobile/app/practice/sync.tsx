@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { CODE_TAKEN_MESSAGE } from "@vetkeep/domain";
 import {
   buildResolvedPayload,
   isFullyResolved,
@@ -9,6 +10,7 @@ import {
 } from "@vetkeep/sync";
 import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
+import { isCodeTakenReason } from "@/sync/code-remedy";
 import { describeEntity, loadConflict, type LoadedConflict } from "@/sync/conflict-loader";
 import { Body, ErrorText, PrimaryButton, SecondaryButton } from "@/ui/components";
 import { Card, FieldLabel, Muted, ScrollScreen, SectionTitle } from "@/ui/practice-components";
@@ -25,10 +27,19 @@ import { fonts, hairline, palette, radius, radiusControl, space, type } from "@/
  * gets looked at.
  */
 export default function SyncScreen() {
-  const { pendingCount, conflicts, deadLetters, lastSyncAt, flush, dismissDeadLetter } = useSync();
+  const {
+    pendingCount,
+    conflicts,
+    deadLetters,
+    lastSyncAt,
+    flush,
+    dismissDeadLetter,
+    resendWithNewCode
+  } = useSync();
   const [open, setOpen] = useState<LoadedConflict | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const openConflict = useCallback(async (mutation: OutboundMutation) => {
     setLoading(true);
@@ -122,22 +133,58 @@ export default function SyncScreen() {
             The server refused these. They are kept here rather than discarded, so nothing is lost
             without you seeing it.
           </Muted>
-          {deadLetters.map((entry) => (
-            <View key={entry.mutation.mutationId} style={styles.deadRow}>
-              <View style={styles.deadHead}>
-                <IconChip name="close-circle" tone="bad" size={36} />
-                <View style={styles.rowBody}>
-                  <Text style={styles.rowTitle}>{describeEntity(entry.mutation)}</Text>
-                  <Text style={styles.rowMeta}>{new Date(entry.failedAt).toLocaleString()}</Text>
+          {deadLetters.map((entry) => {
+            // A repeated reference is the one refusal with a way forward. It is
+            // offered rather than done automatically: the vet may already have
+            // written the old reference on the client's copy, and they are the
+            // only one who knows that.
+            const codeTaken = isCodeTakenReason(entry.reason);
+
+            return (
+              <View key={entry.mutation.mutationId} style={styles.deadRow}>
+                <View style={styles.deadHead}>
+                  <IconChip
+                    name={codeTaken ? "pricetag-outline" : "close-circle"}
+                    tone={codeTaken ? "warn" : "bad"}
+                    size={36}
+                  />
+                  <View style={styles.rowBody}>
+                    <Text style={styles.rowTitle}>{describeEntity(entry.mutation)}</Text>
+                    <Text style={styles.rowMeta}>{new Date(entry.failedAt).toLocaleString()}</Text>
+                  </View>
                 </View>
+
+                <Text style={styles.reason}>{codeTaken ? CODE_TAKEN_MESSAGE : entry.reason}</Text>
+
+                {codeTaken ? (
+                  <>
+                    <Text style={styles.reasonHint}>
+                      Sending this again under a new reference will save it. If you have already
+                      given the old reference to the client, tell them it has changed.
+                    </Text>
+                    <SecondaryButton
+                      label={
+                        busyId === entry.mutation.mutationId
+                          ? "Sending…"
+                          : "Give it a new reference and send"
+                      }
+                      onPress={() => {
+                        setBusyId(entry.mutation.mutationId);
+                        void resendWithNewCode(entry.mutation.mutationId).finally(() =>
+                          setBusyId(null)
+                        );
+                      }}
+                    />
+                  </>
+                ) : null}
+
+                <SecondaryButton
+                  label="Remove from this list"
+                  onPress={() => void dismissDeadLetter(entry.mutation.mutationId)}
+                />
               </View>
-              <Text style={styles.reason}>{entry.reason}</Text>
-              <SecondaryButton
-                label="Remove from this list"
-                onPress={() => void dismissDeadLetter(entry.mutation.mutationId)}
-              />
-            </View>
-          ))}
+            );
+          })}
         </>
       ) : null}
 
@@ -346,6 +393,7 @@ const styles = StyleSheet.create({
   },
   deadHead: { flexDirection: "row", alignItems: "center", gap: space.md },
   reason: { ...type.small, fontSize: 12, color: palette.red },
+  reasonHint: { ...type.small, fontSize: 12, color: palette.quiet },
   rowBody: { flex: 1, gap: 2 },
   rowTitle: { ...type.strong, color: palette.ink },
   rowMeta: { ...type.small, fontSize: 12, color: palette.quiet },
