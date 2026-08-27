@@ -168,9 +168,16 @@ inventory above.
   duration to policy. Both stores and the DPC will ask. It is a question for the
   Data Protection Act and the Veterinary Council's record-keeping requirements,
   and it belongs in the published notice.
-- **Account deletion route.** Google requires a way to request deletion from
-  outside the app as well as inside it, usually a web page. Closure exists in the
-  application; a public URL that explains how to request it does not yet.
+- **Account deletion route.** Built: `/delete-account` on the web application,
+  public and outside the sign-in wall. Give Play the full URL —
+  `https://<your domain>/delete-account`.
+
+  **It is not finished until `NEXT_PUBLIC_SUPPORT_EMAIL` is set** in the Vercel
+  environment. Google requires a route for someone who has lost their device or
+  second factor and cannot reach the in-app closure screen. The page omits that
+  section entirely when the variable is unset, rather than printing an address
+  that nobody reads — so without it, the page does not meet the requirement it
+  exists for. It must be a real, monitored mailbox.
 
 ---
 
