@@ -18,6 +18,12 @@ import type { OutboundMutation } from "@vetkeep/sync";
  * Only the code moves. The record's id stays, so the entry the vet is looking
  * at on the device remains the same record, and the failed attempt inserted
  * nothing to conflict with.
+ *
+ * Dormant as written. Nothing that carries a code is queued today — creates go
+ * straight to the server (§15 in the brief) and the queue holds only the
+ * consultation draft and exam findings — so no dead letter can currently be a
+ * repeated code. This turns itself on when creates are queued; until then the
+ * online retry in `callWithFreshCode` is the path that runs.
  */
 
 /** RPC parameters that carry a device-minted code, and what re-mints each. */

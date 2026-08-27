@@ -206,6 +206,9 @@ export default function ClientScreen() {
     setBusy(true);
     const patientId = globalThis.crypto.randomUUID();
 
+    // Sent straight to the server: adding an animal needs a connection, and is
+    // not queued. See §15 in the brief.
+    //
     // Retried on the rare chance the code is already taken; it has been shown
     // to nobody yet, so a replacement is invisible.
     const { error: patientError } = await callWithFreshCode(generatePatientCode, (code) =>

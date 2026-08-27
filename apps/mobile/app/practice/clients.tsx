@@ -58,8 +58,10 @@ export default function ClientsScreen() {
   async function addClient() {
     setBusy(true);
     setError(null);
-    // Id and code are minted on the device, so this works with no signal and a
-    // retried sync cannot create the client twice.
+    // Sent straight to the server, so this needs a connection. The id and code
+    // are minted here, which is what offline creation would require, but the
+    // call is not queued and there is no local store to create into — see §15
+    // in the brief, where that gap is recorded.
     //
     // The code is retried on the rare chance it is already taken. Safe here and
     // nowhere else: this one has existed for a few milliseconds and been shown

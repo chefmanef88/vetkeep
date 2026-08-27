@@ -8,9 +8,14 @@
 
 ### Revision note — 26 August 2026
 
-Everything specified as product is now built. §12 and §17 were the last of it,
-and this note records what was added, what was corrected, and — for the two
-sections where it matters most — what is deliberately absent.
+Every clinical and record-keeping section is now built: §12 and §17 were the
+last of them. **§15 is not**, and this note originally opened by claiming
+otherwise. See the divergences below — the offline store is the one large piece
+of specified behaviour still outstanding, and saying "everything is built" while
+it is missing is exactly the kind of drift these notes exist to stop.
+
+What follows is what was added, what was corrected, and — for the sections where
+it matters most — what is deliberately absent.
 
 Earlier revision notes are left as written, as before.
 
@@ -44,6 +49,27 @@ Earlier revision notes are left as written, as before.
    surface still shaped around a day's schedule rather than a folder.
 
 **Known divergences**, carried forward and updated:
+
+- **§15 offline operation is not built, and is the largest gap in the product.**
+  §15.1 requires the application to stay clinically useful with no connectivity,
+  and §15.2 asks for offline creation of clients, patients, visits and exam
+  findings. What exists is narrower than that, and the difference matters in a
+  yard with no signal:
+  - **Reads go to the server.** There is no local database, so opening a folder
+    or searching needs a connection. `use-query.ts` says so itself and names
+    Phase 3 as where the offline store belongs — the deferral is deliberate,
+    but it was never written down here.
+  - **Creating a client, an animal or a consultation needs a connection.** Those
+    three call their RPC directly rather than queueing.
+  - **The queue covers two things**: the consultation draft and exam findings.
+    So a record can be documented offline once it exists, and cannot be started
+    offline.
+
+  The consequence, stated plainly because it is the case that will be met first:
+  a veterinarian arriving at a new farm without signal cannot open the folder,
+  and cannot create one. Ids and codes are already minted on the device, so the
+  hard part of offline creation — identity without a server — is done; what is
+  missing is a local store and queued creates.
 
 - ~~The `VK-R-` record code is not implemented.~~ **Resolved 11 August 2026.**
   Every consultation carries one, minted on the device so an offline record has

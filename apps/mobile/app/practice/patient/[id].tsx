@@ -156,10 +156,13 @@ export default function PatientFolderScreen() {
     const recordId = globalThis.crypto.randomUUID();
     // No appointment is involved. A record is created by the act of attending.
     //
-    // Minted here, offline, so the record carries the reference the client will
-    // be given from the moment it exists — and retried on the rare chance that
-    // reference is already taken, which is only safe because it has not yet
-    // been shown to anyone.
+    // Sent straight to the server, so starting a record needs a connection.
+    // The reference is minted here so it exists from the moment the record
+    // does, which is what queued creation would need, but the create itself is
+    // not queued — see §15 in the brief.
+    //
+    // Retried on the rare chance that reference is already taken, which is only
+    // safe because it has not yet been shown to anyone.
     const { error: rpcError } = await callWithFreshCode(generateVisitRecordCode, (code) =>
       supabase.rpc("create_visit", {
         p_id: recordId,

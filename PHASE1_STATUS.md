@@ -93,21 +93,31 @@ which carries its own dated revision notes.
 | Treatments with computed meat/milk/egg withholding                        | Built       |
 | Dose calculation from rate × weight ÷ strength, working shown             | Built       |
 | Drug list — active ingredient, route, strength, withholding periods       | Built       |
-| Preventive care — vaccination and deworming with due dates                | Built       |
+| Preventive care — vaccination, deworming, ectoparasite control            | Built       |
 | Clinical attachments and resumable upload                                 | Built       |
 | Animal photograph on the folder                                           | Built       |
 | Client's copy — one record or full history, generated on device, audited  | Built       |
 | Device-local drafts that survive navigation, separate from the sync queue | Built       |
-| Offline sync with conflict resolution                                     | Built       |
+| Outbound sync queue with conflict resolution — drafts and exam findings   | Built       |
+| Offline store: local reads, and creating a folder without a connection    | Not started |
 | Invoicing — basic slice                                                   | Built       |
-| Public health passport                                                    | Not started |
-| WhatsApp reminders and outbox                                             | Not started |
+| Public health passport                                                    | Built       |
+| Practice export and account closure                                       | Built       |
+| WhatsApp reminders — the queue and the rules that fill it                 | Built       |
+| WhatsApp reminders — actually sending them                                | Not started |
 | Subscription billing                                                      | Not started |
 
 ## Boundaries that moved, and why
 
-- **"No clinical records"** and **"no offline clinical database"** were Phase 1
-  boundaries. Both are now the centre of the product.
+- **"No clinical records"** was a Phase 1 boundary and is now the centre of the
+  product.
+- **"No offline clinical database"** was also a Phase 1 boundary, and unlike the
+  above it has **not** moved. This table said "offline sync with conflict
+  resolution — built", which was true of the outbound queue and read as a claim
+  about the whole of §15. It is not: reads go to the server, and a client,
+  animal or consultation cannot be created without a connection. A record can be
+  documented offline once it exists, and cannot be started offline. The brief's
+  26 August note records the gap in full.
 - **Groups are in scope.** The v1 exclusion was reversed on 10 August: a flock
   is the patient, and the questions asked of it differ from those asked of one
   animal.
