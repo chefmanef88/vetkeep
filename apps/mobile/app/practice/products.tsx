@@ -87,6 +87,12 @@ export default function ProductsScreen() {
   const [milkDays, setMilkDays] = useState("");
   const [eggsDays, setEggsDays] = useState("");
   const [busy, setBusy] = useState(false);
+  // null means the vet has not touched it, so it follows the list: open when
+  // there is nothing to look at and adding is the only thing to do. This was
+  // `initiallyOpen={products.length === 0}`, which is read once at mount —
+  // before the list has loaded, when it is always empty — so the form opened
+  // every single time.
+  const [addOpen, setAddOpen] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data, loading, reload } = useQuery<Product[]>(async () => {
@@ -159,6 +165,7 @@ export default function ProductsScreen() {
       return;
     }
     reset();
+    setAddOpen(false);
     reload();
   }
 
@@ -206,7 +213,12 @@ export default function ProductsScreen() {
         />
       ) : null}
 
-      <Collapsible title="Add a product" icon="add-circle" initiallyOpen={products.length === 0}>
+      <Collapsible
+        title="Add a product"
+        icon="add-circle"
+        open={addOpen ?? (!loading && products.length === 0)}
+        onOpenChange={setAddOpen}
+      >
         <FieldLabel>Name</FieldLabel>
         <Field value={name} onChangeText={setName} placeholder="Oxytetracycline 20%" />
 

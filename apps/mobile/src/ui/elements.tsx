@@ -432,7 +432,9 @@ export function Collapsible({
   children,
   hint,
   tone = "brand",
-  initiallyOpen = false
+  initiallyOpen = false,
+  open: controlledOpen,
+  onOpenChange
 }: {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -441,15 +443,29 @@ export function Collapsible({
   hint?: string;
   tone?: Tone;
   initiallyOpen?: boolean;
+  /**
+   * Pass `open` and `onOpenChange` together to drive this from the outside.
+   * A form that has just saved should shut, and only the screen holding the
+   * form knows that it succeeded. Left out, the section keeps its own state
+   * and behaves exactly as before.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(initiallyOpen);
+  const [ownOpen, setOwnOpen] = useState(initiallyOpen);
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : ownOpen;
+
   return (
     <View style={styles.collapsible}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         style={({ pressed }) => [styles.collapsibleHead, pressed && styles.pressed]}
-        onPress={() => setOpen(!open)}
+        onPress={() => {
+          if (!controlled) setOwnOpen(!open);
+          onOpenChange?.(!open);
+        }}
       >
         <IconChip name={icon} tone={tone} size={38} />
         <View style={styles.collapsibleTitles}>

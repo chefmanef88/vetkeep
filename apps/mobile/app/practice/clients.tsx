@@ -29,6 +29,7 @@ export default function ClientsScreen() {
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   const {
     data,
@@ -91,6 +92,10 @@ export default function ClientsScreen() {
     setPhoneE164("");
     setAddress("");
     setConsent(false);
+    // Shut on success. The vet's next act is looking at the client they just
+    // added, and leaving an empty form open over the list invites adding a
+    // second one by accident.
+    setAddOpen(false);
     reload();
   }
 
@@ -98,7 +103,7 @@ export default function ClientsScreen() {
     <ScrollScreen>
       <SearchField value={search} onChangeText={setSearch} placeholder="Name, code or phone" />
 
-      <Collapsible title="Add a client" icon="person-add">
+      <Collapsible title="Add a client" icon="person-add" open={addOpen} onOpenChange={setAddOpen}>
         <FieldLabel>Name</FieldLabel>
         <Field value={name} onChangeText={setName} placeholder="Full name" />
         <FieldLabel>Phone as displayed</FieldLabel>

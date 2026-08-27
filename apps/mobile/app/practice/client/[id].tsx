@@ -111,6 +111,7 @@ export default function ClientScreen() {
   const [housing, setHousing] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   const profile = speciesProfile(species);
   const isGroup = kind === "group";
@@ -259,6 +260,9 @@ export default function ClientScreen() {
     }
 
     resetForm();
+    // Shut only when both halves succeeded. The partial failure above leaves it
+    // open with the error, because that one still needs the vet.
+    setAddOpen(false);
     reload();
   }
 
@@ -354,7 +358,12 @@ export default function ClientScreen() {
         />
       ) : null}
 
-      <Collapsible title="Add an animal or group" icon="add-circle">
+      <Collapsible
+        title="Add an animal or group"
+        icon="add-circle"
+        open={addOpen}
+        onOpenChange={setAddOpen}
+      >
         <FieldLabel>Species</FieldLabel>
         <OptionChips
           options={SPECIES_OPTIONS}
