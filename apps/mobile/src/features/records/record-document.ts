@@ -15,7 +15,10 @@ export type DocumentVet = {
   businessName: string | null;
   licenseNumber: string | null;
   licenseVerified: boolean;
-  phoneDisplay: string;
+  // Null for a closed account, whose contact details are cleared. A document
+  // generated before closure keeps the number that was true when it was made,
+  // because a client's copy is a record of a moment.
+  phoneDisplay: string | null;
 };
 
 export type DocumentClient = {
@@ -257,7 +260,7 @@ export function buildRecordDocument(input: RecordDocumentInput): string {
   <p class="practice">${escapeHtml(vet.businessName ?? vet.fullName)}</p>
   <p class="practice-meta">
     ${escapeHtml(vet.fullName)}${vet.licenseNumber ? ` · Licence ${escapeHtml(vet.licenseNumber)}` : ""}${vet.licenseVerified ? " (verified)" : ""}
-    · ${escapeHtml(vet.phoneDisplay)}
+    ${vet.phoneDisplay ? ` · ${escapeHtml(vet.phoneDisplay)}` : ""}
   </p>
 </header>
 
@@ -396,7 +399,7 @@ export function buildFolderDocument(input: {
   <p class="practice">${escapeHtml(vet.businessName ?? vet.fullName)}</p>
   <p class="practice-meta">
     ${escapeHtml(vet.fullName)}${vet.licenseNumber ? ` · Licence ${escapeHtml(vet.licenseNumber)}` : ""}${vet.licenseVerified ? " (verified)" : ""}
-    · ${escapeHtml(vet.phoneDisplay)}
+    ${vet.phoneDisplay ? ` · ${escapeHtml(vet.phoneDisplay)}` : ""}
   </p>
 </header>
 

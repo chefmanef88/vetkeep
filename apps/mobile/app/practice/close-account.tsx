@@ -114,6 +114,13 @@ export default function CloseAccountScreen() {
           Records are retained for the period set out in the privacy notice, then handled according
           to it.
         </Muted>
+        {/* Said here because it is the reassuring half of the same fact: what
+            is kept is what the records need, not everything we hold. */}
+        <Muted>
+          Your name and licence number are kept too, because the records you signed have to remain
+          attributable to you. Your phone number, WhatsApp number, business name and service areas
+          are removed.
+        </Muted>
       </Card>
 
       <Card>

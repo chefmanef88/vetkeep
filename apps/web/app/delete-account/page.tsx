@@ -59,6 +59,10 @@ export default function DeleteAccountPage() {
         <ul>
           <li>Your account is closed and you can no longer sign in.</li>
           <li>Every device registered to you is revoked, including any holding offline records.</li>
+          <li>
+            Your contact details are removed — telephone number, WhatsApp number, business name and
+            service areas.
+          </li>
         </ul>
 
         <h3>What is kept, and why</h3>
@@ -68,6 +72,10 @@ export default function DeleteAccountPage() {
           including the withholding periods that say when milk, meat or eggs are safe again. Erasing
           them on request would remove evidence a food-safety authority, a client or a subsequent
           veterinarian may need.
+        </p>
+        <p>
+          Your name and licence number are kept with them, because a signed record has to remain
+          attributable to the person who signed it. Nothing else about you is.
         </p>
         <p>
           The audit trail of who did what is retained for the same reason, and the record of your

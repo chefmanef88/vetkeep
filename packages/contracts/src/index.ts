@@ -14,8 +14,10 @@ export interface VetProfile {
   fullName: string;
   licenseNumber: string | null;
   licenseVerified: boolean;
-  phoneDisplay: string;
-  phoneE164: string;
+  // Null once the account is closed: closure clears contact and keeps only what
+  // makes a signed record attributable — the name and the licence number.
+  phoneDisplay: string | null;
+  phoneE164: string | null;
   businessName: string | null;
   accountStatus: AccountStatus;
 }

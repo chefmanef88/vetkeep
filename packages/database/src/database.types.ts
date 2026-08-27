@@ -1399,8 +1399,8 @@ export type Database = {
           id: string
           license_number: string | null
           license_verified: boolean
-          phone_display: string
-          phone_e164: string
+          phone_display: string | null
+          phone_e164: string | null
           server_version: number
           service_areas: string[]
           updated_at: string
@@ -1418,8 +1418,8 @@ export type Database = {
           id?: string
           license_number?: string | null
           license_verified?: boolean
-          phone_display: string
-          phone_e164: string
+          phone_display?: string | null
+          phone_e164?: string | null
           server_version?: number
           service_areas?: string[]
           updated_at?: string
@@ -1437,8 +1437,8 @@ export type Database = {
           id?: string
           license_number?: string | null
           license_verified?: boolean
-          phone_display?: string
-          phone_e164?: string
+          phone_display?: string | null
+          phone_e164?: string | null
           server_version?: number
           service_areas?: string[]
           updated_at?: string
