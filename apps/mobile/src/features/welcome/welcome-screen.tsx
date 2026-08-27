@@ -11,7 +11,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Wash } from "@/ui/wash";
-import { CopyArt, DoseArt, FolderArt } from "./welcome-art";
+import { CopyArt } from "./welcome-art";
+import { PhotoHero } from "./photo-hero";
+// Imported rather than require()d: Metro resolves both, expo/types declares the
+// module shape, and the lint rule that forbids require applies to asset loading
+// as much as to code.
+import farmVisit from "../../../assets/welcome/farm-visit.jpg";
+import homeVisit from "../../../assets/welcome/home-visit.jpg";
 import {
   fonts,
   palette,
@@ -42,16 +48,38 @@ type Slide = {
   lead: string;
 };
 
+/**
+ * Two photographs, then the product.
+ *
+ * The first two slides are the work — a house call and a farm visit — because
+ * nobody became a veterinarian to use software, and a stranger will not read a
+ * screenshot before they have been given a reason to care. The third is the
+ * document itself, which is the one thing here that is genuinely about the
+ * application rather than the day.
+ *
+ * The cow is on the withholding slide deliberately. Milk and meat withdrawal is
+ * a food-animal problem, and a dairy cow with an ear tag is the exact case the
+ * calculation exists for — the card on the photograph states the consequence
+ * rather than describing the feature.
+ */
 const SLIDES: Slide[] = [
   {
     wash: "brand",
-    art: FolderArt,
+    art: () => (
+      <PhotoHero source={homeVisit} caption="Record started" detail="VK-R-7K3M9T · 12 Aug" />
+    ),
     headline: "A folder for every animal",
     lead: "Standing details that stay editable, and every consultation kept beneath them in date order — the same way a paper file works, without the paper."
   },
   {
     wash: "amber",
-    art: DoseArt,
+    art: () => (
+      <PhotoHero
+        source={farmVisit}
+        caption="Milk safe from 19 August"
+        detail="Oxytetracycline · 18.5 ml"
+      />
+    ),
     headline: "The dose, and the dates it commits you to",
     lead: "Enter the weight and the volume is worked out, with the working shown. Withholding periods for milk, meat and eggs are calculated with it, as dates rather than a number of days to count forward."
   },
