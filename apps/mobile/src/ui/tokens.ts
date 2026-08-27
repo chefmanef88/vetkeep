@@ -112,5 +112,53 @@ export const type = {
   small: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
   /** field-label: text-sm font-medium. */
   label: { fontFamily: fonts.medium, fontSize: 13 },
-  action: { fontFamily: fonts.semibold, fontSize: 15 }
+  action: { fontFamily: fonts.semibold, fontSize: 15 },
+  /**
+   * Bigger and tighter than `display`, for the welcome flow only.
+   *
+   * The reference designs set their headline around 60px with -1.5px tracking
+   * on a desktop hero; scaled to a 390pt phone that lands near 34. Tracking
+   * tightens with size because letterspacing that reads as confident at 34
+   * reads as cramped at 20, which is why this is its own entry rather than a
+   * larger `display`.
+   */
+  hero: { fontFamily: fonts.bold, fontSize: 34, lineHeight: 39, letterSpacing: -1 },
+  heroLead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24 }
+} as const;
+
+/**
+ * The washes behind the welcome slides.
+ *
+ * Every set resolves to VetKeep's green or a warm neighbour of it, so the app
+ * that follows is recognisably the same product. The reference designs vary the
+ * hue per screen — pink, then peach, then sky — and that variation is worth
+ * keeping: it makes a three-screen sequence feel like it is going somewhere.
+ * What is not worth keeping is their saturation, on a tool that is also opened
+ * in a farmyard at midday.
+ *
+ * Ordered light to dark so a gradient reads as depth rather than as a stripe.
+ */
+export const washes = {
+  /** Deep green through to the ground colour. The folder, the core idea. */
+  brand: ["#E4EFE6", "#F2F6F1", "#F7F8F5"],
+  /** Warm, for the dose and the withholding dates: numbers that carry weight. */
+  amber: ["#FBEEDA", "#F8F3E9", "#F7F8F5"],
+  /** Cool, for the client's copy leaving the practice. */
+  sky: ["#E2ECF2", "#F0F4F5", "#F7F8F5"]
+} as const;
+
+export type WashName = keyof typeof washes;
+
+/**
+ * The blurred colour blob sitting behind the hero art.
+ *
+ * React Native has no CSS filter, so the reference's `blur-3xl` is built from
+ * expo-blur over a saturated circle rather than from a blurred gradient. These
+ * are the circle colours: stronger than the wash they sit on, because the blur
+ * that softens them also drains them.
+ */
+export const blobs = {
+  brand: "#8FBF9F",
+  amber: "#E9B972",
+  sky: "#8FB6CC"
 } as const;
