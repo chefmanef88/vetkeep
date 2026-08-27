@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -97,13 +97,34 @@ export function WelcomeScreen({ onDone }: { onDone: () => void }) {
   const scroller = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
 
+  // Pages are laid out at the current width, so a width change leaves the
+  // scroll offset pointing between two of them: the dots said slide one while
+  // slide three was on screen. Rotating, unfolding, or entering split screen
+  // all do this. Re-anchoring on width alone — the index comes from a ref so a
+  // swipe does not fight the scroll it just performed.
+  // Written where the page actually changes rather than during render, which
+  // is why this is not simply `settledIndex.current = index`.
+  const settledIndex = useRef(0);
+  useEffect(() => {
+    scroller.current?.scrollTo({ x: settledIndex.current * width, animated: false });
+  }, [width]);
+
   const last = index === SLIDES.length - 1;
   const slide = SLIDES[index] ?? SLIDES[0];
   if (!slide) return null;
 
+  function goTo(next: number, animated: boolean) {
+    settledIndex.current = next;
+    setIndex(next);
+    scroller.current?.scrollTo({ x: next * width, animated });
+  }
+
   function settled(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const next = Math.round(event.nativeEvent.contentOffset.x / width);
-    if (next !== index) setIndex(next);
+    if (next === index) return;
+    // The scroll already happened — record it without scrolling again.
+    settledIndex.current = next;
+    setIndex(next);
   }
 
   function advance() {
@@ -111,9 +132,7 @@ export function WelcomeScreen({ onDone }: { onDone: () => void }) {
       onDone();
       return;
     }
-    const next = index + 1;
-    setIndex(next);
-    scroller.current?.scrollTo({ x: next * width, animated: true });
+    goTo(index + 1, true);
   }
 
   return (
@@ -129,7 +148,10 @@ export function WelcomeScreen({ onDone }: { onDone: () => void }) {
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={settled}
         style={styles.pager}
-        contentContainerStyle={{ paddingTop: insets.top + space.xxl }}
+        // flexGrow lets each page take the full height so its content can be
+        // centred in it. Without it the pages are only as tall as their content
+        // and everything piles against the status bar.
+        contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + space.lg }}
       >
         {SLIDES.map((entry) => {
           const Art = entry.art;
@@ -178,7 +200,10 @@ export function WelcomeScreen({ onDone }: { onDone: () => void }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: palette.ground },
   pager: { flex: 1 },
-  page: { paddingHorizontal: space.xl, gap: space.xl },
+  /** Centred in the page rather than stacked from the top: at the shortest
+      supported height the two still fit, and on a tall phone the pair sits as a
+      block instead of leaving a hole above the controls. */
+  page: { flex: 1, justifyContent: "center", paddingHorizontal: space.xl, gap: space.xl },
   copy: { gap: space.md },
   headline: { ...type.hero, color: palette.ink },
   lead: { ...type.heroLead, color: palette.quiet },

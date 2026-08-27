@@ -53,7 +53,7 @@ export function CopyArt() {
   return (
     <View style={styles.stage} pointerEvents="none" accessible={false}>
       <Card tilt={5} offsetX={12} offsetY={14} faded />
-      <Card tilt={-4}>
+      <Card tilt={-1.5}>
         <View style={styles.row}>
           <View style={[styles.avatar, styles.avatarSky]}>
             <Ionicons name="document-text" size={18} color="#2F6A8A" />
