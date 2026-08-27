@@ -5,6 +5,8 @@
   "main": "expo-router/entry",
   "scripts": {
     "dev": "expo start --dev-client",
+    "//web": "Design preview only. Renders the screens in a browser so a layout change can be seen without an EAS build. Not a shipping target: native modules degrade or no-op here.",
+    "web": "expo start --web --port 8082 --clear",
     "build": "expo export --platform android --output-dir dist/android --max-workers 2",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -40,10 +42,12 @@
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.2",
     "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "0.86.2",
     "react-native-safe-area-context": "5.7.0",
     "react-native-screens": "~4.26.0",
-    "react-native-url-polyfill": "3.0.0"
+    "react-native-url-polyfill": "3.0.0",
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@types/react": "19.2.17",

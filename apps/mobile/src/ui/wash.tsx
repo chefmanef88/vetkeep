@@ -17,13 +17,23 @@ import { blobs, washes, type WashName } from "./tokens";
  * matters more here than matching the technique exactly.
  */
 
-/** Circle sizes as a fraction of the blob's nominal diameter, largest first. */
-const HALO = [
-  { scale: 1.9, opacity: 0.1 },
-  { scale: 1.5, opacity: 0.14 },
-  { scale: 1.15, opacity: 0.18 },
-  { scale: 0.85, opacity: 0.22 }
-];
+/**
+ * Rings, largest to smallest, each at the same low alpha.
+ *
+ * Four rings at rising opacity was the first attempt and it banded visibly:
+ * every step read as an edge, which is the one thing a blur never does. Many
+ * rings at a constant low alpha work better because the overlap does the work —
+ * coverage at the centre is 1-(1-a)^n and falls off smoothly outward, so the
+ * ramp is generated rather than hand-tuned into a staircase.
+ */
+const RINGS = 12;
+const RING_ALPHA = 0.035;
+const MAX_SCALE = 2.1;
+
+const HALO = Array.from({ length: RINGS }, (_, index) => ({
+  key: index,
+  scale: MAX_SCALE * (1 - index / (RINGS + 1))
+}));
 
 export function Wash({
   name,
@@ -52,14 +62,14 @@ export function Wash({
       <View style={[styles.halo, { top: offsetY }]}>
         {HALO.map((ring) => (
           <View
-            key={ring.scale}
+            key={ring.key}
             style={{
               position: "absolute",
               width: diameter * ring.scale,
               height: diameter * ring.scale,
               borderRadius: (diameter * ring.scale) / 2,
               backgroundColor: colour,
-              opacity: ring.opacity
+              opacity: RING_ALPHA
             }}
           />
         ))}

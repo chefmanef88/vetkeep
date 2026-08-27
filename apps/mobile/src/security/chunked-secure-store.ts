@@ -50,7 +50,7 @@ async function removeChunks(key: string, count: number) {
   );
 }
 
-export const chunkedSecureStore = {
+const nativeStore = {
   async getItem(key: string): Promise<string | null> {
     assertUsableKey(key);
     const countValue = await SecureStore.getItemAsync(indexKey(key));
@@ -109,4 +109,65 @@ export const chunkedSecureStore = {
       SecureStore.deleteItemAsync(indexKey(key))
     ]);
   }
+};
+
+/**
+ * The browser stand-in, used only by `npm run web` — the design preview.
+ *
+ * expo-secure-store has no web implementation and throws on the first call.
+ * Because this module is also the Supabase session store, that failure took the
+ * entire application down before it rendered a pixel: a blank page, with the
+ * real cause four errors deep in the console.
+ *
+ * localStorage is not a keychain and this is not pretending otherwise. It is
+ * reachable only when Platform.OS is "web", and there is no web build of this
+ * application — `expo export` targets android, and the web bundle exists so a
+ * layout can be looked at without waiting on EAS. Nothing that ships is
+ * affected, and the native path above is untouched.
+ *
+ * If a web target is ever shipped, this has to be replaced rather than
+ * inherited: browser-persisted session tokens are a different security question
+ * than the one this file was written to answer.
+ */
+const webStore = {
+  getItem(key: string): Promise<string | null> {
+    assertUsableKey(key);
+    return Promise.resolve(globalThis.localStorage?.getItem(key) ?? null);
+  },
+  setItem(key: string, value: string): Promise<void> {
+    assertUsableKey(key);
+    globalThis.localStorage?.setItem(key, value);
+    return Promise.resolve();
+  },
+  removeItem(key: string): Promise<void> {
+    assertUsableKey(key);
+    globalThis.localStorage?.removeItem(key);
+    return Promise.resolve();
+  }
+};
+
+/**
+ * Chosen per call rather than once at import, and without react-native.
+ *
+ * Two things went wrong before this shape. Deciding with a ternary at module
+ * scope picked the native store on web, because this module can be evaluated
+ * before react-native has initialised and `Platform.OS` is undefined then —
+ * which is not "web", so it fell through to the keychain. The symptom was
+ * Supabase's auth tick failing against expo-secure-store on a web page, a stack
+ * that points nowhere near the ternary responsible.
+ *
+ * And importing `Platform` at all broke this module's own unit tests, which run
+ * in node: react-native's entry point is Flow source that the test transformer
+ * cannot parse. `document` is the honest check anyway — the question here is
+ * "is there a browser to fall back to", not "which react-native platform is
+ * this" — and it needs no import.
+ */
+function active() {
+  return typeof document === "undefined" ? nativeStore : webStore;
+}
+
+export const chunkedSecureStore = {
+  getItem: (key: string) => active().getItem(key),
+  setItem: (key: string, value: string) => active().setItem(key, value),
+  removeItem: (key: string) => active().removeItem(key)
 };

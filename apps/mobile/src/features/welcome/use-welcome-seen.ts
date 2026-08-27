@@ -15,6 +15,11 @@ import { chunkedSecureStore } from "@/security/chunked-secure-store";
 
 const KEY = "vetkeep.welcome.seen";
 
+// Referenced inside the effect rather than captured here: a module-scope
+// `const store = chunkedSecureStore` binds whatever the export happens to be
+// mid-graph-evaluation, which was undefined and failed inside a React effect
+// where the stack names React and not this file.
+
 export function useWelcomeSeen(): { seen: boolean | null; markSeen: () => void } {
   const [seen, setSeen] = useState<boolean | null>(null);
 

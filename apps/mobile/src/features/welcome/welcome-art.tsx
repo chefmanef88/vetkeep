@@ -52,18 +52,26 @@ function Card({
 export function FolderArt() {
   return (
     <View style={styles.stage} pointerEvents="none" accessible={false}>
-      {/* Two behind, to say "and the visits before this one". */}
-      <Card tilt={-8} offsetX={-18} offsetY={16} faded />
-      <Card tilt={5} offsetX={16} offsetY={8} faded />
+      {/* Two behind, to say "and the visits before this one". Kept close and
+          shallow: any further out and they stop reading as a stack and start
+          reading as three cards that failed to line up. */}
+      <Card tilt={-5} offsetX={-10} offsetY={14} faded />
+      <Card tilt={4} offsetX={10} offsetY={7} faded />
       <Card tilt={-2}>
         <View style={styles.row}>
           <View style={styles.avatar}>
             <Ionicons name="paw" size={18} color={palette.brand} />
           </View>
           <View style={styles.grow}>
-            <Text style={styles.name}>Asante&rsquo;s herd</Text>
+            <Text style={styles.name} numberOfLines={1}>
+              Asante&rsquo;s herd
+            </Text>
             <Text style={styles.meta}>Cattle · 42 head</Text>
           </View>
+        </View>
+        {/* Below the name rather than beside it: at this card width the chip
+            squeezed the name into two lines. */}
+        <View style={styles.chipRow}>
           <View style={styles.chip}>
             <Text style={styles.chipText}>VK-P-4QT6R2</Text>
           </View>
@@ -90,7 +98,7 @@ export function FolderArt() {
 export function DoseArt() {
   return (
     <View style={styles.stage} pointerEvents="none" accessible={false}>
-      <Card tilt={6} offsetX={20} offsetY={18} faded />
+      <Card tilt={5} offsetX={12} offsetY={14} faded />
       <Card tilt={-3}>
         <Text style={styles.kicker}>Oxytetracycline 20%</Text>
         <View style={styles.sum}>
@@ -118,7 +126,7 @@ export function DoseArt() {
 export function CopyArt() {
   return (
     <View style={styles.stage} pointerEvents="none" accessible={false}>
-      <Card tilt={7} offsetX={22} offsetY={20} faded />
+      <Card tilt={5} offsetX={12} offsetY={14} faded />
       <Card tilt={-4}>
         <View style={styles.row}>
           <View style={[styles.avatar, styles.avatarSky]}>
@@ -168,6 +176,7 @@ const styles = StyleSheet.create({
   avatarSky: { backgroundColor: "#E2ECF2" },
   name: { fontFamily: fonts.semibold, fontSize: 15, color: palette.ink },
   meta: { fontFamily: fonts.regular, fontSize: 12, color: palette.quiet },
+  chipRow: { flexDirection: "row" },
   chip: {
     backgroundColor: palette.ground,
     borderRadius: 8,
