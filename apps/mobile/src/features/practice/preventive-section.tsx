@@ -134,6 +134,13 @@ export function PreventiveSection({
     if (!allowed.includes(route as (typeof allowed)[number])) {
       setRoute(defaultRouteFor({ kind: nextKind, isGroup }));
     }
+    // Manufacturer and batch are only asked of a vaccination, so switching away
+    // hides those fields. Clearing them too, or a value typed before the switch
+    // would be saved against a wormer with nothing on screen admitting it.
+    if (nextKind !== "vaccination") {
+      setManufacturer("");
+      setBatch("");
+    }
   }
 
   /**
@@ -354,20 +361,25 @@ export function PreventiveSection({
         }
       />
 
+      {/* Manufacturer and batch are asked of a vaccination and nothing else.
+          A vaccine batch is traceable by obligation — it is what a recall or a
+          reaction investigation works from — while a wormer or a spot-on is a
+          product bought off a shelf, and asking for a serial number nobody
+          records trains the vet to skip fields. */}
       {isVaccination ? (
         <>
           <FieldLabel>Manufacturer</FieldLabel>
           <Field value={manufacturer} onChangeText={setManufacturer} placeholder="Optional" />
+
+          <FieldLabel>Batch or serial number</FieldLabel>
+          <Field
+            value={batch}
+            onChangeText={setBatch}
+            placeholder="From the vial"
+            autoCapitalize="characters"
+          />
         </>
       ) : null}
-
-      <FieldLabel>Batch or serial number</FieldLabel>
-      <Field
-        value={batch}
-        onChangeText={setBatch}
-        placeholder="From the vial"
-        autoCapitalize="characters"
-      />
 
       <View style={styles.pairRow}>
         <View style={styles.pairCell}>

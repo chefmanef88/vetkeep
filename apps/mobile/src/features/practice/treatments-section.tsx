@@ -226,6 +226,18 @@ export function TreatmentsSection({
         })
       : null;
 
+  /**
+   * Whether the dose field already holds the calculated figure.
+   *
+   * Compared as numbers, not strings: "18.5" and "18.50" are the same dose, and
+   * a text comparison would leave the prompt showing after a tap that worked.
+   */
+  const usingCalculated =
+    calculated?.ok === true &&
+    doseUnit === "ml" &&
+    optionalNumber(dose) !== undefined &&
+    optionalNumber(dose) === calculated.volumeMl;
+
   function chooseItem(next: string) {
     setItemId(next);
     const item = carried.find((candidate) => candidate.id === next);
@@ -512,12 +524,24 @@ export function TreatmentsSection({
                   setDoseUnit("ml");
                 }}
               >
-                <Ionicons name="calculator" size={18} color={palette.brandInk} />
+                <Ionicons
+                  name={usingCalculated ? "checkmark-circle" : "calculator"}
+                  size={18}
+                  color={usingCalculated ? palette.green : palette.brandInk}
+                />
                 <View style={styles.resultBody}>
                   <Text style={styles.resultValue}>Give {calculated.volumeMl} ml</Text>
                   {/* The sum, so it can be checked rather than trusted. */}
                   <Text style={styles.resultWorking}>{calculated.working}</Text>
-                  <Text style={styles.resultHint}>Tap to use this as the dose</Text>
+                  {/* An instruction that survives being followed reads as a
+                      failed tap. Once the dose field holds this figure the
+                      prompt has nothing left to ask for, so it says what
+                      happened instead. */}
+                  {usingCalculated ? (
+                    <Text style={styles.resultDone}>Used as the dose</Text>
+                  ) : (
+                    <Text style={styles.resultHint}>Tap to use this as the dose</Text>
+                  )}
                 </View>
               </Pressable>
             ) : (
@@ -729,6 +753,7 @@ const styles = StyleSheet.create({
   resultValue: { fontFamily: fonts.semibold, fontSize: 16, color: palette.brandInk },
   resultWorking: { fontFamily: fonts.mono, fontSize: 11, color: palette.quiet },
   resultHint: { ...type.small, fontSize: 11, color: palette.brandInk },
+  resultDone: { ...type.small, fontSize: 11, color: palette.green, fontFamily: fonts.semibold },
   pairCell: { flex: 1, gap: space.xs },
   assert: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.sm },
   assertText: { ...type.small, fontSize: 12, color: palette.ink, flex: 1 },

@@ -55,7 +55,14 @@ export function treatmentRoutesFor(input: {
   purpose: string;
   isGroup: boolean;
 }): readonly TreatmentRoute[] {
-  if (input.isGroup) return ["in_water", "in_feed", "topical", "oral"];
+  if (input.isGroup) {
+    // Mass medication first, because that is what a flock or herd usually gets.
+    // The injectables follow rather than being absent: a group is often started
+    // on an injection — the sick ones caught and dosed individually — before
+    // the rest go onto water or feed, and a route list that cannot express that
+    // forces the record to lie about what was done.
+    return ["in_water", "in_feed", "oral", "topical", "im", "sc", "iv"];
+  }
 
   const base: TreatmentRoute[] = ["im", "sc", "iv", "oral", "topical"];
   if (input.purpose === "milk" && DAIRY_SPECIES.includes(input.species)) {

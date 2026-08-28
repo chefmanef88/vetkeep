@@ -31,6 +31,18 @@ describe("treatment routes", () => {
     );
   });
 
+  it("also lets a group be injected", () => {
+    // A herd is often started on an injection — the affected animals caught and
+    // dosed individually — before the rest go onto water or feed. Offering only
+    // mass medication made the record unable to say what was actually done.
+    const routes = treatmentRoutesFor({ species: "cattle", purpose: "meat", isGroup: true });
+    expect(routes).toContain("im");
+    expect(routes).toContain("sc");
+    expect(routes).toContain("iv");
+    // Still second to the mass routes, which are the commoner answer.
+    expect(routes.indexOf("in_water")).toBeLessThan(routes.indexOf("im"));
+  });
+
   it("never offers intramammary to a group", () => {
     // The bug this test exists for. A tube goes into one quarter of one udder;
     // it is not something done to a flock.

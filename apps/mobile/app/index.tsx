@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "@/auth/session-provider";
@@ -7,30 +8,42 @@ import { MfaChallengeScreen } from "@/features/mfa/mfa-challenge-screen";
 import { MfaEnrollScreen } from "@/features/mfa/mfa-enroll-screen";
 import { OnboardingScreen } from "@/features/onboarding/onboarding-screen";
 import { WelcomeScreen } from "@/features/welcome/welcome-screen";
-import { useWelcomeSeen } from "@/features/welcome/use-welcome-seen";
 import { palette } from "@/ui/tokens";
 
 export default function IndexPage() {
   const sessionState = useSession();
-  // Read before the session resolves, so a first launch does not show the sign-in
-  // form for a frame and then replace it with the welcome flow.
-  const { seen, markSeen } = useWelcomeSeen();
 
-  if (sessionState.loading || seen === null) {
+  if (sessionState.loading) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" />
       </SafeAreaView>
     );
   }
-  // Only ahead of the sign-in form. Someone with a session has been here before,
-  // and an introduction after the fact is an obstacle.
-  if (!sessionState.session && !seen) return <WelcomeScreen onDone={markSeen} />;
-  if (!sessionState.session) return <AuthScreen />;
+
+  if (!sessionState.session) return <SignedOut />;
   if (sessionState.mfaState === "enroll") return <MfaEnrollScreen />;
   if (sessionState.mfaState === "challenge") return <MfaChallengeScreen />;
   if (!sessionState.profile) return <OnboardingScreen />;
   return <HomeScreen />;
+}
+
+/**
+ * Everything before a session exists: the introduction, then the sign-in form.
+ *
+ * The introduction was shown once per installation and remembered in the
+ * keychain. It is now shown every time there is no session, which is what
+ * signing out should produce — you land back at the beginning rather than on a
+ * bare form. Skip is one tap for anyone who does not want it.
+ *
+ * The state lives here rather than in the page above so it resets by itself:
+ * this component unmounts the moment a session appears and mounts again when
+ * one goes away, so a sign-out returns to the first slide with nothing to clear.
+ */
+function SignedOut() {
+  const [introDone, setIntroDone] = useState(false);
+  if (!introDone) return <WelcomeScreen onDone={() => setIntroDone(true)} />;
+  return <AuthScreen />;
 }
 
 const styles = StyleSheet.create({
