@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { getMobileEnv } from "@/lib/env";
 
 /**
  * The public health passport, from the veterinarian's side (brief §10).
@@ -18,14 +19,18 @@ const TOKEN_PREFIX = "vetkeep.passport.";
 /**
  * The URL the QR code encodes.
  *
- * Configurable because the web application is not deployed at its production
- * domain yet. Until it is, a passport link is a valid, working token pointing
- * at a host that does not answer — the token is real, the address is not.
+ * Read through getMobileEnv rather than from the variable directly. This file
+ * carried its own copy of the same lookup and the same fallback, and the two
+ * are exactly the kind of pair that drifts: when the fallback here was wrong it
+ * produced a valid token at an address that does not answer, which is a broken
+ * link in a client's hand and looks like nothing at all from this end.
+ *
+ * Resolved per call, not at module load, so importing this file cannot throw
+ * before the environment has been read.
  */
-const BASE_URL = (process.env["EXPO_PUBLIC_PASSPORT_BASE_URL"] ?? "https://vetkeep.app").replace(
-  /\/+$/,
-  ""
-);
+function baseUrl(): string {
+  return getMobileEnv().webBaseUrl;
+}
 
 /**
  * Thirty-two URL-safe characters from a cryptographic source — around 190 bits.
@@ -47,7 +52,7 @@ export function generatePassportToken(): string {
 }
 
 export function passportUrl(token: string): string {
-  return `${BASE_URL}/passport/${token}`;
+  return `${baseUrl()}/passport/${token}`;
 }
 
 export async function savePassportToken(patientId: string, token: string): Promise<void> {
