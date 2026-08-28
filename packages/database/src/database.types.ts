@@ -1623,6 +1623,7 @@ export type Database = {
         Row: {
           body_condition_score: string | null
           chief_complaint: string | null
+          clinical_note: string | null
           completed_at: string | null
           created_at: string
           created_by_device_id: string | null
@@ -1662,6 +1663,7 @@ export type Database = {
         Insert: {
           body_condition_score?: string | null
           chief_complaint?: string | null
+          clinical_note?: string | null
           completed_at?: string | null
           created_at?: string
           created_by_device_id?: string | null
@@ -1701,6 +1703,7 @@ export type Database = {
         Update: {
           body_condition_score?: string | null
           chief_complaint?: string | null
+          clinical_note?: string | null
           completed_at?: string | null
           created_at?: string
           created_by_device_id?: string | null
@@ -2238,6 +2241,7 @@ export type Database = {
           p_base_server_version?: number
           p_body_condition_score?: string
           p_chief_complaint?: string
+          p_clinical_note?: string
           p_current_medications?: string
           p_definitive_diagnosis?: string
           p_device_id?: string

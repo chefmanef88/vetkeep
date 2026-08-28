@@ -25,7 +25,8 @@ const EDITABLE_COLUMNS = [
   "treatment_plan",
   "prescriptions",
   "follow_up_plan",
-  "next_review_date"
+  "next_review_date",
+  "clinical_note"
 ] as const;
 
 function baseVisit(overrides: Partial<VisitRow> = {}): VisitRow {
@@ -38,6 +39,7 @@ function baseVisit(overrides: Partial<VisitRow> = {}): VisitRow {
     workflow_status: "draft",
     signed_at: null,
     void_reason: null,
+    clinical_note: null,
     chief_complaint: null,
     history_of_complaint: null,
     past_medical_history: null,

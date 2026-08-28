@@ -9,6 +9,7 @@ export type VisitRow = {
   signed_at: string | null;
   void_reason: string | null;
   chief_complaint: string | null;
+  clinical_note: string | null;
   history_of_complaint: string | null;
   past_medical_history: string | null;
   current_medications: string | null;
@@ -88,6 +89,8 @@ export type DraftForm = {
   prescriptions: string;
   followUpPlan: string;
   nextReviewDate: string;
+  /** The clinician's own note. Free prose, not one of the SOAP boxes. */
+  clinicalNote: string;
 };
 
 export function draftFromVisit(visit: VisitRow): DraftForm {
@@ -109,6 +112,7 @@ export function draftFromVisit(visit: VisitRow): DraftForm {
     treatmentPlan: visit.treatment_plan ?? "",
     prescriptions: visit.prescriptions ?? "",
     followUpPlan: visit.follow_up_plan ?? "",
-    nextReviewDate: visit.next_review_date ?? ""
+    nextReviewDate: visit.next_review_date ?? "",
+    clinicalNote: visit.clinical_note ?? ""
   };
 }

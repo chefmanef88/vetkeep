@@ -186,6 +186,7 @@ export default function VisitScreen() {
     draft.treatmentPlan,
     draft.prescriptions,
     draft.followUpPlan,
+    draft.clinicalNote,
     draft.nextReviewDate
   ]);
 
@@ -230,6 +231,7 @@ export default function VisitScreen() {
           p_treatment_plan: optionalText(draft!.treatmentPlan),
           p_prescriptions: optionalText(draft!.prescriptions),
           p_follow_up_plan: optionalText(draft!.followUpPlan),
+          p_clinical_note: optionalText(draft!.clinicalNote),
           p_next_review_date: optionalText(draft!.nextReviewDate),
           p_base_server_version: visit.server_version
         }) as Record<string, unknown>
@@ -518,6 +520,7 @@ export default function VisitScreen() {
           <ReadOnly label="Treatment" value={visit.treatment_plan} />
           <ReadOnly label="Prescriptions" value={visit.prescriptions} />
           <ReadOnly label="Home care" value={visit.follow_up_plan} />
+          <ReadOnly label="Doctor's note" value={visit.clinical_note} />
         </Card>
       )}
 
@@ -606,6 +609,18 @@ export default function VisitScreen() {
             value={draft.nextReviewDate}
             placeholder="2026-08-09"
             onChangeText={(v) => set("nextReviewDate", v)}
+          />
+
+          {/* Last, and deliberately unstructured. Everything above means one
+              specific thing; this is where the rest of the consultation goes —
+              the yard with no crush, the third case in the same house, the
+              conversation that explains the decision a year from now. */}
+          <FieldLabel>Doctor&rsquo;s note</FieldLabel>
+          <Field
+            multiline
+            value={draft.clinicalNote}
+            placeholder="Anything the fields above have nowhere for"
+            onChangeText={(v) => set("clinicalNote", v)}
           />
         </Collapsible>
       ) : null}
