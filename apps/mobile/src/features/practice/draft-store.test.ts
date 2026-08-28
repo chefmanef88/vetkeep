@@ -55,6 +55,10 @@ function form(overrides: Partial<DraftForm> = {}): DraftForm {
     prescriptions: "",
     followUpPlan: "",
     clinicalNote: "",
+    groupSizeAtVisit: "",
+    animalsAffected: "",
+    animalsDead: "",
+    housingUnit: "",
     nextReviewDate: "",
     ...overrides
   };

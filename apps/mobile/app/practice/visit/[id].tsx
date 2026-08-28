@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
-import { sortByExamOrder } from "@vetkeep/domain";
+import { describeGroupObservation, sortByExamOrder } from "@vetkeep/domain";
 import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
 import { SyncBanner } from "@/sync/sync-banner";
@@ -160,6 +160,7 @@ export default function VisitScreen() {
 
   const { visit, findings } = data;
   const isDraft = visit.workflow_status === "draft";
+  const isGroup = visit.patients?.kind === "group";
   const notExamined = findings.filter((f) => f.status === "not_examined").length;
   const examined = findings.length - notExamined;
   const abnormal = findings.filter((f) => f.status === "abnormal").length;
@@ -232,6 +233,17 @@ export default function VisitScreen() {
           p_prescriptions: optionalText(draft!.prescriptions),
           p_follow_up_plan: optionalText(draft!.followUpPlan),
           p_clinical_note: optionalText(draft!.clinicalNote),
+          // Only ever sent for a group. The server refuses these on an
+          // individual rather than ignoring them, so sending empties would
+          // turn every dog consultation into an error.
+          ...(isGroup
+            ? {
+                p_group_size_at_visit: optionalNumber(draft!.groupSizeAtVisit),
+                p_animals_affected: optionalNumber(draft!.animalsAffected),
+                p_animals_dead: optionalNumber(draft!.animalsDead),
+                p_housing_unit: optionalText(draft!.housingUnit)
+              }
+            : {}),
           p_next_review_date: optionalText(draft!.nextReviewDate),
           p_base_server_version: visit.server_version
         }) as Record<string, unknown>
@@ -454,7 +466,69 @@ export default function VisitScreen() {
             />
           </Collapsible>
 
-          <Collapsible title="Vitals" icon="pulse" hint={`${vitalsFilled} of 6 recorded`}>
+          {/* Only on a group, and above the individual examination because it
+              is the clinical picture: how many are sick out of how many. The
+              vitals below then describe one of them. */}
+          {isGroup ? (
+            <Collapsible
+              title="The group"
+              icon="stats-chart"
+              hint={
+                describeGroupObservation({
+                  groupSize: optionalNumber(draft.groupSizeAtVisit) ?? null,
+                  affected: optionalNumber(draft.animalsAffected) ?? null,
+                  dead: optionalNumber(draft.animalsDead) ?? null
+                }) ?? "Nothing counted"
+              }
+            >
+              <FieldLabel>How many in the group today</FieldLabel>
+              {/* Recorded per visit rather than taken from the folder: a flock
+                  is not the same size in March as it was in January, and a rate
+                  worked out against today's headcount would rewrite last
+                  year's outbreak. */}
+              <Field
+                keyboardType="number-pad"
+                value={draft.groupSizeAtVisit}
+                placeholder="400"
+                onChangeText={(v) => set("groupSizeAtVisit", v)}
+              />
+
+              <View style={styles.pairRow}>
+                <View style={styles.pairCell}>
+                  <FieldLabel>Affected</FieldLabel>
+                  <Field
+                    keyboardType="number-pad"
+                    value={draft.animalsAffected}
+                    onChangeText={(v) => set("animalsAffected", v)}
+                  />
+                </View>
+                <View style={styles.pairCell}>
+                  <FieldLabel>Dead</FieldLabel>
+                  <Field
+                    keyboardType="number-pad"
+                    value={draft.animalsDead}
+                    onChangeText={(v) => set("animalsDead", v)}
+                  />
+                </View>
+              </View>
+              {/* Left blank rather than filled with zero: not counted and
+                  counted-as-none are different findings. */}
+              <Muted>Leave blank if you did not count.</Muted>
+
+              <FieldLabel>House, pen or paddock</FieldLabel>
+              <Field
+                value={draft.housingUnit}
+                placeholder="Which one — an outbreak is usually confined to one"
+                onChangeText={(v) => set("housingUnit", v)}
+              />
+            </Collapsible>
+          ) : null}
+
+          <Collapsible
+            title={isGroup ? "Sample animal" : "Vitals"}
+            icon="pulse"
+            hint={`${vitalsFilled} of 6 recorded`}
+          >
             <View style={styles.pairRow}>
               <View style={styles.pairCell}>
                 <FieldLabel>Temp °C</FieldLabel>
@@ -520,6 +594,21 @@ export default function VisitScreen() {
           <ReadOnly label="Treatment" value={visit.treatment_plan} />
           <ReadOnly label="Prescriptions" value={visit.prescriptions} />
           <ReadOnly label="Home care" value={visit.follow_up_plan} />
+          {/* The population first for a group: it is the finding, and the vitals
+              above it describe one sampled animal. */}
+          {isGroup ? (
+            <>
+              <ReadOnly
+                label="The group"
+                value={describeGroupObservation({
+                  groupSize: visit.group_size_at_visit,
+                  affected: visit.animals_affected,
+                  dead: visit.animals_dead
+                })}
+              />
+              <ReadOnly label="House or pen" value={visit.housing_unit} />
+            </>
+          ) : null}
           <ReadOnly label="Doctor's note" value={visit.clinical_note} />
         </Card>
       )}

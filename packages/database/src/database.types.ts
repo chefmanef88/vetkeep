@@ -1621,6 +1621,8 @@ export type Database = {
       }
       visits: {
         Row: {
+          animals_affected: number | null
+          animals_dead: number | null
           body_condition_score: string | null
           chief_complaint: string | null
           clinical_note: string | null
@@ -1632,8 +1634,10 @@ export type Database = {
           deleted_at: string | null
           differential_diagnoses: string | null
           follow_up_plan: string | null
+          group_size_at_visit: number | null
           heart_rate_bpm: number | null
           history_of_complaint: string | null
+          housing_unit: string | null
           id: string
           last_modified_by_device_id: string | null
           next_review_date: string | null
@@ -1661,6 +1665,8 @@ export type Database = {
           workflow_status: string
         }
         Insert: {
+          animals_affected?: number | null
+          animals_dead?: number | null
           body_condition_score?: string | null
           chief_complaint?: string | null
           clinical_note?: string | null
@@ -1672,8 +1678,10 @@ export type Database = {
           deleted_at?: string | null
           differential_diagnoses?: string | null
           follow_up_plan?: string | null
+          group_size_at_visit?: number | null
           heart_rate_bpm?: number | null
           history_of_complaint?: string | null
+          housing_unit?: string | null
           id: string
           last_modified_by_device_id?: string | null
           next_review_date?: string | null
@@ -1701,6 +1709,8 @@ export type Database = {
           workflow_status?: string
         }
         Update: {
+          animals_affected?: number | null
+          animals_dead?: number | null
           body_condition_score?: string | null
           chief_complaint?: string | null
           clinical_note?: string | null
@@ -1712,8 +1722,10 @@ export type Database = {
           deleted_at?: string | null
           differential_diagnoses?: string | null
           follow_up_plan?: string | null
+          group_size_at_visit?: number | null
           heart_rate_bpm?: number | null
           history_of_complaint?: string | null
+          housing_unit?: string | null
           id?: string
           last_modified_by_device_id?: string | null
           next_review_date?: string | null
@@ -2238,6 +2250,8 @@ export type Database = {
       }
       update_visit_draft: {
         Args: {
+          p_animals_affected?: number
+          p_animals_dead?: number
           p_base_server_version?: number
           p_body_condition_score?: string
           p_chief_complaint?: string
@@ -2247,8 +2261,10 @@ export type Database = {
           p_device_id?: string
           p_differential_diagnoses?: string
           p_follow_up_plan?: string
+          p_group_size_at_visit?: number
           p_heart_rate_bpm?: number
           p_history_of_complaint?: string
+          p_housing_unit?: string
           p_id: string
           p_next_review_date?: string
           p_pain_score?: string

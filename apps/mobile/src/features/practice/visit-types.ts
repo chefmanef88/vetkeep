@@ -10,6 +10,10 @@ export type VisitRow = {
   void_reason: string | null;
   chief_complaint: string | null;
   clinical_note: string | null;
+  group_size_at_visit: number | null;
+  animals_affected: number | null;
+  animals_dead: number | null;
+  housing_unit: string | null;
   history_of_complaint: string | null;
   past_medical_history: string | null;
   current_medications: string | null;
@@ -91,6 +95,11 @@ export type DraftForm = {
   nextReviewDate: string;
   /** The clinician's own note. Free prose, not one of the SOAP boxes. */
   clinicalNote: string;
+  /** Group folders only. Empty strings on an individual, and never sent. */
+  groupSizeAtVisit: string;
+  animalsAffected: string;
+  animalsDead: string;
+  housingUnit: string;
 };
 
 export function draftFromVisit(visit: VisitRow): DraftForm {
@@ -113,6 +122,10 @@ export function draftFromVisit(visit: VisitRow): DraftForm {
     prescriptions: visit.prescriptions ?? "",
     followUpPlan: visit.follow_up_plan ?? "",
     nextReviewDate: visit.next_review_date ?? "",
-    clinicalNote: visit.clinical_note ?? ""
+    clinicalNote: visit.clinical_note ?? "",
+    groupSizeAtVisit: visit.group_size_at_visit?.toString() ?? "",
+    animalsAffected: visit.animals_affected?.toString() ?? "",
+    animalsDead: visit.animals_dead?.toString() ?? "",
+    housingUnit: visit.housing_unit ?? ""
   };
 }

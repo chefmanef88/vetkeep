@@ -17,6 +17,15 @@ export {
 
 export { describeAge, describeGroupAge, type DateOfBirthPrecision } from "./age";
 
+export {
+  caseFatalityRate,
+  describeGroupObservation,
+  formatRate,
+  morbidityRate,
+  mortalityRate,
+  type GroupObservation
+} from "./group";
+
 export { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder, type ExamSystem } from "./exam";
 
 export {
