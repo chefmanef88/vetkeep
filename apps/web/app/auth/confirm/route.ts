@@ -20,6 +20,14 @@ export async function GET(request: NextRequest) {
   if (error) {
     destination.pathname = "/login";
     destination.searchParams.set("error", "confirmation_failed");
+    return NextResponse.redirect(destination);
   }
+
+  // A recovery link is not a confirmation. Verifying it signs the person in
+  // holding a password they have forgotten, so sending them to /onboarding —
+  // where the previous version sent everything — would drop them into the
+  // application with no way to set the password they came here to change.
+  if (type === "recovery") destination.pathname = "/security/password";
+
   return NextResponse.redirect(destination);
 }
