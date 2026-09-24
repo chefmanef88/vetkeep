@@ -19,3 +19,7 @@ apps/mobile/ios/
 
 .vercel
 .env*
+!.env.example
+
+# The SEO agent's raw pulls. Rolled-up numbers live in seo/state.json.
+seo/data/

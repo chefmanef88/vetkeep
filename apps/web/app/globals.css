@@ -90,6 +90,12 @@ button.secondary,
   border-bottom: 1px solid #d9e2dc;
 }
 
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .inline-action {
   display: grid;
   justify-items: end;

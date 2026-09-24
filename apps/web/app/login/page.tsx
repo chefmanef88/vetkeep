@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AuthForm } from "./auth-form";
 
 // Rendered per request, not prerendered, and the reason is the Content Security
@@ -12,13 +13,30 @@ import { AuthForm } from "./auth-form";
 // Development never showed this because development always renders per request.
 export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
+// A form, not a page to rank: the home page is what search should send people to.
+export const metadata: Metadata = {
+  title: "Sign in — VetKeep",
+  robots: { index: false, follow: true }
+};
+
+/**
+ * ?mode=signup opens straight on the create-account form, so the home page's
+ * call to action lands on the thing it promised rather than on sign-in.
+ */
+export default async function LoginPage({
+  searchParams
+}: {
+  searchParams: Promise<{ mode?: string }>;
+}) {
+  const { mode } = await searchParams;
+  const signup = mode === "signup";
+
   return (
     <main>
       <section className="card stack">
-        <h1>Veterinarian access</h1>
+        <h1>{signup ? "Create your veterinarian account" : "Veterinarian access"}</h1>
         <p className="muted">Use a unique account. Shared logins are not permitted.</p>
-        <AuthForm />
+        <AuthForm initialMode={signup ? "signup" : "signin"} />
       </section>
     </main>
   );

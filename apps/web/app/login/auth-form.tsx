@@ -6,9 +6,9 @@ import { createClient } from "@/lib/supabase/browser";
 
 type Mode = "signin" | "signup" | "recover";
 
-export function AuthForm() {
+export function AuthForm({ initialMode = "signin" }: { initialMode?: Mode }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

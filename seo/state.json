@@ -1,0 +1,18 @@
+{
+  "updated": null,
+  "site": "https://vetkeep-liart.vercel.app/",
+  "searchConsole": {
+    "property": null,
+    "lastDayPulled": null,
+    "note": "Search Console data lands two to three days late; never pull later than today minus three days."
+  },
+  "focus": {
+    "page": null,
+    "mainQuery": null,
+    "reason": null,
+    "chosen": null
+  },
+  "pages": {},
+  "pendingChange": null,
+  "liveChanges": []
+}

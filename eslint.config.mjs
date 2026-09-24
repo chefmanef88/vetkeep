@@ -41,13 +41,16 @@ export default tseslint.config(
     // reach for Buffer, process and console. Declaring the globals keeps the
     // no-undef rule doing its job everywhere else rather than being disabled
     // file by file.
-    files: ["**/scripts/**/*.{mjs,js}"],
+    files: ["**/scripts/**/*.{mjs,js}", ".claude/hooks/**/*.mjs"],
     languageOptions: {
       globals: {
         Buffer: "readonly",
         console: "readonly",
         process: "readonly",
-        __dirname: "readonly"
+        __dirname: "readonly",
+        fetch: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly"
       }
     }
   }
