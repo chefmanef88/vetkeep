@@ -1195,6 +1195,129 @@ export type Database = {
           },
         ]
       }
+      surgical_procedures: {
+        Row: {
+          anaesthesia: string
+          analgesia: string | null
+          animals_treated: number | null
+          assistant: string | null
+          complications: string | null
+          created_at: string
+          created_by_device_id: string | null
+          deleted_at: string | null
+          duration_minutes: number | null
+          id: string
+          induction_agent: string | null
+          last_modified_by_device_id: string | null
+          maintenance_agent: string | null
+          monitoring: string | null
+          outcome: string
+          patient_id: string
+          performed_at: string
+          post_op_instructions: string | null
+          pre_op_assessment: string | null
+          premedication: string | null
+          procedure_kind: string
+          procedure_name: string
+          server_version: number
+          updated_at: string
+          vet_id: string
+          visit_id: string
+        }
+        Insert: {
+          anaesthesia: string
+          analgesia?: string | null
+          animals_treated?: number | null
+          assistant?: string | null
+          complications?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          duration_minutes?: number | null
+          id: string
+          induction_agent?: string | null
+          last_modified_by_device_id?: string | null
+          maintenance_agent?: string | null
+          monitoring?: string | null
+          outcome?: string
+          patient_id: string
+          performed_at?: string
+          post_op_instructions?: string | null
+          pre_op_assessment?: string | null
+          premedication?: string | null
+          procedure_kind: string
+          procedure_name: string
+          server_version?: number
+          updated_at?: string
+          vet_id: string
+          visit_id: string
+        }
+        Update: {
+          anaesthesia?: string
+          analgesia?: string | null
+          animals_treated?: number | null
+          assistant?: string | null
+          complications?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          deleted_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          induction_agent?: string | null
+          last_modified_by_device_id?: string | null
+          maintenance_agent?: string | null
+          monitoring?: string | null
+          outcome?: string
+          patient_id?: string
+          performed_at?: string
+          post_op_instructions?: string | null
+          pre_op_assessment?: string | null
+          premedication?: string | null
+          procedure_kind?: string
+          procedure_name?: string
+          server_version?: number
+          updated_at?: string
+          vet_id?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surgical_procedures_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surgical_procedures_last_modified_by_device_id_fkey"
+            columns: ["last_modified_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surgical_procedures_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surgical_procedures_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surgical_procedures_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       treatments: {
         Row: {
           active_ingredient: string | null
@@ -2057,6 +2180,30 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_surgical_procedure: {
+        Args: {
+          p_anaesthesia: string
+          p_analgesia?: string
+          p_animals_treated?: number
+          p_assistant?: string
+          p_complications?: string
+          p_device_id?: string
+          p_duration_minutes?: number
+          p_id: string
+          p_induction_agent?: string
+          p_maintenance_agent?: string
+          p_monitoring?: string
+          p_outcome?: string
+          p_performed_at?: string
+          p_post_op_instructions?: string
+          p_pre_op_assessment?: string
+          p_premedication?: string
+          p_procedure_kind: string
+          p_procedure_name: string
+          p_visit_id: string
+        }
+        Returns: string
+      }
       record_treatment: {
         Args: {
           p_active_ingredient?: string
@@ -2233,6 +2380,29 @@ export type Database = {
           p_route?: string
           p_target_parasites?: string[]
           p_vaccine_type?: string
+        }
+        Returns: undefined
+      }
+      update_surgical_procedure: {
+        Args: {
+          p_anaesthesia: string
+          p_analgesia?: string
+          p_animals_treated?: number
+          p_assistant?: string
+          p_base_server_version?: number
+          p_complications?: string
+          p_device_id?: string
+          p_duration_minutes?: number
+          p_id: string
+          p_induction_agent?: string
+          p_maintenance_agent?: string
+          p_monitoring?: string
+          p_outcome?: string
+          p_post_op_instructions?: string
+          p_pre_op_assessment?: string
+          p_premedication?: string
+          p_procedure_kind: string
+          p_procedure_name: string
         }
         Returns: undefined
       }
