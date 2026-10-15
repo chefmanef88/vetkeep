@@ -14,6 +14,7 @@ import {
 } from "@vetkeep/domain";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
+import { ConsentBlock, type ConsentRow } from "@/features/practice/consent-block";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { Collapsible, OptionChips } from "@/ui/elements";
 import { FieldLabel, Muted, Segmented } from "@/ui/practice-components";
@@ -83,7 +84,10 @@ export function SurgerySection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data, reload } = useQuery<ProcedureRow[]>(async () => {
+  const { data, reload } = useQuery<{
+    procedures: ProcedureRow[];
+    consents: ConsentRow[];
+  }>(async () => {
     const { data: rows, error: rpcError } = await supabase
       .from("surgical_procedures")
       .select(
@@ -93,10 +97,26 @@ export function SurgerySection({
       .is("deleted_at", null)
       .order("performed_at", { ascending: true });
     if (rpcError) throw new Error(rpcError.message);
-    return (rows ?? []) as ProcedureRow[];
+
+    const { data: consentRows, error: consentError } = await supabase
+      .from("consents")
+      .select(
+        "id, surgical_procedure_id, granted_by_name, granted_by_capacity, method, witness_name, risks_explained, granted_at, withdrawn_at, withdrawal_reason"
+      )
+      .eq("visit_id", visitId)
+      .order("granted_at", { ascending: true });
+    if (consentError) throw new Error(consentError.message);
+
+    return {
+      procedures: (rows ?? []) as ProcedureRow[],
+      consents: (consentRows ?? []) as (ConsentRow & { surgical_procedure_id: string | null })[]
+    };
   }, [visitId]);
 
-  const procedures = data ?? [];
+  const procedures = data?.procedures ?? [];
+  const allConsents = (data?.consents ?? []) as (ConsentRow & {
+    surgical_procedure_id: string | null;
+  })[];
   const fields = protocolFieldsFor(anaesthesia);
   // Said while the form is being filled rather than at save time, where the
   // server would say the same thing but only after the tap.
@@ -206,6 +226,17 @@ export function SurgerySection({
           {entry.post_op_instructions ? (
             <Text style={styles.entryDetail}>Aftercare: {entry.post_op_instructions}</Text>
           ) : null}
+
+          {/* Consent belongs to the procedure, not to the consultation: two
+              operations in one visit can have been agreed to separately, or
+              one of them not at all. */}
+          <ConsentBlock
+            visitId={visitId}
+            procedureId={entry.id}
+            consents={allConsents.filter((c) => c.surgical_procedure_id === entry.id)}
+            editable={editable}
+            onChanged={reload}
+          />
         </View>
       ))}
 

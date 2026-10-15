@@ -41,6 +41,17 @@ export {
   type ProcedureOutcome
 } from "./surgery";
 
+export {
+  CAPACITY_LABELS,
+  CONSENT_CAPACITIES,
+  CONSENT_METHODS,
+  METHOD_LABELS,
+  consentProblem,
+  describeConsent,
+  type ConsentCapacity,
+  type ConsentMethod
+} from "./consent";
+
 export { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder, type ExamSystem } from "./exam";
 
 export {

@@ -404,6 +404,105 @@ export type Database = {
           },
         ]
       }
+      consents: {
+        Row: {
+          consent_for: string
+          created_at: string
+          created_by_device_id: string | null
+          granted_at: string
+          granted_by_capacity: string
+          granted_by_name: string
+          id: string
+          last_modified_by_device_id: string | null
+          method: string
+          risks_explained: string
+          server_version: number
+          surgical_procedure_id: string | null
+          updated_at: string
+          vet_id: string
+          visit_id: string
+          withdrawal_reason: string | null
+          withdrawn_at: string | null
+          witness_name: string | null
+        }
+        Insert: {
+          consent_for: string
+          created_at?: string
+          created_by_device_id?: string | null
+          granted_at?: string
+          granted_by_capacity: string
+          granted_by_name: string
+          id: string
+          last_modified_by_device_id?: string | null
+          method: string
+          risks_explained: string
+          server_version?: number
+          surgical_procedure_id?: string | null
+          updated_at?: string
+          vet_id: string
+          visit_id: string
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          witness_name?: string | null
+        }
+        Update: {
+          consent_for?: string
+          created_at?: string
+          created_by_device_id?: string | null
+          granted_at?: string
+          granted_by_capacity?: string
+          granted_by_name?: string
+          id?: string
+          last_modified_by_device_id?: string | null
+          method?: string
+          risks_explained?: string
+          server_version?: number
+          surgical_procedure_id?: string | null
+          updated_at?: string
+          vet_id?: string
+          visit_id?: string
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          witness_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consents_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consents_last_modified_by_device_id_fkey"
+            columns: ["last_modified_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consents_surgical_procedure_id_fkey"
+            columns: ["surgical_procedure_id"]
+            isOneToOne: false
+            referencedRelation: "surgical_procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consents_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consents_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       export_jobs: {
         Row: {
           completed_at: string | null
@@ -2137,6 +2236,21 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_consent: {
+        Args: {
+          p_consent_for: string
+          p_device_id?: string
+          p_granted_by_capacity: string
+          p_granted_by_name: string
+          p_id: string
+          p_method: string
+          p_risks_explained: string
+          p_surgical_procedure_id?: string
+          p_visit_id: string
+          p_witness_name?: string
+        }
+        Returns: string
+      }
       record_invoice_payment: {
         Args: {
           p_amount_pesewas: number
@@ -2476,6 +2590,10 @@ export type Database = {
       }
       void_visit: {
         Args: { p_device_id?: string; p_reason: string; p_visit_id: string }
+        Returns: undefined
+      }
+      withdraw_consent: {
+        Args: { p_device_id?: string; p_id: string; p_reason: string }
         Returns: undefined
       }
     }
