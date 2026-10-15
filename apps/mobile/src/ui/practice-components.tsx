@@ -48,6 +48,13 @@ export function ScrollScreen({
         { paddingBottom: insets.bottom + space.xxxl }
       ]}
       keyboardShouldPersistTaps="handled"
+      // A number pad has no return key, so a field like "minutes" or "head
+      // count" left the keyboard up with nothing on screen to dismiss it —
+      // covering the button the vet was reaching for. Dragging the form is the
+      // gesture they already make, so it is the one that puts it away.
+      // Set here rather than per field: there are twenty-nine numeric inputs
+      // and every one of them has the same problem.
+      keyboardDismissMode="on-drag"
     >
       {children}
     </ScrollView>

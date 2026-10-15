@@ -81,6 +81,10 @@ export function SurgerySection({
   const [assistant, setAssistant] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("");
   const [animalsTreated, setAnimalsTreated] = useState("");
+  // Closed until asked for, and closed again once a procedure is recorded.
+  // An open form sitting over the thing it just created invites recording it
+  // twice, and hides the entry the vet wants to check.
+  const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -179,6 +183,7 @@ export function SurgerySection({
       return;
     }
     reset();
+    setAdding(false);
     reload();
   }
 
@@ -247,7 +252,18 @@ export function SurgerySection({
 
       {procedures.length === 0 && !editable ? <Muted>No surgery recorded.</Muted> : null}
 
-      {editable ? (
+      {editable && !adding ? (
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.add, pressed && styles.pressed]}
+          onPress={() => setAdding(true)}
+        >
+          <Ionicons name="add" size={16} color={palette.brandInk} />
+          <Text style={styles.addText}>Record a procedure</Text>
+        </Pressable>
+      ) : null}
+
+      {editable && adding ? (
         <View style={styles.form}>
           <FieldLabel>Procedure</FieldLabel>
           <Field value={name} onChangeText={setName} placeholder="What was done" />
@@ -420,6 +436,16 @@ export function SurgerySection({
             disabled={busy || !ready}
             onPress={() => void record()}
           />
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}
+            onPress={() => {
+              reset();
+              setAdding(false);
+            }}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </Pressable>
         </View>
       ) : null}
     </Collapsible>
@@ -441,6 +467,21 @@ const styles = StyleSheet.create({
   entryMeta: { ...type.small, fontSize: 12.5, color: palette.quiet },
   entryDetail: { ...type.small, fontSize: 12.5, color: palette.ink },
   entryComplication: { ...type.small, fontSize: 12.5, color: palette.red },
+  add: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: space.md,
+    borderRadius: radiusControl,
+    borderWidth: hairline,
+    borderColor: palette.line,
+    alignSelf: "flex-start",
+    marginTop: space.sm
+  },
+  addText: { ...type.small, fontSize: 13.5, color: palette.brandInk, fontFamily: fonts.medium },
+  cancel: { minHeight: 44, alignItems: "center", justifyContent: "center" },
+  cancelText: { ...type.small, fontSize: 13, color: palette.quiet },
   form: { gap: space.sm, paddingTop: space.md },
   suggestions: { flexDirection: "row", flexWrap: "wrap", gap: 6, paddingTop: 2 },
   suggestion: {
