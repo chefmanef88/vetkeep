@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
 import { SyncBanner } from "@/sync/sync-banner";
 import { AttachmentsSection } from "@/features/practice/attachments-section";
+import { SurgerySection } from "@/features/practice/surgery-section";
 import { TreatmentsSection } from "@/features/practice/treatments-section";
 import { useQuery } from "@/features/practice/use-query";
 import {
@@ -718,6 +719,15 @@ export default function VisitScreen() {
         visitId={visit.id}
         species={visit.patients?.species ?? "other"}
         purpose={visit.patients?.purpose ?? "pet"}
+        isGroup={visit.patients?.kind === "group"}
+        editable={isDraft}
+      />
+
+      {/* After treatments: a procedure is usually decided on after the drugs
+          given around it, and the anaesthetic is itself a treatment. */}
+      <SurgerySection
+        visitId={visit.id}
+        species={visit.patients?.species ?? "other"}
         isGroup={visit.patients?.kind === "group"}
         editable={isDraft}
       />

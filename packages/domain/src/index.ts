@@ -26,6 +26,21 @@ export {
   type GroupObservation
 } from "./group";
 
+export {
+  ANAESTHESIA_LABELS,
+  ANAESTHESIA_TYPES,
+  OUTCOME_LABELS,
+  PROCEDURE_KINDS,
+  PROCEDURE_KIND_LABELS,
+  PROCEDURE_OUTCOMES,
+  anaesthesiaProblem,
+  procedureSuggestions,
+  protocolFieldsFor,
+  type AnaesthesiaType,
+  type ProcedureKind,
+  type ProcedureOutcome
+} from "./surgery";
+
 export { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder, type ExamSystem } from "./exam";
 
 export {
