@@ -409,6 +409,7 @@ export type Database = {
           consent_for: string
           created_at: string
           created_by_device_id: string | null
+          euthanasia_record_id: string | null
           granted_at: string
           granted_by_capacity: string
           granted_by_name: string
@@ -429,6 +430,7 @@ export type Database = {
           consent_for: string
           created_at?: string
           created_by_device_id?: string | null
+          euthanasia_record_id?: string | null
           granted_at?: string
           granted_by_capacity: string
           granted_by_name: string
@@ -449,6 +451,7 @@ export type Database = {
           consent_for?: string
           created_at?: string
           created_by_device_id?: string | null
+          euthanasia_record_id?: string | null
           granted_at?: string
           granted_by_capacity?: string
           granted_by_name?: string
@@ -474,6 +477,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "consents_euthanasia_record_id_fkey"
+            columns: ["euthanasia_record_id"]
+            isOneToOne: false
+            referencedRelation: "euthanasia_records"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "consents_last_modified_by_device_id_fkey"
             columns: ["last_modified_by_device_id"]
             isOneToOne: false
@@ -496,6 +506,108 @@ export type Database = {
           },
           {
             foreignKeyName: "consents_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      euthanasia_records: {
+        Row: {
+          agent: string | null
+          animals_count: number | null
+          carcass_disposal: string | null
+          created_at: string
+          created_by_device_id: string | null
+          death_confirmed: boolean
+          death_confirmed_by: string | null
+          deleted_at: string | null
+          id: string
+          last_modified_by_device_id: string | null
+          method: string
+          patient_id: string
+          performed_at: string
+          reason: string
+          reason_detail: string
+          server_version: number
+          updated_at: string
+          vet_id: string
+          visit_id: string
+        }
+        Insert: {
+          agent?: string | null
+          animals_count?: number | null
+          carcass_disposal?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          death_confirmed?: boolean
+          death_confirmed_by?: string | null
+          deleted_at?: string | null
+          id: string
+          last_modified_by_device_id?: string | null
+          method: string
+          patient_id: string
+          performed_at?: string
+          reason: string
+          reason_detail: string
+          server_version?: number
+          updated_at?: string
+          vet_id: string
+          visit_id: string
+        }
+        Update: {
+          agent?: string | null
+          animals_count?: number | null
+          carcass_disposal?: string | null
+          created_at?: string
+          created_by_device_id?: string | null
+          death_confirmed?: boolean
+          death_confirmed_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          last_modified_by_device_id?: string | null
+          method?: string
+          patient_id?: string
+          performed_at?: string
+          reason?: string
+          reason_detail?: string
+          server_version?: number
+          updated_at?: string
+          vet_id?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "euthanasia_records_created_by_device_id_fkey"
+            columns: ["created_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "euthanasia_records_last_modified_by_device_id_fkey"
+            columns: ["last_modified_by_device_id"]
+            isOneToOne: false
+            referencedRelation: "vet_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "euthanasia_records_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "euthanasia_records_vet_id_fkey"
+            columns: ["vet_id"]
+            isOneToOne: false
+            referencedRelation: "vets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "euthanasia_records_visit_id_fkey"
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visits"
@@ -2240,6 +2352,7 @@ export type Database = {
         Args: {
           p_consent_for: string
           p_device_id?: string
+          p_euthanasia_record_id?: string
           p_granted_by_capacity: string
           p_granted_by_name: string
           p_id: string
@@ -2248,6 +2361,22 @@ export type Database = {
           p_surgical_procedure_id?: string
           p_visit_id: string
           p_witness_name?: string
+        }
+        Returns: string
+      }
+      record_euthanasia: {
+        Args: {
+          p_agent?: string
+          p_animals_count?: number
+          p_carcass_disposal?: string
+          p_death_confirmed?: boolean
+          p_death_confirmed_by?: string
+          p_device_id?: string
+          p_id: string
+          p_method: string
+          p_reason: string
+          p_reason_detail: string
+          p_visit_id: string
         }
         Returns: string
       }
