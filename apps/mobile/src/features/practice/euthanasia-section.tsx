@@ -18,7 +18,16 @@ import { confirmWithDevice } from "@/security/confirm-with-device";
 import { FieldLabel } from "@/ui/practice-components";
 import { OptionChips } from "@/ui/elements";
 import { ErrorText, Field } from "@/ui/components";
-import { fonts, hairline, palette, radius, radiusControl, space, type } from "@/ui/tokens";
+import {
+  fonts,
+  hairline,
+  palette,
+  radius,
+  radiusControl,
+  space,
+  touchTarget,
+  type
+} from "@/ui/tokens";
 
 /**
  * Euthanasia, which ends the folder.
@@ -195,7 +204,9 @@ export function EuthanasiaSection({
         style={({ pressed }) => [styles.entry, pressed && styles.pressed]}
         onPress={() => setOpen(true)}
       >
+        <Ionicons name="remove-circle-outline" size={18} color={palette.red} />
         <Text style={styles.entryText}>Record a euthanasia</Text>
+        <Ionicons name="chevron-forward" size={16} color={palette.line} />
       </Pressable>
     );
   }
@@ -327,14 +338,31 @@ const styles = StyleSheet.create({
   reason: { ...type.strong, fontSize: 14, color: palette.ink },
   detail: { ...type.small, fontSize: 13, color: palette.ink },
   unconfirmed: { ...type.small, fontSize: 13, color: palette.amber, fontFamily: fonts.semibold },
+  /**
+   * Understated, but unmistakably a control.
+   *
+   * The first version was grey text centred on the page background, and a
+   * veterinarian reported it did not look like something that would open a
+   * form. That is the right complaint: "takes a deliberate reach" was never
+   * meant to mean "hard to recognise". It now has the full width, a border,
+   * an icon in the colour of the thing it does and a chevron — the same
+   * shape as every other row that opens something — while staying quiet
+   * enough not to compete with the treatment and surgery buttons above it.
+   */
   entry: {
-    minHeight: 44,
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
+    gap: space.md,
+    minHeight: touchTarget,
+    paddingHorizontal: space.lg,
+    borderRadius: radiusControl,
+    borderWidth: hairline,
+    borderColor: palette.line,
+    backgroundColor: palette.surface,
     marginTop: space.xl,
     marginBottom: space.lg
   },
-  entryText: { ...type.small, fontSize: 13, color: palette.quiet },
+  entryText: { ...type.action, fontSize: 15, color: palette.red, flex: 1 },
   form: {
     gap: space.sm,
     backgroundColor: palette.surface,

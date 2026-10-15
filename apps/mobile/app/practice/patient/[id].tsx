@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
@@ -338,29 +339,44 @@ export default function PatientFolderScreen() {
         <EditPatientSection patient={folder as EditablePatient} onSaved={reload} />
       </Card>
 
-      {/* Creating a record is the point of opening a folder, so it sits above
-          the history rather than below it. */}
-      <Card>
-        <FieldLabel>New record</FieldLabel>
-        <Segmented
-          options={RECORD_TYPES}
-          value={recordType}
-          onChange={setRecordType}
-          accessibilityLabel="Type of attendance"
-        />
-        {actionError ? <ErrorText>{actionError}</ErrorText> : null}
-        {openRecord ? (
+      {/* A folder ends at death. The server refuses a new consultation on a
+          deceased animal, so offering the control would be offering something
+          that cannot work — and the folder should say why rather than let the
+          vet find out by tapping. The history below stays readable. */}
+      {folder.status === "deceased" ? (
+        <Card>
+          <View style={styles.deceasedHead}>
+            <Ionicons name="remove-circle" size={20} color={palette.red} />
+            <Text style={styles.deceasedTitle}>This animal is recorded as deceased</Text>
+          </View>
           <Muted>
-            There is already an unsigned record from {formatDay(openRecord.visit_date)}. Open it
-            below rather than starting another.
+            No new records can be added. Everything already recorded stays here and can still be
+            read and shared.
           </Muted>
-        ) : null}
-        <PrimaryButton
-          label={busy ? "Opening…" : "Start a record now"}
-          disabled={busy}
-          onPress={() => void startRecord()}
-        />
-      </Card>
+        </Card>
+      ) : (
+        <Card>
+          <FieldLabel>New record</FieldLabel>
+          <Segmented
+            options={RECORD_TYPES}
+            value={recordType}
+            onChange={setRecordType}
+            accessibilityLabel="Type of attendance"
+          />
+          {actionError ? <ErrorText>{actionError}</ErrorText> : null}
+          {openRecord ? (
+            <Muted>
+              There is already an unsigned record from {formatDay(openRecord.visit_date)}. Open it
+              below rather than starting another.
+            </Muted>
+          ) : null}
+          <PrimaryButton
+            label={busy ? "Opening…" : "Start a record now"}
+            disabled={busy}
+            onPress={() => void startRecord()}
+          />
+        </Card>
+      )}
 
       {/* Standing protection, not a consultation: what this animal has had and
           what is due, whether or not anyone attended today. */}
@@ -461,6 +477,8 @@ export default function PatientFolderScreen() {
 }
 
 const styles = StyleSheet.create({
+  deceasedHead: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingBottom: 4 },
+  deceasedTitle: { ...type.strong, fontSize: 15, color: palette.red, flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",

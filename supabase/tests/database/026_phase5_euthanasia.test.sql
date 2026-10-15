@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(16);
+select plan(17);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -282,6 +282,27 @@ select is(
      and grantee = 'authenticated'),
   'SELECT',
   'A signed-in client may read these and nothing else'
+);
+
+-- ---------------------------------------------------------------------------
+-- The folder ends at death (17)
+-- ---------------------------------------------------------------------------
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"aa000000-0000-0000-0000-0000000000e9","role":"authenticated","aal":"aal2","session_id":"5e000000-0000-0000-0000-0000000000e9"}', true);
+
+-- 17 Reported from the phone: the animal was marked deceased and the folder
+-- carried on exactly as before, offering a new consultation on an animal whose
+-- death this same application had just recorded.
+select throws_ok(
+  $$select public.create_visit(
+      p_id => 'ea000000-0000-0000-0000-0000000000eb'::uuid,
+      p_patient_id => 'da000000-0000-0000-0000-0000000000e9'::uuid,
+      p_visit_date => now(), p_visit_type => 'home_call'
+    )$$,
+  '42501',
+  'This animal is recorded as deceased',
+  'No new consultation can be started on a deceased animal'
 );
 
 select * from finish();

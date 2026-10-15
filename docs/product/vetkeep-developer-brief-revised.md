@@ -2,9 +2,92 @@
 
 **Document status:** Technical build specification  
 **Product stage:** Pre-development architecture baseline  
-**Revision date:** 11 July 2026 (Phase 2 scope correction 2 August 2026; product model correction 10 August 2026; build corrections 11 August 2026; product complete 26 August 2026)  
+**Revision date:** 11 July 2026 (Phase 2 scope correction 2 August 2026; product model correction 10 August 2026; build corrections 11 August 2026; product complete 26 August 2026; phase 5 clinical record 16 October 2026)  
 **Primary market:** Independent solo veterinarians in Ghana and West Africa  
 **Primary platforms:** Mobile application for clinical work; web application for account, public passport, and platform workflows
+
+### Revision note — 16 October 2026
+
+Phase 5. Four things the record could not say, and one convention that every
+table in this schema now has to follow.
+
+Earlier revision notes are left as written, as before.
+
+1. **A herd record is about the herd.** §7 recorded a consultation on a flock
+   with the fields used for a dog: a temperature, a heart rate, a body
+   condition score. Those are not wrong on a farm visit — a vet examines
+   representative animals — but on their own they describe one animal out of
+   four hundred and say nothing about the outbreak. `visits` gains the
+   population: how many affected, how many dead, out of how many, and in which
+   house. The individual vitals stay, relabelled as a sample, so the two
+   together say "eleven of four hundred are sick, and here is what one of them
+   looks like". Morbidity and mortality are derived, never stored: a saved
+   percentage drifts from its own numerator the first time a count is
+   corrected.
+2. **§7.11 Surgery, with the anaesthetic that went with it.** A procedure could
+   only be recorded by typing it into the treatment plan, which loses what
+   matters afterwards: what the animal was given, at what dose, who held it,
+   whether it woke up. Most surgery a house-call vet does is routine rather
+   than therapeutic — neutering, disbudding, dehorning — and the kind is
+   recorded rather than inferred, because the same operation is either: a spay
+   is routine on a healthy bitch and therapeutic on a pyometra. A dehorning
+   session is one afternoon across forty calves, not forty operations, so the
+   count sits on the row as it does on a treatment. `anaesthesia` is not
+   nullable and `none` is one of its values, so a blank protocol reads as "not
+   written down" rather than "none given"; a general anaesthetic without its
+   induction agent is refused.
+3. **§7.12 Consent, which cannot be rewritten.** The one record here whose
+   whole value is that it is immutable — a consent you can edit is not
+   evidence, it is a note saying consent was given written by the only person
+   with an interest in saying so. A trigger refuses any change to the
+   substance; withdrawal is a new fact recorded beside the original. Three
+   decisions shape it. The person present is not always the owner, so the
+   capacity is recorded rather than assumed from the folder's client. Consent
+   here is usually spoken, so verbal is first-class and witnessed must name its
+   witness — offering only "written" would make the vet either lie or skip the
+   record. And what the owner was told is the substance, so it is required.
+4. **§7.13 Euthanasia, which ends the folder.** Not a treatment with an unusual
+   outcome. The reason is a list rather than prose, because a year later "the
+   owner agreed it was time" and "the owner could not afford the treatment"
+   read very differently to a council and free text makes the second invisible
+   — **cost of treatment is on that list without euphemism** for exactly that
+   reason. The method is recorded because it is not always an injection: a
+   captive bolt is the humane answer for cattle in a yard with no restraint.
+   Death is confirmed separately from the act, because they are two events and
+   the gap between them is where a mistake lives. Carcass disposal is asked of
+   food animals, because the question does not end at death. The patient is
+   marked deceased in the same transaction, and nothing reverses it.
+5. **A doctor's note on every record.** The record had somewhere for a
+   complaint, a history, a diagnosis, a plan and a follow-up, and nowhere for
+   the sentence a clinician actually wants to leave. Those observations were
+   going into whichever box was nearest, usually the treatment plan, which then
+   stopped meaning "the plan".
+
+**A convention every new table must follow.** This database carries a default
+ACL granting `authenticated` TRUNCATE, REFERENCES and TRIGGER on new tables,
+and **row-level security does not apply to TRUNCATE**. A table created without
+an explicit `revoke all ... from anon, authenticated` before its `grant select`
+is one a signed-in client can empty. `surgical_procedures` was created that way
+and carried those privileges until it was checked. Every table now revokes
+first, an audit confirmed none of the others were over-granted, and the
+consent suite asserts the grant itself rather than only the policy — a grant
+can be widened by a later migration without anyone noticing the trigger was
+the real protection.
+
+**Known divergences**, carried forward and updated:
+
+- **§15 offline operation is still not built**, and remains the largest gap.
+  The 26 August note describes it in full and nothing has changed: reads need a
+  connection, and a client, animal or consultation cannot be created without
+  one. Everything in this note was built on top of that gap, not instead of it.
+- **§13 and §14 billing remain unbuilt**, and are now the only specified
+  product area with nothing behind them.
+- **The Phase 5 clinical work is mobile only.** Surgery, consent, euthanasia
+  and the group figures have no web interface. The web application can read
+  the records through the folder, but cannot create any of them. This is the
+  same shape the web application was in for treatments and preventive care
+  before it caught up, and it is recorded here so it is a decision rather than
+  an oversight.
 
 ### Revision note — 26 August 2026
 
