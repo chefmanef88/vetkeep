@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
 import { SyncBanner } from "@/sync/sync-banner";
 import { AttachmentsSection } from "@/features/practice/attachments-section";
+import { EuthanasiaSection } from "@/features/practice/euthanasia-section";
 import { SurgerySection } from "@/features/practice/surgery-section";
 import { TreatmentsSection } from "@/features/practice/treatments-section";
 import { useQuery } from "@/features/practice/use-query";
@@ -733,6 +734,16 @@ export default function VisitScreen() {
       />
 
       <AttachmentsSection visitId={visit.id} patientId={visit.patient_id} editable={isDraft} />
+
+      {/* Last on the screen and quiet until it has happened, after which the
+          component puts itself first. A terminal act should take a deliberate
+          reach, not sit under the thumb beside "add a treatment". */}
+      <EuthanasiaSection
+        visitId={visit.id}
+        isGroup={visit.patients?.kind === "group"}
+        isFoodAnimal={visit.patients?.purpose !== "pet"}
+        editable={isDraft}
+      />
 
       {isDraft ? (
         <Card>

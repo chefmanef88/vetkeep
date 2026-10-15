@@ -242,7 +242,7 @@ export function SurgerySection({
               one of them not at all. */}
           <ConsentBlock
             visitId={visitId}
-            procedureId={entry.id}
+            subject={{ kind: "surgery", procedureId: entry.id }}
             consents={allConsents.filter((c) => c.surgical_procedure_id === entry.id)}
             editable={editable}
             onChanged={reload}

@@ -45,13 +45,18 @@ export type ConsentRow = {
 
 export function ConsentBlock({
   visitId,
-  procedureId,
+  subject,
   consents,
   editable,
   onChanged
 }: {
   visitId: string;
-  procedureId: string;
+  /**
+   * What is being consented to. A discriminated union rather than two optional
+   * ids, so a caller cannot pass neither — or both, which would be a consent
+   * for two different things at once.
+   */
+  subject: { kind: "surgery"; procedureId: string } | { kind: "euthanasia"; euthanasiaId: string };
   consents: ConsentRow[];
   editable: boolean;
   onChanged: () => void;
@@ -83,8 +88,9 @@ export function ConsentBlock({
       definedArgs({
         p_id: globalThis.crypto.randomUUID(),
         p_visit_id: visitId,
-        p_consent_for: "surgery",
-        p_surgical_procedure_id: procedureId,
+        p_consent_for: subject.kind,
+        p_surgical_procedure_id: subject.kind === "surgery" ? subject.procedureId : undefined,
+        p_euthanasia_record_id: subject.kind === "euthanasia" ? subject.euthanasiaId : undefined,
         p_granted_by_name: name.trim(),
         p_granted_by_capacity: capacity,
         p_method: method,

@@ -52,6 +52,16 @@ export {
   type ConsentMethod
 } from "./consent";
 
+export {
+  EUTHANASIA_METHODS,
+  EUTHANASIA_REASONS,
+  METHOD_LABELS_EUTHANASIA,
+  REASON_LABELS,
+  euthanasiaProblem,
+  type EuthanasiaMethod,
+  type EuthanasiaReason
+} from "./euthanasia";
+
 export { EXAM_SYSTEM_ORDER, examSystemRank, sortByExamOrder, type ExamSystem } from "./exam";
 
 export {
