@@ -98,14 +98,19 @@ export function SurgerySection({
       .order("performed_at", { ascending: true });
     if (rpcError) throw new Error(rpcError.message);
 
-    const { data: consentRows, error: consentError } = await supabase
+    // Fetched beside the procedures but not allowed to take them down with it.
+    // When the consents table was missing from an environment this threw, the
+    // whole query failed, and the surgery list rendered empty — so a schema gap
+    // in one table looked like "no procedures recorded" in another. A consent
+    // that cannot be read is worth saying nothing about; the procedures are
+    // still worth showing.
+    const { data: consentRows } = await supabase
       .from("consents")
       .select(
         "id, surgical_procedure_id, granted_by_name, granted_by_capacity, method, witness_name, risks_explained, granted_at, withdrawn_at, withdrawal_reason"
       )
       .eq("visit_id", visitId)
       .order("granted_at", { ascending: true });
-    if (consentError) throw new Error(consentError.message);
 
     return {
       procedures: (rows ?? []) as ProcedureRow[],

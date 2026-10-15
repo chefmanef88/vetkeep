@@ -29,8 +29,19 @@ export const ANAESTHESIA_LABELS: Record<AnaesthesiaType, string> = {
 export const PROCEDURE_OUTCOMES = ["uneventful", "complication", "died"] as const;
 export type ProcedureOutcome = (typeof PROCEDURE_OUTCOMES)[number];
 
+/**
+ * "Uneventful" is the textbook word for a procedure that went to plan, and it
+ * was the first label here. A veterinarian looking at the form read the three
+ * options and asked where "success" was — which is the right complaint: a
+ * record is filled in by the person doing the work, not by the person who
+ * chose the vocabulary.
+ *
+ * The stored value stays `uneventful`, so nothing already recorded changes
+ * meaning and the database constraint is untouched. Only the word on screen
+ * moves.
+ */
 export const OUTCOME_LABELS: Record<ProcedureOutcome, string> = {
-  uneventful: "Uneventful",
+  uneventful: "Successful",
   complication: "Complication",
   died: "Died"
 };
