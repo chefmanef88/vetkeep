@@ -1,0 +1,8 @@
+{
+  // The tests that tsconfig.json excludes, so excluding them from the Next
+  // build does not quietly stop them being type-checked. `npm run typecheck`
+  // runs this project too.
+  "extends": "./tsconfig.json",
+  "include": ["next-env.d.ts", "**/*.test.ts", "**/*.test.tsx"],
+  "exclude": ["node_modules"]
+}
