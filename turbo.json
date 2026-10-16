@@ -1,6 +1,15 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+
+  // turbo 2.11 writes a managed block into AGENTS.md whenever it detects an AI
+  // agent running a repository-scoped command, and re-adds it after removal.
+  // The file would therefore appear only because of who ran the command, not
+  // because the repository needs it, and show up as an uncommitted change on
+  // every agent-driven run. Off, for the same reason next-env.d.ts is not
+  // committed: generated tooling artefacts stay out of the tree.
+  "agentGuidance": false,
+
   "tasks": {
     "dev": {
       "cache": false,
