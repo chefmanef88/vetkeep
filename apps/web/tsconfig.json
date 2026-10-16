@@ -8,5 +8,15 @@
     "paths": { "@/*": ["./*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+
+  // Tests are excluded from this project because `next build` type-checks it,
+  // and Vercel builds after a production install. vitest is a dev dependency,
+  // so on Vercel the tests are the only files in the app that cannot compile:
+  // TS2307, cannot find module 'vitest'. It passed locally and in the quality
+  // job every time, because both have dev dependencies installed - the preview
+  // deployment was the only place that ever ran the real production tree.
+  //
+  // They are still type-checked. tsconfig.test.json takes them, and the
+  // typecheck script runs both projects.
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }
