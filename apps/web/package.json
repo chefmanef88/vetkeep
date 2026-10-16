@@ -18,9 +18,9 @@
     "@vetkeep/observability": "*",
     "@vetkeep/validation": "*",
     "next": "16.4.0",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
-    "zod": "4.6.5"
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
