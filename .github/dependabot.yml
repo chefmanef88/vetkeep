@@ -8,12 +8,43 @@ updates:
       time: "05:00"
       timezone: "Etc/UTC"
     open-pull-requests-limit: 5
+
+    # The Expo SDK owns these versions, not Dependabot. `expo install` resolves
+    # them from the installed SDK, and the SDK the project is on is the SDK that
+    # Expo Go on a test phone ships — a newer React Native here means a bundle
+    # that store-installed Expo Go will not run.
+    #
+    # Dependabot cannot know that. It proposed react-native 0.87.1 while SDK 57
+    # expects 0.86.3, which is why that PR failed typecheck: 0.87 turned
+    # ScrollView into a function component.
+    #
+    # Keep these current with `npx expo install --fix` in apps/mobile instead.
+    ignore:
+      - dependency-name: react
+      - dependency-name: react-dom
+      - dependency-name: react-native
+      - dependency-name: "react-native-*"
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "@expo/*"
+      - dependency-name: "@types/react"
+      - dependency-name: "@types/react-dom"
+      - dependency-name: "@react-native/*"
+
     groups:
+      # Capped at minor and patch on purpose. Without the cap this group is
+      # defined by dependency-type alone, so a major lands inside a PR titled
+      # "bump the development-tooling group" — which is how typescript 7 and
+      # eslint 10 arrived together in one green-looking changeset. Majors in the
+      # toolchain change what compiles and what lints across every workspace,
+      # and they get their own PR and their own run of the gate.
       development-tooling:
         dependency-type: development
+        update-types: [minor, patch]
       production-minor-patch:
         dependency-type: production
         update-types: [minor, patch]
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

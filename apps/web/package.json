@@ -10,8 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@supabase/ssr": "0.12.0",
-    "@supabase/supabase-js": "2.110.2",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.3",
     "@vetkeep/contracts": "*",
     "@vetkeep/database": "*",
     "@vetkeep/domain": "*",
@@ -20,7 +20,7 @@
     "next": "16.4.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "zod": "4.4.3"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
