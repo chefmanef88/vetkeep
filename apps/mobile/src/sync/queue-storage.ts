@@ -1,8 +1,11 @@
-import type { OutboundMutation, SyncCheckpoint, SyncStorage } from "@vetkeep/sync";
+import type { OutboundMutation, SyncCheckpoint } from "@vetkeep/sync";
 import { MAX_VALUE_LENGTH, chunkedSecureStore } from "@/security/chunked-secure-store";
 
+import type { DeadLetterEntry, QueueStorage } from "./queue-contract";
 // Shared with the one-time adoption that moves these onto the local database.
 import { CHECKPOINT_KEY, DEAD_KEY, QUEUE_KEY } from "./queue-keys";
+
+export type { DeadLetterEntry };
 
 /**
  * Durable storage for the outbound queue.
@@ -22,12 +25,6 @@ import { CHECKPOINT_KEY, DEAD_KEY, QUEUE_KEY } from "./queue-keys";
 
 /** Leaves room for the envelope so a queue at capacity can still be rewritten. */
 export const QUEUE_CAPACITY_BYTES = Math.floor(MAX_VALUE_LENGTH * 0.9);
-
-export interface DeadLetterEntry {
-  mutation: OutboundMutation;
-  reason: string;
-  failedAt: string;
-}
 
 export class QueueAtCapacityError extends Error {
   constructor() {
@@ -54,13 +51,7 @@ async function writeJson(key: string, value: unknown): Promise<void> {
   await chunkedSecureStore.setItem(key, JSON.stringify(value));
 }
 
-export function createQueueStorage(): SyncStorage & {
-  pendingCount(): Promise<number>;
-  pending(): Promise<OutboundMutation[]>;
-  deadLetters(): Promise<DeadLetterEntry[]>;
-  usedBytes(): Promise<number>;
-  clearDeadLetter(mutationId: string): Promise<void>;
-} {
+export function createQueueStorage(): QueueStorage {
   async function readQueue(): Promise<OutboundMutation[]> {
     return readJson<OutboundMutation[]>(QUEUE_KEY, []);
   }

@@ -16,7 +16,7 @@
     "lib": ["ES2022", "DOM"],
     "customConditions": []
   },
-  "include": ["**/*.test.ts", "**/*.test.tsx", "**/*.test-support.ts"],
+  "include": ["**/*.test.ts", "**/*.test.tsx", "**/*.test-support.ts", "vitest.config.mts"],
   // Overrides the inherited exclude, which names exactly these files.
   "exclude": ["node_modules"]
 }

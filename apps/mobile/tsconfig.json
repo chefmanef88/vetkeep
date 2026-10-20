@@ -12,5 +12,11 @@
   // node's types. They are excluded here so the app cannot reach for a node
   // global that does not exist in Hermes. `npm run typecheck` runs both
   // projects, so nothing here goes unchecked.
-  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx", "**/*.test-support.ts"]
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.test-support.ts",
+    "vitest.config.mts"
+  ]
 }

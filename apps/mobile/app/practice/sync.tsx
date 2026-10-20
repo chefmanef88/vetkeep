@@ -10,6 +10,7 @@ import {
 } from "@vetkeep/sync";
 import { supabase } from "@/lib/supabase";
 import { useSync } from "@/sync/sync-provider";
+import type { Backing } from "@/sync/local-queue-storage";
 import { isCodeTakenReason } from "@/sync/code-remedy";
 import { describeEntity, loadConflict, type LoadedConflict } from "@/sync/conflict-loader";
 import { Body, ErrorText, PrimaryButton, SecondaryButton } from "@/ui/components";
@@ -32,6 +33,7 @@ export default function SyncScreen() {
     conflicts,
     deadLetters,
     lastSyncAt,
+    backing,
     flush,
     dismissDeadLetter,
     resendWithNewCode
@@ -195,7 +197,56 @@ export default function SyncScreen() {
           hint="Work saved in the field appears here until it reaches the server."
         />
       ) : null}
+
+      <StorageNote backing={backing} />
     </ScrollScreen>
+  );
+}
+
+/**
+ * Where unsent work is being kept, and whether it is encrypted.
+ *
+ * Here rather than buried in a log because of what it says when the answer is
+ * no. Brief 5.1 requires the local clinical database encrypted, and SQLCipher
+ * is not available in Expo Go — so on a phone running Expo Go the notes waiting
+ * here are sitting in a readable file. Someone deciding whether to take this
+ * app to a real client's animals should be able to see that, and an app that
+ * quietly implied otherwise would be worse than one that says it.
+ *
+ * It also reports the fallback, because a capped keychain queue behaves
+ * differently under a long spell with no signal and that is worth knowing
+ * before the cap is reached rather than after.
+ */
+function StorageNote({ backing }: { backing: Backing | null }) {
+  if (!backing) return null;
+
+  if (backing.kind === "keychain") {
+    return (
+      <View style={styles.storage}>
+        <IconChip name="alert-circle" tone="warn" size={20} />
+        <Muted>
+          {"The local database could not be opened, so this phone is holding unsent work in " +
+            "secure storage instead. It is encrypted, but it holds much less. Send what is " +
+            "waiting when you next have signal."}
+        </Muted>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.storage}>
+      <IconChip
+        name={backing.encrypted ? "lock-closed" : "lock-open"}
+        tone={backing.encrypted ? "good" : "warn"}
+        size={20}
+      />
+      <Muted>
+        {backing.encrypted
+          ? "Unsent work is kept in an encrypted database on this phone."
+          : "Unsent work is kept in a database on this phone that is not encrypted. " +
+            "Encryption needs a build of the app made outside Expo Go."}
+      </Muted>
+    </View>
   );
 }
 
@@ -372,6 +423,14 @@ const styles = StyleSheet.create({
   stateBody: { flex: 1, gap: 2 },
   stateTitle: { ...type.strong, color: palette.ink },
   stateDetail: { ...type.small, fontSize: 12, color: palette.quiet },
+  // Quiet, and last: a standing fact about the phone rather than something to
+  // act on, so it sits below the work and does not compete with it.
+  storage: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: space.sm,
+    paddingTop: space.md
+  },
   conflictRow: {
     flexDirection: "row",
     alignItems: "center",

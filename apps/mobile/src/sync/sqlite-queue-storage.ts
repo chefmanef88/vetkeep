@@ -16,15 +16,13 @@
  * not the case in Expo Go, and what it costs.
  */
 
-import type { OutboundMutation, SyncCheckpoint, SyncStorage } from "@vetkeep/sync";
+import type { OutboundMutation, SyncCheckpoint } from "@vetkeep/sync";
 
 import type { SqliteDatabase } from "@/db/types";
 
-export interface DeadLetterEntry {
-  mutation: OutboundMutation;
-  reason: string;
-  failedAt: string;
-}
+import type { DeadLetterEntry, QueueStorage } from "./queue-contract";
+
+export type { DeadLetterEntry };
 
 interface MutationRow {
   mutation_id: string;
@@ -79,15 +77,9 @@ function toMutation(row: MutationRow): OutboundMutation {
   };
 }
 
-export interface SqliteQueueStorage extends SyncStorage {
-  pendingCount(): Promise<number>;
-  pending(): Promise<OutboundMutation[]>;
-  deadLetters(): Promise<DeadLetterEntry[]>;
-  usedBytes(): Promise<number>;
-  clearDeadLetter(mutationId: string): Promise<void>;
-}
+export type SqliteQueueStorage = QueueStorage;
 
-export function createSqliteQueueStorage(db: SqliteDatabase): SqliteQueueStorage {
+export function createSqliteQueueStorage(db: SqliteDatabase): QueueStorage {
   return {
     async enqueue(mutation) {
       // Re-queuing the same mutation id replaces rather than duplicates: a

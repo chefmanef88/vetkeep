@@ -12,7 +12,9 @@ import { AppState } from "react-native";
 import { pushBatch, type EntityType, type OutboundMutation } from "@vetkeep/sync";
 import { supabase } from "@/lib/supabase";
 import { remedied } from "./code-remedy";
-import { createQueueStorage, QueueAtCapacityError, type DeadLetterEntry } from "./queue-storage";
+import { createLocalQueueStorage, type Backing } from "./local-queue-storage";
+import type { DeadLetterEntry } from "./queue-contract";
+import { QueueAtCapacityError } from "./queue-storage";
 import { createSender } from "./send";
 
 /**
@@ -32,6 +34,15 @@ interface SyncContextValue {
   conflicts: OutboundMutation[];
   deadLetters: DeadLetterEntry[];
   lastSyncAt: string | null;
+  /**
+   * What is holding the queue, once it is known. Null while opening.
+   *
+   * Exposed because two things about it are worth saying out loud rather than
+   * assuming: whether the local clinical database is actually encrypted, which
+   * brief 5.1 requires and Expo Go cannot provide, and whether the database
+   * opened at all or the capped keychain queue is standing in for it.
+   */
+  backing: Backing | null;
   /** Queues a write and tries to send it now. Resolves once it is queued. */
   record: (input: RecordInput) => Promise<{ queued: true; sentNow: boolean }>;
   flush: () => Promise<void>;
@@ -61,12 +72,15 @@ const VERSIONED_TABLES: Partial<Record<EntityType, string>> = {
 };
 
 export function SyncProvider({ children }: { children: ReactNode }) {
-  const storage = useMemo(() => createQueueStorage(), []);
+  // The local database, opened lazily behind this. Every method already
+  // awaited, so nothing below had to change to stop using the keychain.
+  const storage = useMemo(() => createLocalQueueStorage(), []);
   const [pendingCount, setPendingCount] = useState(0);
   const [conflicts, setConflicts] = useState<OutboundMutation[]>([]);
   const [deadLetters, setDeadLetters] = useState<DeadLetterEntry[]>([]);
   const [status, setStatus] = useState<SyncStatus>("idle");
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [backing, setBacking] = useState<Backing | null>(null);
   const running = useRef(false);
 
   const sender = useMemo(
@@ -195,9 +209,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     // Reads the queue that survived the last app launch. The rule guards against
     // cascading renders from a synchronous setState, which this is not: every
     // state update happens after the storage read resolves.
+    //
+    // This is also the call that opens the database and runs the one-time move
+    // of anything the keychain was still holding, because refreshCounts reads
+    // through the same storage. The counts it reports therefore already include
+    // the adopted work rather than jumping a moment later.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refreshCounts();
   }, [refreshCounts]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void storage.backing().then((resolved) => {
+      if (!cancelled) setBacking(resolved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storage]);
 
   useEffect(() => {
     // Coming back to the app is the moment a vet most often has signal again,
@@ -215,6 +244,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       conflicts,
       deadLetters,
       lastSyncAt,
+      backing,
       record,
       flush,
       dismissDeadLetter,
@@ -226,6 +256,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       conflicts,
       deadLetters,
       lastSyncAt,
+      backing,
       record,
       flush,
       dismissDeadLetter,
