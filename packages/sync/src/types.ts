@@ -57,6 +57,9 @@ export type EntityType =
   | "preventive_care"
   | "invoice"
   | "invoice_payment"
+  | "surgical_procedure"
+  | "consent"
+  | "euthanasia_record"
   | "display_preference";
 
 /**

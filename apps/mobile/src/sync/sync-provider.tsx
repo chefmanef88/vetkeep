@@ -68,7 +68,11 @@ const VERSIONED_TABLES: Partial<Record<EntityType, string>> = {
   client: "clients",
   patient: "patients",
   visit_draft: "visits",
-  exam_finding: "physical_exam_findings"
+  exam_finding: "physical_exam_findings",
+  // update_surgical_procedure takes a base_server_version and the server
+  // rejects a stale one, so the sender has to be able to read the current
+  // version back to tell the vet what they are up against.
+  surgical_procedure: "surgical_procedures"
 };
 
 export function SyncProvider({ children }: { children: ReactNode }) {

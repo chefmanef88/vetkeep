@@ -17,7 +17,15 @@ describe("conflict policy", () => {
   it("never resolves medical prose automatically", () => {
     // Brief 15.6: no universal field-level merge, and never last-write-wins for
     // medical prose. This is the single most important rule in the file.
-    const clinical: EntityType[] = ["visit", "visit_draft", "exam_finding", "visit_amendment"];
+    const clinical: EntityType[] = [
+      "visit",
+      "visit_draft",
+      "exam_finding",
+      "visit_amendment",
+      "surgical_procedure",
+      "consent",
+      "euthanasia_record"
+    ];
     for (const entityType of clinical) {
       expect(conflictPolicyFor(entityType)).not.toBe("last_write_wins");
     }
@@ -48,6 +56,34 @@ describe("conflict policy", () => {
       "invoice_payment"
     ] as EntityType[]) {
       expect(conflictPolicyFor(entityType)).toBe("idempotent_never_merge");
+    }
+  });
+
+  it("treats consent and a death as records that cannot be edited", () => {
+    // The database agrees: consents carry an immutability trigger, and
+    // euthanasia_records a unique index giving each animal exactly one death.
+    // A conflict on either has nothing to merge and nothing to ask about, and
+    // a local copy that survived would become a second death for one animal.
+    expect(conflictPolicyFor("consent")).toBe("reject_immutable");
+    expect(conflictPolicyFor("euthanasia_record")).toBe("reject_immutable");
+  });
+
+  it("asks the vet about a stale surgical edit rather than dropping it", () => {
+    // Surgery is the one Phase 5 record that is genuinely updatable:
+    // update_surgical_procedure takes a base_server_version and the server
+    // refuses a stale one. A conflict therefore means the vet typed
+    // anaesthetic doses and an outcome against a version that had moved on.
+    // Discarding that loses clinical detail nobody can reconstruct; merging two
+    // sets of doses would be worse.
+    expect(conflictPolicyFor("surgical_procedure")).toBe("manual_compare");
+    expect(requiresManualResolution(conflictPolicyFor("surgical_procedure"))).toBe(true);
+    expect(discardsLocalChange(conflictPolicyFor("surgical_procedure"))).toBe(false);
+  });
+
+  it("discards the Phase 5 records the vet cannot act on", () => {
+    for (const entityType of ["consent", "euthanasia_record"] as EntityType[]) {
+      expect(discardsLocalChange(conflictPolicyFor(entityType))).toBe(true);
+      expect(requiresManualResolution(conflictPolicyFor(entityType))).toBe(false);
     }
   });
 
