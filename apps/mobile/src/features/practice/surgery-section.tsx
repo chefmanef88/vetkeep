@@ -15,6 +15,12 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { ConsentBlock, type ConsentRow } from "@/features/practice/consent-block";
+import {
+  applyQueuedWithdrawals,
+  queuedConsents,
+  withQueued
+} from "@/features/practice/queued-records";
+import { useSync } from "@/sync/sync-provider";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { Collapsible, OptionChips } from "@/ui/elements";
 import { FieldLabel, Muted, Segmented } from "@/ui/practice-components";
@@ -87,6 +93,10 @@ export function SurgerySection({
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Only the queued consents are read here. The procedure write itself still
+  // goes straight to the server; converting it is its own step, because
+  // surgery's update path carries a base_server_version.
+  const { pending } = useSync();
 
   const { data, reload } = useQuery<{
     procedures: ProcedureRow[];
@@ -122,10 +132,18 @@ export function SurgerySection({
     };
   }, [visitId]);
 
+  // Consent is queued now, so a consent taken with no signal is not on the
+  // server yet. Without this merge, saving one offline would look like it had
+  // been discarded.
+  const queuedSurgicalConsents = queuedConsents(pending, visitId, "surgery");
   const procedures = data?.procedures ?? [];
-  const allConsents = (data?.consents ?? []) as (ConsentRow & {
-    surgical_procedure_id: string | null;
-  })[];
+  const allConsents = applyQueuedWithdrawals(
+    withQueued(
+      (data?.consents ?? []) as (ConsentRow & { surgical_procedure_id: string | null })[],
+      queuedSurgicalConsents
+    ),
+    pending
+  );
   const fields = protocolFieldsFor(anaesthesia);
   // Said while the form is being filled rather than at save time, where the
   // server would say the same thing but only after the tap.

@@ -31,6 +31,17 @@ type SyncStatus = "idle" | "syncing" | "offline" | "attention";
 interface SyncContextValue {
   status: SyncStatus;
   pendingCount: number;
+  /**
+   * Everything queued, payloads included.
+   *
+   * Exposed because a screen that has just queued a write has nowhere else to
+   * read it back from. The server has not seen it, and until the folder reads
+   * from the local database there is no local read model either — but the queue
+   * is a local store holding the exact payload, so a section can render the
+   * record it is waiting to send instead of showing an empty state and
+   * inviting the vet to record it a second time.
+   */
+  pending: OutboundMutation[];
   conflicts: OutboundMutation[];
   deadLetters: DeadLetterEntry[];
   lastSyncAt: string | null;
@@ -80,6 +91,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   // awaited, so nothing below had to change to stop using the keychain.
   const storage = useMemo(() => createLocalQueueStorage(), []);
   const [pendingCount, setPendingCount] = useState(0);
+  const [pending, setPending] = useState<OutboundMutation[]>([]);
   const [conflicts, setConflicts] = useState<OutboundMutation[]>([]);
   const [deadLetters, setDeadLetters] = useState<DeadLetterEntry[]>([]);
   const [status, setStatus] = useState<SyncStatus>("idle");
@@ -109,10 +121,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshCounts = useCallback(async () => {
-    const [pending, dead] = await Promise.all([storage.pending(), storage.deadLetters()]);
-    setPendingCount(pending.length);
+    const [queued, dead] = await Promise.all([storage.pending(), storage.deadLetters()]);
+    setPendingCount(queued.length);
+    setPending(queued);
     // A mutation that came back conflicted stays queued with the reason on it.
-    setConflicts(pending.filter((mutation) => mutation.lastError !== null));
+    setConflicts(queued.filter((mutation) => mutation.lastError !== null));
     setDeadLetters(dead);
   }, [storage]);
 
@@ -245,6 +258,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     () => ({
       status,
       pendingCount,
+      pending,
       conflicts,
       deadLetters,
       lastSyncAt,
@@ -257,6 +271,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     [
       status,
       pendingCount,
+      pending,
       conflicts,
       deadLetters,
       lastSyncAt,
