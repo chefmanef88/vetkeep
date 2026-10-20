@@ -1,6 +1,9 @@
 import type { OutboundMutation, SyncCheckpoint, SyncStorage } from "@vetkeep/sync";
 import { MAX_VALUE_LENGTH, chunkedSecureStore } from "@/security/chunked-secure-store";
 
+// Shared with the one-time adoption that moves these onto the local database.
+import { CHECKPOINT_KEY, DEAD_KEY, QUEUE_KEY } from "./queue-keys";
+
 /**
  * Durable storage for the outbound queue.
  *
@@ -16,10 +19,6 @@ import { MAX_VALUE_LENGTH, chunkedSecureStore } from "@/security/chunked-secure-
  * it could never return. Removing that ceiling is one of the things the local
  * database chosen in the brief's section 15.2 evaluation is for.
  */
-
-const QUEUE_KEY = "vetkeep.sync.outbound";
-const DEAD_KEY = "vetkeep.sync.dead_letter";
-const CHECKPOINT_KEY = "vetkeep.sync.checkpoints";
 
 /** Leaves room for the envelope so a queue at capacity can still be rewritten. */
 export const QUEUE_CAPACITY_BYTES = Math.floor(MAX_VALUE_LENGTH * 0.9);

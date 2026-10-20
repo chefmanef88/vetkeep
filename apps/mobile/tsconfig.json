@@ -6,5 +6,11 @@
     "exactOptionalPropertyTypes": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+
+  // Tests and their support live in tsconfig.test.json, which gives them
+  // node's types. They are excluded here so the app cannot reach for a node
+  // global that does not exist in Hermes. `npm run typecheck` runs both
+  // projects, so nothing here goes unchecked.
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx", "**/*.test-support.ts"]
 }

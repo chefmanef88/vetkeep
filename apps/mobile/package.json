@@ -12,7 +12,7 @@
     "//web": "Design preview only. Renders the screens in a browser so a layout change can be seen without an EAS build. Not a shipping target: native modules degrade or no-op here.",
     "web": "expo start --web --port 8082 --clear",
     "build": "expo export --platform android --output-dir dist/android --max-workers 2",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },
   "dependencies": {
