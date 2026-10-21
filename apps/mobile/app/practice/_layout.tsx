@@ -42,7 +42,8 @@ export default function PracticeLayout() {
         headerRight: () => <MenuButton />
       }}
     >
-      <Stack.Screen name="clients" options={{ title: "Clients" }} />
+      {/* Clients is a tab now, not a screen in this stack. What is left here is
+          the detail a tab leads into: one client, one folder, one record. */}
       <Stack.Screen name="client/[id]" options={{ title: "Client" }} />
       <Stack.Screen name="patient/[id]" options={{ title: "Folder" }} />
       <Stack.Screen name="visit/[id]" options={{ title: "Record" }} />

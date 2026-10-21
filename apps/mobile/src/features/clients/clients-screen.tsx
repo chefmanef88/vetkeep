@@ -7,6 +7,7 @@ import { definedArgs, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { ScrollScreen, FieldLabel } from "@/ui/practice-components";
+import { ScreenTopBar } from "@/ui/screen-top-bar";
 import { Collapsible, EmptyState, ListHeader, PersonRow, SearchField } from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
 import { palette, space, type } from "@/ui/tokens";
@@ -19,7 +20,7 @@ type ClientRow = {
   address: string | null;
 };
 
-export default function ClientsScreen() {
+export function ClientsScreen() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [name, setName] = useState("");
@@ -100,7 +101,10 @@ export default function ClientsScreen() {
   }
 
   return (
-    <ScrollScreen>
+    <ScrollScreen topInset tabBarInset>
+      {/* Menu on the left, as on every tab. The search here is this list's own
+          filter; the control on the home screen searches animals too. */}
+      <ScreenTopBar title="Clients" />
       <SearchField value={search} onChangeText={setSearch} placeholder="Name, code or phone" />
 
       <Collapsible title="Add a client" icon="person-add" open={addOpen} onOpenChange={setAddOpen}>

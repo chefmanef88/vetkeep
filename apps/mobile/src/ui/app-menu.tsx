@@ -116,7 +116,7 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
 
   function go(
     path:
-      | "/practice/clients"
+      | "/clients"
       | "/practice/products"
       | "/practice/sync"
       | "/practice/reminders"
@@ -184,7 +184,7 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
             icon="people-outline"
             label="Clients and folders"
             detail="Everyone you keep records for"
-            onPress={() => go("/practice/clients")}
+            onPress={() => go("/clients")}
           />
           <MenuRow
             icon="medkit-outline"

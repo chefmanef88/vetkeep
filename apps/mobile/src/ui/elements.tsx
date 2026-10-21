@@ -127,11 +127,16 @@ export function CodeChip({ children }: { children: ReactNode }) {
 export function SearchField({
   value,
   onChangeText,
-  placeholder
+  placeholder,
+  // Set on the dedicated search screen, where opening it is the request to
+  // type. Left off the filters that sit above a list the vet may just be
+  // reading, because a keyboard covering half of it would be unasked for.
+  autoFocus = false
 }: {
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
+  autoFocus?: boolean;
 } & Pick<TextInputProps, "placeholder">) {
   return (
     <View style={styles.search}>
@@ -144,6 +149,7 @@ export function SearchField({
         placeholderTextColor={palette.quiet}
         autoCapitalize="none"
         returnKeyType="search"
+        autoFocus={autoFocus}
       />
       {value.length > 0 ? (
         <Pressable
