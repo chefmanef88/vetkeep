@@ -2,6 +2,7 @@ import {
   CLIENT_FIELDS,
   EXAM_FINDING_FIELDS,
   PATIENT_FIELDS,
+  SURGICAL_PROCEDURE_FIELDS,
   VISIT_DRAFT_FIELDS,
   diffFields,
   type EntityType,
@@ -19,14 +20,19 @@ const FIELD_SPECS: Partial<Record<EntityType, typeof VISIT_DRAFT_FIELDS>> = {
   visit_draft: VISIT_DRAFT_FIELDS,
   exam_finding: EXAM_FINDING_FIELDS,
   client: CLIENT_FIELDS,
-  patient: PATIENT_FIELDS
+  patient: PATIENT_FIELDS,
+  // Only the three types with a manual policy need to be here. consent and
+  // euthanasia_record are reject_immutable, so their conflicts are discarded
+  // rather than shown, and a field spec for them would never be read.
+  surgical_procedure: SURGICAL_PROCEDURE_FIELDS
 };
 
 const TABLES: Partial<Record<EntityType, string>> = {
   visit_draft: "visits",
   exam_finding: "physical_exam_findings",
   client: "clients",
-  patient: "patients"
+  patient: "patients",
+  surgical_procedure: "surgical_procedures"
 };
 
 export interface LoadedConflict {
@@ -91,6 +97,13 @@ export function describeEntity(mutation: OutboundMutation): string {
       return "Client details";
     case "patient":
       return "Animal details";
+    case "surgical_procedure":
+      // Named, because a vet with two procedures waiting needs to know which.
+      return `Surgery — ${String(mutation.payload.p_procedure_name ?? "procedure")}`;
+    case "consent":
+      return "Consent";
+    case "euthanasia_record":
+      return "Euthanasia";
     default:
       return mutation.entityType.replace("_", " ");
   }

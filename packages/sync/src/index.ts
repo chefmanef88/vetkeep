@@ -30,6 +30,7 @@ export {
   CLIENT_FIELDS,
   EXAM_FINDING_FIELDS,
   PATIENT_FIELDS,
+  SURGICAL_PROCEDURE_FIELDS,
   VISIT_DRAFT_FIELDS,
   buildResolvedPayload,
   diffFields,

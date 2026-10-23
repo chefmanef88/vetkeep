@@ -5,10 +5,14 @@
   "main": "expo-router/entry",
   "scripts": {
     "dev": "expo start --dev-client",
+    "//go": "Expo Go on a physical phone. --go pins the client so it cannot start in dev-build mode, which is what `dev` does. Needs the phone on the same WiFi as this machine and TCP 8081 allowed inbound.",
+    "go": "expo start --go",
+    "//tunnel": "Expo Go when the phone and this machine are not on the same network, or the WiFi blocks device-to-device traffic. Slower; routes the bundle through ngrok.",
+    "tunnel": "expo start --go --tunnel",
     "//web": "Design preview only. Renders the screens in a browser so a layout change can be seen without an EAS build. Not a shipping target: native modules degrade or no-op here.",
     "web": "expo start --web --port 8082 --clear",
     "build": "expo export --platform android --output-dir dist/android --max-workers 2",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },
   "dependencies": {
@@ -39,6 +43,7 @@
     "expo-secure-store": "~57.0.4",
     "expo-sharing": "~57.0.23",
     "expo-splash-screen": "~57.0.10",
+    "expo-sqlite": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "react": "19.2.3",

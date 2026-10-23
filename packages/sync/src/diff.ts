@@ -124,6 +124,35 @@ export const VISIT_DRAFT_FIELDS: FieldSpec[] = [
   { param: "p_next_review_date", column: "next_review_date", label: "Next review" }
 ];
 
+/**
+ * The fields of update_surgical_procedure, in the order the form asks for them.
+ *
+ * Anaesthesia is listed as its own run of fields rather than one blob, because
+ * a conflict on the maintenance agent is a different question from a conflict
+ * on the outcome, and a vet resolving one should not have to accept the other.
+ */
+export const SURGICAL_PROCEDURE_FIELDS: FieldSpec[] = [
+  { param: "p_procedure_name", column: "procedure_name", label: "Procedure" },
+  { param: "p_procedure_kind", column: "procedure_kind", label: "Type" },
+  { param: "p_animals_treated", column: "animals_treated", label: "Animals treated" },
+  { param: "p_duration_minutes", column: "duration_minutes", label: "Duration in minutes" },
+  { param: "p_anaesthesia", column: "anaesthesia", label: "Anaesthesia" },
+  { param: "p_premedication", column: "premedication", label: "Premedication" },
+  { param: "p_induction_agent", column: "induction_agent", label: "Induction agent" },
+  { param: "p_maintenance_agent", column: "maintenance_agent", label: "Maintenance agent" },
+  { param: "p_analgesia", column: "analgesia", label: "Analgesia" },
+  { param: "p_monitoring", column: "monitoring", label: "Monitoring" },
+  { param: "p_pre_op_assessment", column: "pre_op_assessment", label: "Pre-operative assessment" },
+  {
+    param: "p_post_op_instructions",
+    column: "post_op_instructions",
+    label: "Post-operative instructions"
+  },
+  { param: "p_complications", column: "complications", label: "Complications" },
+  { param: "p_outcome", column: "outcome", label: "Outcome" },
+  { param: "p_assistant", column: "assistant", label: "Assistant" }
+];
+
 export const EXAM_FINDING_FIELDS: FieldSpec[] = [
   { param: "p_status", column: "status", label: "Finding" },
   { param: "p_remarks", column: "remarks", label: "Remarks" }

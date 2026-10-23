@@ -17,6 +17,8 @@ import {
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
+import { queuedTreatments, withQueued } from "@/features/practice/queued-records";
+import { useSync } from "@/sync/sync-provider";
 import { Card, FieldLabel, Muted, Segmented } from "@/ui/practice-components";
 import { Collapsible, OptionChips } from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
@@ -58,7 +60,7 @@ const STRENGTH_UNITS = [
   { value: "mg_per_g", label: "mg/g" }
 ];
 
-type TreatmentRow = {
+export type TreatmentRow = {
   id: string;
   product_name: string;
   dose_value: number;
@@ -128,6 +130,8 @@ export function TreatmentsSection({
   const [noneRequired, setNoneRequired] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Renamed: the local `record` below is this section's own submit handler.
+  const { record: queueWrite, pending } = useSync();
 
   const { data, reload } = useQuery<{
     treatments: TreatmentRow[];
@@ -160,7 +164,10 @@ export function TreatmentsSection({
     };
   }, [visitId]);
 
-  const treatments = data?.treatments ?? [];
+  // Server rows, plus anything still waiting to send. Without the second
+  // half a treatment saved with no signal would vanish from the list the
+  // moment it was saved.
+  const treatments = withQueued(data?.treatments ?? [], queuedTreatments(pending, visitId));
   const carried = data?.carried ?? [];
   const chosen = carried.find((item) => item.id === itemId) ?? null;
   /** The drug list vouches for this one; anything else was read off the bottle. */
@@ -278,40 +285,48 @@ export function TreatmentsSection({
     }
 
     setBusy(true);
-    const { error: rpcError } = await supabase.rpc(
-      "record_treatment",
-      definedArgs({
-        p_id: globalThis.crypto.randomUUID(),
-        p_visit_id: visitId,
-        p_product_name: productName,
-        p_dose_value: optionalNumber(dose),
-        p_dose_unit: doseUnit,
-        p_route: route,
-        p_inventory_item_id: itemId ?? undefined,
-        p_active_ingredient: optionalText(chosen?.active_ingredient ?? ""),
-        p_duration_days: optionalNumber(durationDays),
-        p_animals_treated: isGroup ? optionalNumber(animalsTreated) : undefined,
-        p_meat_withhold_until: optionalText(meatUntil),
-        p_milk_withhold_until: optionalText(milkUntil),
-        p_eggs_withhold_until: optionalText(eggsUntil),
-        // Asserting that nothing is withheld is a deliberate act, never a
-        // default, so it is only sent when the vet ticked it.
-        p_withdrawal_source: noneRequired ? "none_required" : itemId ? "formulary" : "manual",
-        // Kept so the dose can be rechecked later: a volume alone cannot be.
-        p_dose_rate_value: optionalNumber(rateValue),
-        p_dose_rate_unit: optionalNumber(rateValue) !== undefined ? rateUnit : undefined,
-        p_weight_kg_used:
-          optionalNumber(rateValue) !== undefined ? optionalNumber(weightKg) : undefined,
-        p_concentration_value: concentration?.value,
-        p_concentration_unit: concentration?.unit,
-        // Whether the drug list vouched for the strength or it was read off the
-        // bottle. The dose is the same; what can be rechecked later is not.
-        p_concentration_source: concentrationSource ?? undefined
-      })
-    );
-    if (rpcError) {
+    // Queued. A treatment carries a dose and the withholding dates that follow
+    // from it, and both are worked out in front of the animal — losing them to
+    // a dead signal means asking an owner to remember what their cow was given.
+    const id = globalThis.crypto.randomUUID();
+    try {
+      await queueWrite({
+        entityType: "treatment",
+        entityId: id,
+        operation: "create",
+        rpcName: "record_treatment",
+        payload: definedArgs({
+          p_id: id,
+          p_visit_id: visitId,
+          p_product_name: productName,
+          p_dose_value: optionalNumber(dose),
+          p_dose_unit: doseUnit,
+          p_route: route,
+          p_inventory_item_id: itemId ?? undefined,
+          p_active_ingredient: optionalText(chosen?.active_ingredient ?? ""),
+          p_duration_days: optionalNumber(durationDays),
+          p_animals_treated: isGroup ? optionalNumber(animalsTreated) : undefined,
+          p_meat_withhold_until: optionalText(meatUntil),
+          p_milk_withhold_until: optionalText(milkUntil),
+          p_eggs_withhold_until: optionalText(eggsUntil),
+          // Asserting that nothing is withheld is a deliberate act, never a
+          // default, so it is only sent when the vet ticked it.
+          p_withdrawal_source: noneRequired ? "none_required" : itemId ? "formulary" : "manual",
+          // Kept so the dose can be rechecked later: a volume alone cannot be.
+          p_dose_rate_value: optionalNumber(rateValue),
+          p_dose_rate_unit: optionalNumber(rateValue) !== undefined ? rateUnit : undefined,
+          p_weight_kg_used:
+            optionalNumber(rateValue) !== undefined ? optionalNumber(weightKg) : undefined,
+          p_concentration_value: concentration?.value,
+          p_concentration_unit: concentration?.unit,
+          // Whether the drug list vouched for the strength or it was read off the
+          // bottle. The dose is the same; what can be rechecked later is not.
+          p_concentration_source: concentrationSource ?? undefined
+        })
+      });
+    } catch (thrown: unknown) {
       setBusy(false);
-      setError(rpcError.message);
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
       return;
     }
 

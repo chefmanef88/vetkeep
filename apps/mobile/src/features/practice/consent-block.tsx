@@ -10,7 +10,7 @@ import {
   describeConsent
 } from "@vetkeep/domain";
 import { definedArgs, optionalText } from "@vetkeep/contracts";
-import { supabase } from "@/lib/supabase";
+import { useSync } from "@/sync/sync-provider";
 import { FieldLabel } from "@/ui/practice-components";
 import { OptionChips } from "@/ui/elements";
 import { ErrorText, Field } from "@/ui/components";
@@ -71,6 +71,8 @@ export function ConsentBlock({
   const [withdrawReason, setWithdrawReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Renamed: the local `record` below is this block's own submit handler.
+  const { record: queueWrite } = useSync();
 
   const problem = consentProblem({
     grantedByName: name,
@@ -83,26 +85,35 @@ export function ConsentBlock({
   async function record() {
     setBusy(true);
     setError(null);
-    const { error: rpcError } = await supabase.rpc(
-      "record_consent",
-      definedArgs({
-        p_id: globalThis.crypto.randomUUID(),
-        p_visit_id: visitId,
-        p_consent_for: subject.kind,
-        p_surgical_procedure_id: subject.kind === "surgery" ? subject.procedureId : undefined,
-        p_euthanasia_record_id: subject.kind === "euthanasia" ? subject.euthanasiaId : undefined,
-        p_granted_by_name: name.trim(),
-        p_granted_by_capacity: capacity,
-        p_method: method,
-        p_witness_name: optionalText(witness),
-        p_risks_explained: risks.trim()
-      })
-    );
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+    // Queued, like the procedure it consents to. A consent taken in a yard
+    // with no signal is still a consent, and the owner standing there has
+    // already said yes.
+    const id = globalThis.crypto.randomUUID();
+    try {
+      await queueWrite({
+        entityType: "consent",
+        entityId: id,
+        operation: "create",
+        rpcName: "record_consent",
+        payload: definedArgs({
+          p_id: id,
+          p_visit_id: visitId,
+          p_consent_for: subject.kind,
+          p_surgical_procedure_id: subject.kind === "surgery" ? subject.procedureId : undefined,
+          p_euthanasia_record_id: subject.kind === "euthanasia" ? subject.euthanasiaId : undefined,
+          p_granted_by_name: name.trim(),
+          p_granted_by_capacity: capacity,
+          p_method: method,
+          p_witness_name: optionalText(witness),
+          p_risks_explained: risks.trim()
+        })
+      });
+    } catch (thrown: unknown) {
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
+      setBusy(false);
       return;
     }
+    setBusy(false);
     setName("");
     setWitness("");
     setRisks("");
@@ -115,15 +126,24 @@ export function ConsentBlock({
   async function withdraw(id: string) {
     setBusy(true);
     setError(null);
-    const { error: rpcError } = await supabase.rpc("withdraw_consent", {
-      p_id: id,
-      p_reason: withdrawReason.trim()
-    });
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+    // Also queued, and the ordering takes care of itself: the queue sends
+    // oldest first, so a consent withdrawn before it was ever sent goes out as
+    // the create and then the withdrawal, in that order, and the server sees
+    // the same sequence the vet performed.
+    try {
+      await queueWrite({
+        entityType: "consent",
+        entityId: id,
+        operation: "update",
+        rpcName: "withdraw_consent",
+        payload: { p_id: id, p_reason: withdrawReason.trim() }
+      });
+    } catch (thrown: unknown) {
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
+      setBusy(false);
       return;
     }
+    setBusy(false);
     setWithdrawing(null);
     setWithdrawReason("");
     onChanged();

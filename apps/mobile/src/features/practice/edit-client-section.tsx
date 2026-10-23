@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { definedArgs, optionalText } from "@vetkeep/contracts";
-import { supabase } from "@/lib/supabase";
+import { useSync } from "@/sync/sync-provider";
 import { FieldLabel } from "@/ui/practice-components";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
 import { fonts, hairline, palette, space, type } from "@/ui/tokens";
@@ -51,35 +51,45 @@ export function EditClientSection({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { record: queueWrite } = useSync();
 
   async function save() {
     setError(null);
     setBusy(true);
 
-    const { error: rpcError } = await supabase.rpc(
-      "update_client",
-      definedArgs({
-        p_id: client.id,
-        p_name: name,
-        p_phone_display: phoneDisplay,
-        p_phone_e164: phoneE164,
-        p_whatsapp_display: optionalText(whatsappDisplay),
-        p_whatsapp_e164: optionalText(whatsappE164),
-        p_email: optionalText(email),
-        p_address: optionalText(address),
-        p_notes: optionalText(notes),
-        p_communication_consent: client.communication_consent,
-        // The version this form was built from. A stale write is refused rather
-        // than applied over a correction made on another device.
-        p_base_server_version: client.server_version
-      })
-    );
-
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+    // Queued, carrying the version the form was built from. A phone number
+    // corrected at the client's gate is worth as much as one corrected at a
+    // desk, and the vet is more often at the gate.
+    try {
+      await queueWrite({
+        entityType: "client",
+        entityId: client.id,
+        operation: "update",
+        rpcName: "update_client",
+        baseServerVersion: client.server_version,
+        payload: definedArgs({
+          p_id: client.id,
+          p_name: name,
+          p_phone_display: phoneDisplay,
+          p_phone_e164: phoneE164,
+          p_whatsapp_display: optionalText(whatsappDisplay),
+          p_whatsapp_e164: optionalText(whatsappE164),
+          p_email: optionalText(email),
+          p_address: optionalText(address),
+          p_notes: optionalText(notes),
+          p_communication_consent: client.communication_consent,
+          // The version this form was built from. A stale write is refused rather
+          // than applied over a correction made on another device.
+          p_base_server_version: client.server_version
+        })
+      });
+    } catch (thrown: unknown) {
+      setBusy(false);
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
       return;
     }
+
+    setBusy(false);
     // Closing is the confirmation. A note that outlives the action is worse
     // than none, because it is still there when the vet returns later.
     setOpen(false);

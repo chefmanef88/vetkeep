@@ -37,6 +37,26 @@ const POLICIES: Record<EntityType, ConflictPolicy> = {
   invoice: "idempotent_never_merge",
   invoice_payment: "idempotent_never_merge",
 
+  // Consent is immutable in the database from the moment it is given: the
+  // substance cannot be edited, only withdrawn, because the one party with an
+  // interest in rewriting what was agreed is the one holding the pen. A
+  // conflicting edit has nothing to merge and nothing to ask about.
+  consent: "reject_immutable",
+
+  // There is one death per animal and a unique index that enforces it. A
+  // conflict here means the record already exists, almost always sent from the
+  // vet's other device, and the local copy must be dropped rather than become a
+  // second death for the same animal.
+  euthanasia_record: "reject_immutable",
+
+  // Not immutable, and that is the point. update_surgical_procedure takes a
+  // base_server_version and the server rejects a stale one, so a conflict means
+  // the vet typed anaesthetic doses and an outcome against a version someone
+  // else had already moved on from. Discarding that silently is the exact
+  // failure the comment at the top of this file is about, and merging two sets
+  // of doses would be worse. So it goes to the vet, with both versions shown.
+  surgical_procedure: "manual_compare",
+
   display_preference: "last_write_wins"
 };
 

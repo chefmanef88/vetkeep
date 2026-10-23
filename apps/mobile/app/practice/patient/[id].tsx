@@ -140,10 +140,16 @@ export default function PatientFolderScreen() {
     const recordId = globalThis.crypto.randomUUID();
     // No appointment is involved. A record is created by the act of attending.
     //
-    // Sent straight to the server, so starting a record needs a connection.
-    // The reference is minted here so it exists from the moment the record
-    // does, which is what queued creation would need, but the create itself is
-    // not queued — see §15 in the brief.
+    // Still sent straight to the server, and the last clinical write that is.
+    // Queueing it is not the hard part — the reference is already minted here,
+    // as queued creation needs. The problem is the line below: this navigates
+    // straight into the record, and that screen reads the visit, its findings
+    // and its treatments from the server. Queue the create without a local
+    // read model and the vet lands on a blank screen having been told the
+    // record was started.
+    //
+    // So it waits for the read side of §15 rather than becoming a worse
+    // failure than the honest one it is now.
     //
     // Retried on the rare chance that reference is already taken, which is only
     // safe because it has not yet been shown to anyone.

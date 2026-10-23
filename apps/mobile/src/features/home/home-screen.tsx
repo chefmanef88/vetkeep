@@ -4,12 +4,12 @@ import { purposeLabel, speciesProfile } from "@vetkeep/domain";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { useSync } from "@/sync/sync-provider";
-import { PrimaryButton } from "@/ui/components";
 import { ScrollScreen } from "@/ui/practice-components";
 import { EmptyState, ListHeader, PageHeader, PersonRow, StatTile } from "@/ui/elements";
 import { useSession } from "@/auth/session-provider";
-import { MenuButton } from "@/ui/app-menu";
+import { ScreenTopBar, SearchAction } from "@/ui/screen-top-bar";
 import { radius, space } from "@/ui/tokens";
+import { Showcase } from "./showcase";
 
 type RecentFolder = {
   id: string;
@@ -80,13 +80,12 @@ export function HomeScreen() {
   const needsAttention = conflicts.length + deadLetters.length;
 
   return (
-    <ScrollScreen topInset>
-      {/* Home is the root, so nothing owns the leading edge and the menu can
-          sit where it was asked for. Sub-screens keep the back arrow there and
-          carry the menu on the trailing edge instead. */}
-      <View style={styles.topBar}>
-        <MenuButton />
-      </View>
+    <ScrollScreen topInset tabBarInset>
+      {/* Menu stays on the left, where it was. Finding a client or an animal
+          used to be a full-width button halfway down the page; it is the most
+          frequent act in the application, so it moves to the corner a thumb
+          reaches without reading anything. */}
+      <ScreenTopBar action={<SearchAction onPress={() => router.push("/search")} />} />
 
       <PageHeader
         title={`${greeting()}, ${firstName(profile?.full_name)}`}
@@ -97,13 +96,18 @@ export function HomeScreen() {
         })}
       />
 
+      {/* The middle of the page. Loops without end, pauses under a finger, and
+          holds the one slot reserved for something that is not the vet's own
+          records. */}
+      <Showcase />
+
       <View style={styles.statRow}>
         <StatTile
           icon="folder-open"
           label="Folders"
           value={folderCount ?? "—"}
           tone="brand"
-          onPress={() => router.push("/practice/clients")}
+          onPress={() => router.push("/animals")}
         />
         <StatTile
           icon={needsAttention > 0 ? "alert-circle" : "cloud-done"}
@@ -113,13 +117,6 @@ export function HomeScreen() {
           onPress={() => router.push("/practice/sync")}
         />
       </View>
-
-      {/* Finding the folder is the act that starts everything, so it is the
-          primary action. There is nothing to "start": the day is not booked. */}
-      <PrimaryButton
-        label="Find a client or animal"
-        onPress={() => router.push("/practice/clients")}
-      />
 
       {recent && recent.length > 0 ? (
         <>
@@ -153,7 +150,6 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  topBar: { flexDirection: "row", marginLeft: -space.sm },
   statRow: { flexDirection: "row", gap: space.md },
   list: { borderRadius: radius, overflow: "hidden" }
 });
