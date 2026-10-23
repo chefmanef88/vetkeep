@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SPECIES, speciesProfile } from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
-import { supabase } from "@/lib/supabase";
+import { useSync } from "@/sync/sync-provider";
 import { FieldLabel, Segmented } from "@/ui/practice-components";
 import { OptionChips } from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
@@ -79,37 +79,46 @@ export function EditPatientSection({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { record: queueWrite } = useSync();
 
   async function save() {
     setError(null);
     setBusy(true);
 
-    const { error: rpcError } = await supabase.rpc(
-      "update_patient",
-      definedArgs({
-        p_id: patient.id,
-        p_name: name,
-        p_species: species,
-        p_kind: patient.kind,
-        p_purpose: patient.purpose,
-        p_sex: isGroup ? undefined : sex,
-        p_breed: optionalText(breed),
-        p_date_of_birth: optionalText(dob),
-        p_date_of_birth_precision: optionalText(precision),
-        p_color_markings: optionalText(markings),
-        p_microchip_id: optionalText(microchip),
-        p_ear_tag: optionalText(earTag),
-        p_head_count: isGroup ? optionalNumber(headCount) : undefined,
-        p_status: patient.status,
-        p_base_server_version: patient.server_version
-      })
-    );
-
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+    // Queued, carrying the version the form was built from. Standing details
+    // are corrected as the vet learns them, which is in front of the animal.
+    try {
+      await queueWrite({
+        entityType: "patient",
+        entityId: patient.id,
+        operation: "update",
+        rpcName: "update_patient",
+        baseServerVersion: patient.server_version,
+        payload: definedArgs({
+          p_id: patient.id,
+          p_name: name,
+          p_species: species,
+          p_kind: patient.kind,
+          p_purpose: patient.purpose,
+          p_sex: isGroup ? undefined : sex,
+          p_breed: optionalText(breed),
+          p_date_of_birth: optionalText(dob),
+          p_date_of_birth_precision: optionalText(precision),
+          p_color_markings: optionalText(markings),
+          p_microchip_id: optionalText(microchip),
+          p_ear_tag: optionalText(earTag),
+          p_head_count: isGroup ? optionalNumber(headCount) : undefined,
+          p_status: patient.status,
+          p_base_server_version: patient.server_version
+        })
+      });
+    } catch (thrown: unknown) {
+      setBusy(false);
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
       return;
     }
+
+    setBusy(false);
     // Closing is the confirmation. A note that outlives the action is worse
     // than none, because it is still there when the vet returns later.
     setOpen(false);

@@ -4,7 +4,6 @@ import { ActivityIndicator, Linking, StyleSheet, Text, View } from "react-native
 import {
   PURPOSES,
   allowsGroup,
-  callWithFreshCode,
   generatePatientCode,
   purposeLabel,
   speciesProfile,
@@ -15,6 +14,7 @@ import {
 } from "@vetkeep/domain";
 import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
+import { useSync } from "@/sync/sync-provider";
 import { useQuery } from "@/features/practice/use-query";
 import { EditClientSection, type EditableClient } from "@/features/practice/edit-client-section";
 import { resolveDateOfBirth, type DobMode } from "@/features/practice/patient-dob";
@@ -111,6 +111,7 @@ export default function ClientScreen() {
   const [housing, setHousing] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { record: queueWrite } = useSync();
   const [addOpen, setAddOpen] = useState(false);
 
   const profile = speciesProfile(species);
@@ -207,17 +208,24 @@ export default function ClientScreen() {
     setBusy(true);
     const patientId = globalThis.crypto.randomUUID();
 
-    // Sent straight to the server: adding an animal needs a connection, and is
-    // not queued. See §15 in the brief.
+    // Both halves are queued, and the order looks after itself: the queue sends
+    // oldest first, so the animal is created before the link that gives it an
+    // owner. That also retires the half-succeeded case below — either both are
+    // queued or neither is, and a vet in a yard is not left holding an animal
+    // with no owner.
     //
-    // Retried on the rare chance the code is already taken; it has been shown
-    // to nobody yet, so a replacement is invisible.
-    const { error: patientError } = await callWithFreshCode(generatePatientCode, (code) =>
-      supabase.rpc(
-        "create_patient",
-        definedArgs({
+    // The code is not retried in a loop any more: offline there is nobody to
+    // say it is taken. If the server rejects it the queue dead-letters it with
+    // a remedy the sync screen offers.
+    try {
+      await queueWrite({
+        entityType: "patient",
+        entityId: patientId,
+        operation: "create",
+        rpcName: "create_patient",
+        payload: definedArgs({
           p_id: patientId,
-          p_patient_code: code,
+          p_patient_code: generatePatientCode(),
           p_name: name,
           p_species: species,
           p_kind: kind,
@@ -236,28 +244,27 @@ export default function ClientScreen() {
           p_group_age_weeks: isGroup ? optionalNumber(groupAgeWeeks) : undefined,
           p_housing: isGroup ? optionalText(housing) : undefined
         })
-      )
-    );
-    if (patientError) {
-      setBusy(false);
-      setError(patientError.message);
-      return;
-    }
+      });
 
-    const { error: ownerError } = await supabase.rpc("create_patient_owner", {
-      p_id: globalThis.crypto.randomUUID(),
-      p_patient_id: patientId,
-      p_client_id: String(id),
-      p_is_primary: true
-    });
-    setBusy(false);
-    if (ownerError) {
-      // The animal exists but is unowned. Say which half succeeded rather than
-      // implying nothing was saved.
-      setError(`Saved the animal, but could not link it to this client: ${ownerError.message}`);
-      reload();
+      const ownerId = globalThis.crypto.randomUUID();
+      await queueWrite({
+        entityType: "patient_owner",
+        entityId: ownerId,
+        operation: "create",
+        rpcName: "create_patient_owner",
+        payload: {
+          p_id: ownerId,
+          p_patient_id: patientId,
+          p_client_id: String(id),
+          p_is_primary: true
+        }
+      });
+    } catch (thrown: unknown) {
+      setBusy(false);
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
       return;
     }
+    setBusy(false);
 
     resetForm();
     // Shut only when both halves succeeded. The partial failure above leaves it

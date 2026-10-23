@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PARASITE_TARGETS, parasiteLabel } from "@vetkeep/domain";
 import { definedArgs, optionalText } from "@vetkeep/contracts";
-import { supabase } from "@/lib/supabase";
+import { useSync } from "@/sync/sync-provider";
 import { FieldLabel } from "@/ui/practice-components";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
 import { fonts, hairline, palette, radiusControl, radiusPill, space, type } from "@/ui/tokens";
@@ -43,6 +43,7 @@ export function PreventiveEdit({ entry, onSaved }: { entry: EditableEntry; onSav
   const [dose, setDose] = useState(entry.dose ?? "");
   const [nextDue, setNextDue] = useState(entry.next_due_date ?? "");
   const [parasites, setParasites] = useState<string[]>(entry.target_parasites ?? []);
+  const { record: queueWrite } = useSync();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,28 +75,38 @@ export function PreventiveEdit({ entry, onSaved }: { entry: EditableEntry; onSav
     setError(null);
     setBusy(true);
 
-    const { error: rpcError } = await supabase.rpc(
-      "update_preventive_care",
-      definedArgs({
-        p_id: entry.id,
-        p_product_name: productName,
-        p_date_given: dateGiven,
-        // Carried through unchanged: the server requires it for a vaccination
-        // and refuses it for anything else.
-        p_vaccine_type: entry.vaccine_type ?? undefined,
-        p_batch_lot_number: optionalText(batch),
-        p_dose: optionalText(dose),
-        p_next_due_date: optionalText(nextDue),
-        p_target_parasites: isParasiteControl && parasites.length > 0 ? parasites : undefined,
-        p_base_server_version: entry.server_version
-      })
-    );
-
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+    // Queued, and carrying the version it was edited against. The server
+    // refuses a stale one, and the queue's policy for preventive care is
+    // idempotent-never-merge — so a correction made twice is a no-op rather
+    // than two doses.
+    try {
+      await queueWrite({
+        entityType: "preventive_care",
+        entityId: entry.id,
+        operation: "update",
+        rpcName: "update_preventive_care",
+        baseServerVersion: entry.server_version,
+        payload: definedArgs({
+          p_id: entry.id,
+          p_product_name: productName,
+          p_date_given: dateGiven,
+          // Carried through unchanged: the server requires it for a vaccination
+          // and refuses it for anything else.
+          p_vaccine_type: entry.vaccine_type ?? undefined,
+          p_batch_lot_number: optionalText(batch),
+          p_dose: optionalText(dose),
+          p_next_due_date: optionalText(nextDue),
+          p_target_parasites: isParasiteControl && parasites.length > 0 ? parasites : undefined,
+          p_base_server_version: entry.server_version
+        })
+      });
+    } catch (thrown: unknown) {
+      setBusy(false);
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
       return;
     }
+
+    setBusy(false);
     setOpen(false);
     onSaved();
   }

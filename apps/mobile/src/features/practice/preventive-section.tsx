@@ -17,6 +17,8 @@ import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { PreventiveEdit } from "@/features/practice/preventive-edit";
 import { useQuery } from "@/features/practice/use-query";
+import { queuedPreventive, withQueued } from "@/features/practice/queued-records";
+import { useSync } from "@/sync/sync-provider";
 import { FieldLabel, Segmented } from "@/ui/practice-components";
 import { Collapsible, OptionChips } from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
@@ -30,7 +32,7 @@ import { fonts, hairline, palette, radiusControl, radiusPill, space, type } from
  * vaccine is chosen from a list and a dewormer is typed.
  */
 
-type PreventiveRow = {
+export type PreventiveRow = {
   id: string;
   kind: string;
   target_parasites: string[] | null;
@@ -93,6 +95,8 @@ export function PreventiveSection({
   const [animalsTreated, setAnimalsTreated] = useState("");
   const [dateGiven, setDateGiven] = useState(isoToday());
   const [nextDue, setNextDue] = useState("");
+  // Renamed: the local `record` below is this section's own submit handler.
+  const { record: queueWrite, pending } = useSync();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +113,9 @@ export function PreventiveSection({
     return (rows ?? []) as PreventiveRow[];
   }, [patientId]);
 
-  const history = data ?? [];
+  // Server rows plus anything waiting to send, so a vaccination given with no
+  // signal does not disappear the moment it is saved.
+  const history = withQueued(data ?? [], queuedPreventive(pending, patientId));
   // Counted separately, because they are not the same claim. Saying "3 due"
   // about doses that are weeks away is simply untrue, and a header that cries
   // wolf is one a vet stops reading.
@@ -183,30 +189,39 @@ export function PreventiveSection({
     }
 
     setBusy(true);
-    const { error: rpcError } = await supabase.rpc(
-      "record_preventive_care",
-      definedArgs({
-        p_id: globalThis.crypto.randomUUID(),
-        p_patient_id: patientId,
-        p_kind: kind,
-        p_product_name: productName,
-        p_date_given: dateGiven,
-        p_vaccine_type: isVaccination ? (vaccineType ?? undefined) : undefined,
-        p_manufacturer: optionalText(manufacturer),
-        p_batch_lot_number: optionalText(batch),
-        p_dose: optionalText(dose),
-        p_route: route,
-        p_animals_treated: isGroup ? optionalNumber(animalsTreated) : undefined,
-        p_next_due_date: optionalText(nextDue),
-        // Only ever sent for parasite control; the server refuses it otherwise.
-        p_target_parasites: isParasiteControl && parasites.length > 0 ? parasites : undefined
-      })
-    );
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+    // Queued. A vaccination is given on the farm and its next-due date is what
+    // a reminder is built from later; a dead signal at the moment of giving it
+    // should not cost the record or the date.
+    const id = globalThis.crypto.randomUUID();
+    try {
+      await queueWrite({
+        entityType: "preventive_care",
+        entityId: id,
+        operation: "create",
+        rpcName: "record_preventive_care",
+        payload: definedArgs({
+          p_id: id,
+          p_patient_id: patientId,
+          p_kind: kind,
+          p_product_name: productName,
+          p_date_given: dateGiven,
+          p_vaccine_type: isVaccination ? (vaccineType ?? undefined) : undefined,
+          p_manufacturer: optionalText(manufacturer),
+          p_batch_lot_number: optionalText(batch),
+          p_dose: optionalText(dose),
+          p_route: route,
+          p_animals_treated: isGroup ? optionalNumber(animalsTreated) : undefined,
+          p_next_due_date: optionalText(nextDue),
+          // Only ever sent for parasite control; the server refuses it otherwise.
+          p_target_parasites: isParasiteControl && parasites.length > 0 ? parasites : undefined
+        })
+      });
+    } catch (thrown: unknown) {
+      setBusy(false);
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
       return;
     }
+    setBusy(false);
     reset();
     reload();
   }
@@ -282,7 +297,12 @@ export function PreventiveSection({
                     server_version: entry.server_version,
                     // Standing on its own or on a draft it is correctable; signed with
                     // a consultation it is part of a signed record.
-                    locked: entry.visits !== null && entry.visits.workflow_status !== "draft"
+                    // A record still waiting to send cannot be corrected: an
+                    // edit would carry a base version the server never issued,
+                    // and would be refused as stale once the create lands.
+                    locked:
+                      "pendingSend" in entry ||
+                      (entry.visits !== null && entry.visits.workflow_status !== "draft")
                   }}
                   onSaved={reload}
                 />

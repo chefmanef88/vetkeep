@@ -21,6 +21,9 @@ import type { OutboundMutation } from "@vetkeep/sync";
 
 import type { ConsentRow } from "./consent-block";
 import type { EuthanasiaRow } from "./euthanasia-section";
+import type { PreventiveRow } from "./preventive-section";
+import type { ProcedureRow } from "./surgery-section";
+import type { TreatmentRow } from "./treatments-section";
 
 /** A record rebuilt from the queue rather than read from the server. */
 export type Queued<T> = T & { pendingSend: true };
@@ -148,6 +151,173 @@ export function applyQueuedWithdrawals<
       withdrawal_reason: typeof reason === "string" && reason.length > 0 ? reason : null
     };
   });
+}
+
+function number(value: unknown): number | null {
+  return typeof value === "number" ? value : null;
+}
+
+function strings(value: unknown): string[] | null {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? (value as string[])
+    : null;
+}
+
+/**
+ * Treatments waiting to send.
+ *
+ * A dose is the one thing here that cannot be reconstructed from anything else,
+ * so a payload without a usable one is skipped rather than shown as a treatment
+ * of zero. The form refuses to queue without it, so this is a guard against a
+ * row written by a build that is no longer running, not against the current one.
+ */
+export function queuedTreatments(
+  pending: readonly OutboundMutation[],
+  visitId: string
+): Queued<TreatmentRow>[] {
+  const rows: Queued<TreatmentRow>[] = [];
+
+  for (const mutation of pending) {
+    if (mutation.rpcName !== "record_treatment") continue;
+    if (mutation.payload.p_visit_id !== visitId) continue;
+
+    const dose = number(mutation.payload.p_dose_value);
+    if (dose === null) continue;
+
+    const payload = mutation.payload;
+    rows.push({
+      id: text(payload.p_id),
+      product_name: text(payload.p_product_name),
+      dose_value: dose,
+      dose_unit: text(payload.p_dose_unit),
+      route: text(payload.p_route),
+      // Set by the server. The time it was queued is when the animal was
+      // actually treated, which is what the column means.
+      administered_at: queuedAt(mutation),
+      duration_days: number(payload.p_duration_days),
+      animals_treated: number(payload.p_animals_treated),
+      meat_withhold_until: optional(payload.p_meat_withhold_until),
+      milk_withhold_until: optional(payload.p_milk_withhold_until),
+      eggs_withhold_until: optional(payload.p_eggs_withhold_until),
+      withdrawal_source: text(payload.p_withdrawal_source),
+      pendingSend: true
+    });
+  }
+
+  return rows;
+}
+
+/**
+ * Clients added but not yet sent.
+ *
+ * Listed so a client added with no signal can still have an animal added under
+ * them: the folder is the point of adding the client at all, and making the vet
+ * wait for a connection between the two halves of one act would be the worst
+ * possible place to stop.
+ */
+export function queuedClients(pending: readonly OutboundMutation[]): Queued<{
+  id: string;
+  client_code: string;
+  name: string;
+  phone_display: string;
+  address: string | null;
+}>[] {
+  return pending
+    .filter((candidate) => candidate.rpcName === "create_client")
+    .map((mutation) => {
+      const payload = mutation.payload;
+      return {
+        id: text(payload.p_id),
+        client_code: text(payload.p_client_code),
+        name: text(payload.p_name),
+        phone_display: text(payload.p_phone_display),
+        address: optional(payload.p_address),
+        pendingSend: true
+      };
+    });
+}
+
+/**
+ * Surgical procedures waiting to send.
+ *
+ * The anaesthetic protocol is the part that matters: premedication, induction,
+ * maintenance and analgesia are written down while the vet still has them in
+ * mind, and none of it can be reconstructed afterwards from the outcome.
+ */
+export function queuedProcedures(
+  pending: readonly OutboundMutation[],
+  visitId: string
+): Queued<ProcedureRow>[] {
+  return pending
+    .filter(
+      (candidate) =>
+        candidate.rpcName === "record_surgical_procedure" &&
+        candidate.payload.p_visit_id === visitId
+    )
+    .map((mutation) => {
+      const payload = mutation.payload;
+      return {
+        id: text(payload.p_id),
+        procedure_name: text(payload.p_procedure_name),
+        procedure_kind: text(payload.p_procedure_kind),
+        anaesthesia: text(payload.p_anaesthesia),
+        animals_treated: number(payload.p_animals_treated),
+        duration_minutes: number(payload.p_duration_minutes),
+        premedication: optional(payload.p_premedication),
+        induction_agent: optional(payload.p_induction_agent),
+        maintenance_agent: optional(payload.p_maintenance_agent),
+        analgesia: optional(payload.p_analgesia),
+        monitoring: optional(payload.p_monitoring),
+        pre_op_assessment: optional(payload.p_pre_op_assessment),
+        post_op_instructions: optional(payload.p_post_op_instructions),
+        complications: optional(payload.p_complications),
+        outcome: text(payload.p_outcome),
+        assistant: optional(payload.p_assistant),
+        performed_at: queuedAt(mutation),
+        pendingSend: true
+      };
+    });
+}
+
+/**
+ * Preventive care waiting to send.
+ *
+ * server_version is 0 because there is no server row to have a version of.
+ * Callers must not offer to edit one of these: an edit would queue an update
+ * carrying a base version the server never issued, and it would be rejected as
+ * stale the moment the create it depends on lands.
+ */
+export function queuedPreventive(
+  pending: readonly OutboundMutation[],
+  patientId: string
+): Queued<PreventiveRow>[] {
+  return pending
+    .filter(
+      (candidate) =>
+        candidate.rpcName === "record_preventive_care" &&
+        candidate.payload.p_patient_id === patientId
+    )
+    .map((mutation) => {
+      const payload = mutation.payload;
+      return {
+        id: text(payload.p_id),
+        kind: text(payload.p_kind),
+        target_parasites: strings(payload.p_target_parasites),
+        vaccine_type: optional(payload.p_vaccine_type),
+        product_name: text(payload.p_product_name),
+        manufacturer: optional(payload.p_manufacturer),
+        batch_lot_number: optional(payload.p_batch_lot_number),
+        dose: optional(payload.p_dose),
+        animals_treated: number(payload.p_animals_treated),
+        // Given by the vet rather than by the server, so unlike the others this
+        // one is in the payload and is the real date.
+        date_given: text(payload.p_date_given),
+        next_due_date: optional(payload.p_next_due_date),
+        server_version: 0,
+        visits: null,
+        pendingSend: true
+      };
+    });
 }
 
 /**

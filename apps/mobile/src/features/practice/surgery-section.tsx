@@ -18,6 +18,7 @@ import { ConsentBlock, type ConsentRow } from "@/features/practice/consent-block
 import {
   applyQueuedWithdrawals,
   queuedConsents,
+  queuedProcedures,
   withQueued
 } from "@/features/practice/queued-records";
 import { useSync } from "@/sync/sync-provider";
@@ -41,7 +42,7 @@ import { fonts, hairline, palette, radiusControl, space, type } from "@/ui/token
  * and the server refuses it there.
  */
 
-type ProcedureRow = {
+export type ProcedureRow = {
   id: string;
   procedure_name: string;
   procedure_kind: string;
@@ -96,7 +97,7 @@ export function SurgerySection({
   // Only the queued consents are read here. The procedure write itself still
   // goes straight to the server; converting it is its own step, because
   // surgery's update path carries a base_server_version.
-  const { pending } = useSync();
+  const { record: queueWrite, pending } = useSync();
 
   const { data, reload } = useQuery<{
     procedures: ProcedureRow[];
@@ -136,7 +137,9 @@ export function SurgerySection({
   // server yet. Without this merge, saving one offline would look like it had
   // been discarded.
   const queuedSurgicalConsents = queuedConsents(pending, visitId, "surgery");
-  const procedures = data?.procedures ?? [];
+  // Server rows plus anything waiting to send, so a procedure recorded with
+  // no signal does not vanish the moment it is saved.
+  const procedures = withQueued(data?.procedures ?? [], queuedProcedures(pending, visitId));
   const allConsents = applyQueuedWithdrawals(
     withQueued(
       (data?.consents ?? []) as (ConsentRow & { surgical_procedure_id: string | null })[],
@@ -171,35 +174,44 @@ export function SurgerySection({
   async function record() {
     setBusy(true);
     setError(null);
-    const { error: rpcError } = await supabase.rpc(
-      "record_surgical_procedure",
-      definedArgs({
-        p_id: globalThis.crypto.randomUUID(),
-        p_visit_id: visitId,
-        p_procedure_name: name.trim(),
-        p_procedure_kind: kind,
-        p_anaesthesia: anaesthesia,
-        // Only sent for a group. The server refuses it on an individual, where
-        // the count is always one.
-        p_animals_treated: isGroup ? optionalNumber(animalsTreated) : undefined,
-        p_duration_minutes: optionalNumber(durationMinutes),
-        p_premedication: optionalText(premedication),
-        p_induction_agent: optionalText(induction),
-        p_maintenance_agent: optionalText(maintenance),
-        p_analgesia: optionalText(analgesia),
-        p_monitoring: optionalText(monitoring),
-        p_pre_op_assessment: optionalText(preOp),
-        p_post_op_instructions: optionalText(postOp),
-        p_complications: optionalText(complications),
-        p_outcome: outcome,
-        p_assistant: optionalText(assistant)
-      })
-    );
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+    // Queued. Surgery in this practice happens on a table in a yard as often
+    // as anywhere else, and the anaesthetic protocol is written down while it
+    // is still in the vet's head.
+    const id = globalThis.crypto.randomUUID();
+    try {
+      await queueWrite({
+        entityType: "surgical_procedure",
+        entityId: id,
+        operation: "create",
+        rpcName: "record_surgical_procedure",
+        payload: definedArgs({
+          p_id: id,
+          p_visit_id: visitId,
+          p_procedure_name: name.trim(),
+          p_procedure_kind: kind,
+          p_anaesthesia: anaesthesia,
+          // Only sent for a group. The server refuses it on an individual, where
+          // the count is always one.
+          p_animals_treated: isGroup ? optionalNumber(animalsTreated) : undefined,
+          p_duration_minutes: optionalNumber(durationMinutes),
+          p_premedication: optionalText(premedication),
+          p_induction_agent: optionalText(induction),
+          p_maintenance_agent: optionalText(maintenance),
+          p_analgesia: optionalText(analgesia),
+          p_monitoring: optionalText(monitoring),
+          p_pre_op_assessment: optionalText(preOp),
+          p_post_op_instructions: optionalText(postOp),
+          p_complications: optionalText(complications),
+          p_outcome: outcome,
+          p_assistant: optionalText(assistant)
+        })
+      });
+    } catch (thrown: unknown) {
+      setBusy(false);
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
       return;
     }
+    setBusy(false);
     reset();
     setAdding(false);
     reload();

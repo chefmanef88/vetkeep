@@ -3,8 +3,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyQueuedWithdrawals,
+  queuedClients,
   queuedConsents,
   queuedEuthanasia,
+  queuedPreventive,
+  queuedProcedures,
+  queuedTreatments,
   withQueued
 } from "./queued-records";
 
@@ -226,5 +230,174 @@ describe("applyQueuedWithdrawals", () => {
     const [row] = applyQueuedWithdrawals([standing], [withdrawal]);
     expect(row?.withdrawn_at).toBe("2026-10-20T09:15:00.000Z");
     expect(row?.withdrawal_reason).toBeNull();
+  });
+});
+
+describe("queuedTreatments", () => {
+  const treatment = {
+    p_id: "t1",
+    p_visit_id: "v1",
+    p_product_name: "Oxytetracycline",
+    p_dose_value: 18.5,
+    p_dose_unit: "ml",
+    p_route: "im",
+    p_withdrawal_source: "formulary",
+    p_meat_withhold_until: "2026-11-03",
+    p_milk_withhold_until: "2026-10-28"
+  };
+
+  it("rebuilds the dose and the dates it commits to", () => {
+    const [row] = queuedTreatments(
+      [queued({ rpcName: "record_treatment", payload: treatment })],
+      "v1"
+    );
+
+    expect(row).toMatchObject({
+      id: "t1",
+      product_name: "Oxytetracycline",
+      dose_value: 18.5,
+      dose_unit: "ml",
+      route: "im",
+      meat_withhold_until: "2026-11-03",
+      milk_withhold_until: "2026-10-28",
+      eggs_withhold_until: null,
+      administered_at: "2026-10-20T09:15:00.000Z",
+      pendingSend: true
+    });
+  });
+
+  it("skips a payload with no usable dose", () => {
+    // A treatment of zero is a different claim from a treatment whose dose was
+    // lost, and showing one as the other would be worse than showing neither.
+    const broken = queued({
+      rpcName: "record_treatment",
+      payload: { ...treatment, p_dose_value: undefined }
+    });
+    expect(queuedTreatments([broken], "v1")).toEqual([]);
+  });
+
+  it("ignores treatments on another consultation", () => {
+    const other = queued({
+      rpcName: "record_treatment",
+      payload: { ...treatment, p_visit_id: "v2" }
+    });
+    expect(queuedTreatments([other], "v1")).toEqual([]);
+  });
+});
+
+describe("queuedPreventive", () => {
+  const vaccination = {
+    p_id: "p1",
+    p_patient_id: "a1",
+    p_kind: "vaccination",
+    p_product_name: "Newcastle HB1",
+    p_date_given: "2026-10-20",
+    p_next_due_date: "2027-04-20",
+    p_target_parasites: ["roundworm", "tapeworm"]
+  };
+
+  it("keeps the date the vet gave rather than the time it was queued", () => {
+    const [row] = queuedPreventive(
+      [queued({ rpcName: "record_preventive_care", payload: vaccination })],
+      "a1"
+    );
+
+    expect(row?.date_given).toBe("2026-10-20");
+    expect(row?.next_due_date).toBe("2027-04-20");
+    expect(row?.target_parasites).toEqual(["roundworm", "tapeworm"]);
+  });
+
+  it("has no server version, because there is no server row", () => {
+    // Callers rely on this to refuse an edit: an update carrying a version the
+    // server never issued would be refused as stale once the create lands.
+    const [row] = queuedPreventive(
+      [queued({ rpcName: "record_preventive_care", payload: vaccination })],
+      "a1"
+    );
+    expect(row?.server_version).toBe(0);
+    expect(row?.visits).toBeNull();
+    expect(row?.pendingSend).toBe(true);
+  });
+
+  it("drops a parasite list that is not strings", () => {
+    const [row] = queuedPreventive(
+      [
+        queued({
+          rpcName: "record_preventive_care",
+          payload: { ...vaccination, p_target_parasites: [1, 2] }
+        })
+      ],
+      "a1"
+    );
+    expect(row?.target_parasites).toBeNull();
+  });
+});
+
+describe("queuedProcedures", () => {
+  it("carries the whole anaesthetic protocol", () => {
+    // None of this can be reconstructed afterwards from the outcome.
+    const [row] = queuedProcedures(
+      [
+        queued({
+          rpcName: "record_surgical_procedure",
+          payload: {
+            p_id: "s1",
+            p_visit_id: "v1",
+            p_procedure_name: "Caesarean section",
+            p_procedure_kind: "therapeutic",
+            p_anaesthesia: "general",
+            p_premedication: "Xylazine 0.1mg/kg",
+            p_induction_agent: "Ketamine",
+            p_maintenance_agent: "Isoflurane",
+            p_analgesia: "Meloxicam",
+            p_outcome: "uneventful"
+          }
+        })
+      ],
+      "v1"
+    );
+
+    expect(row).toMatchObject({
+      id: "s1",
+      procedure_name: "Caesarean section",
+      anaesthesia: "general",
+      premedication: "Xylazine 0.1mg/kg",
+      induction_agent: "Ketamine",
+      maintenance_agent: "Isoflurane",
+      analgesia: "Meloxicam",
+      outcome: "uneventful",
+      pendingSend: true
+    });
+  });
+});
+
+describe("queuedClients", () => {
+  it("lists a client added but not sent", () => {
+    // So an animal can be added under them without waiting for a connection
+    // between the two halves of one act.
+    const [row] = queuedClients([
+      queued({
+        rpcName: "create_client",
+        payload: {
+          p_id: "c9",
+          p_client_code: "VK-C-3E1TA8",
+          p_name: "Ama Boateng",
+          p_phone_display: "024 123 4567"
+        }
+      })
+    ]);
+
+    expect(row).toEqual({
+      id: "c9",
+      client_code: "VK-C-3E1TA8",
+      name: "Ama Boateng",
+      phone_display: "024 123 4567",
+      address: null,
+      pendingSend: true
+    });
+  });
+
+  it("ignores other queued writes", () => {
+    expect(queuedClients([queued({ rpcName: "create_patient" })])).toEqual([]);
   });
 });
