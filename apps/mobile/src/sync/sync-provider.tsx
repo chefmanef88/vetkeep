@@ -11,6 +11,7 @@ import {
 import { AppState } from "react-native";
 import { pushBatch, type EntityType, type OutboundMutation } from "@vetkeep/sync";
 import { supabase } from "@/lib/supabase";
+import { sweepAttachments } from "./attachment-sweeper";
 import { remedied } from "./code-remedy";
 import { createLocalQueueStorage, type Backing } from "./local-queue-storage";
 import type { DeadLetterEntry } from "./queue-contract";
@@ -140,6 +141,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     try {
       const result = await pushBatch(storage, sender, { jitter: Math.random() });
       await refreshCounts();
+
+      // Attachments drain on the same occasions clinical writes do. Nothing
+      // used to drain them at all unless the consultation they belonged to
+      // happened to be open, and a folder photograph belongs to no
+      // consultation, so those were never sent by anyone. Failures here are
+      // the sweeper's own business: the files stay queued and the next flush
+      // tries again.
+      void sweepAttachments().catch(() => undefined);
 
       if (result.retrying > 0) setStatus("offline");
       else if (result.conflicted > 0 || result.deadLettered > 0) setStatus("attention");
