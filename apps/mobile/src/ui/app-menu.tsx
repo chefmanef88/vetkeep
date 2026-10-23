@@ -1,12 +1,24 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode
+} from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "@/auth/session-provider";
 import { useSync } from "@/sync/sync-provider";
 import { supabase } from "@/lib/supabase";
 import { registerCurrentDevice } from "@/device/device-registry";
+import {
+  isSimulatedOffline,
+  setSimulatedOffline,
+  subscribeToSimulatedOffline
+} from "@/dev/offline-switch";
 import { Avatar, IconChip } from "./elements";
 import { fonts, hairline, palette, radius, radiusPill, space, touchTarget, type } from "./tokens";
 
@@ -253,9 +265,57 @@ function AppMenu({ visible, onClose }: { visible: boolean; onClose: () => void }
             tone="danger"
             onPress={() => go("/practice/close-account")}
           />
+
+          <DevOfflineRow onDone={onClose} />
         </ScrollView>
       </View>
     </Modal>
+  );
+}
+
+/**
+ * The offline switch, in the menu because the menu is everywhere.
+ *
+ * It began life on the Profile tab, which turned out to be useless for the one
+ * thing it exists for: reaching it means leaving the screen under test, and
+ * coming back re-mounts that screen and re-reads it from the server. So the
+ * folder a vet was about to work in offline would not reopen, and the test
+ * could never start.
+ *
+ * The menu opens over whatever is already on screen and closes back onto it
+ * without remounting anything, which is exactly what this needs. Closing it is
+ * part of the action: the point is to be returned to the record, now offline.
+ *
+ * Development only — __DEV__ is a constant the bundler replaces, and `expo
+ * export` leaves none of this in a release build.
+ */
+function DevOfflineRow({ onDone }: { onDone: () => void }) {
+  const offline = useSyncExternalStore(
+    subscribeToSimulatedOffline,
+    isSimulatedOffline,
+    isSimulatedOffline
+  );
+
+  if (!__DEV__) return null;
+
+  return (
+    <>
+      <Text style={styles.groupLabel}>Development</Text>
+      <MenuRow
+        icon={offline ? "cloud-offline" : "cloud-done-outline"}
+        label={offline ? "Pretending to be offline" : "Pretend to be offline"}
+        detail={
+          offline
+            ? "Tap to reconnect. Records saved meanwhile are waiting to send."
+            : "Makes the database unreachable. Metro and reloading keep working."
+        }
+        tone={offline ? "danger" : "ink"}
+        onPress={() => {
+          setSimulatedOffline(!offline);
+          onDone();
+        }}
+      />
+    </>
   );
 }
 
