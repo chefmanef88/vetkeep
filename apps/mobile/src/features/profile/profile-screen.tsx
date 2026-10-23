@@ -1,12 +1,19 @@
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { useSyncExternalStore } from "react";
+import { StyleSheet, Switch, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/auth/session-provider";
 import { useSync } from "@/sync/sync-provider";
 import { ScrollScreen } from "@/ui/practice-components";
 import { Avatar, InfoRow, ListHeader, NavTile } from "@/ui/elements";
 import { ScreenTopBar } from "@/ui/screen-top-bar";
-import { palette, radius, space, type } from "@/ui/tokens";
+import {
+  isSimulatedOffline,
+  setSimulatedOffline,
+  subscribeToSimulatedOffline
+} from "@/dev/offline-switch";
+import { hairline, palette, radius, space, type } from "@/ui/tokens";
 
 /**
  * The practice itself: who the records belong to, and the state of the device
@@ -141,7 +148,53 @@ export function ProfileScreen() {
       <Text style={styles.footnote}>
         Signing out and closing your account are in the menu, top left.
       </Text>
+
+      <OfflineSwitch />
     </ScrollScreen>
+  );
+}
+
+/**
+ * Cuts the app off from the database without touching the network.
+ *
+ * Here because this is where someone goes looking for the state of the phone,
+ * and because it has to be somewhere a person can reach while holding the
+ * device — the whole point is to exercise the queue by hand.
+ *
+ * Renders nothing outside development. The hook runs first because hooks have
+ * to run unconditionally, and the check comes after it — which is also why this
+ * is a component rather than a condition at the call site.
+ */
+function OfflineSwitch() {
+  const offline = useSyncExternalStore(
+    subscribeToSimulatedOffline,
+    isSimulatedOffline,
+    isSimulatedOffline
+  );
+
+  if (!__DEV__) return null;
+
+  return (
+    <View style={[styles.devBox, offline && styles.devBoxOn]}>
+      <View style={styles.devHead}>
+        <Ionicons
+          name={offline ? "cloud-offline" : "hammer"}
+          size={18}
+          color={offline ? palette.red : palette.quiet}
+        />
+        <Text style={styles.devTitle}>{offline ? "Pretending to be offline" : "Development"}</Text>
+        <Switch
+          value={offline}
+          onValueChange={setSimulatedOffline}
+          accessibilityLabel="Pretend this phone has no connection"
+        />
+      </View>
+      <Text style={styles.devHint}>
+        {offline
+          ? "The database is unreachable. Records save to this phone and wait. Metro and reloading still work."
+          : "Turn this on to make the database unreachable without turning off the network, which on a tethered phone would take Metro down too."}
+      </Text>
+    </View>
   );
 }
 
@@ -152,5 +205,18 @@ const styles = StyleSheet.create({
   business: { ...type.small, color: palette.quiet },
   group: { borderRadius: radius, overflow: "hidden" },
   tiles: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
-  footnote: { ...type.small, color: palette.quiet, textAlign: "center", marginTop: space.md }
+  footnote: { ...type.small, color: palette.quiet, textAlign: "center", marginTop: space.md },
+  devBox: {
+    marginTop: space.xl,
+    padding: space.lg,
+    borderRadius: radius,
+    borderWidth: hairline,
+    borderColor: palette.line,
+    backgroundColor: palette.surface,
+    gap: space.sm
+  },
+  devBoxOn: { borderColor: palette.red, backgroundColor: palette.redSoft },
+  devHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  devTitle: { ...type.strong, color: palette.ink, flex: 1 },
+  devHint: { ...type.small, color: palette.quiet }
 });
