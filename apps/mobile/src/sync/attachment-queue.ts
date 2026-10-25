@@ -20,6 +20,17 @@ export interface QueuedUpload extends AttachmentUpload {
   label: string;
 }
 
+/**
+ * A photograph of the animal itself rather than one attached to a consultation.
+ *
+ * Told apart by having no visit, which is what makes it a folder photograph in
+ * the first place. Worth a named function rather than the check written out
+ * four times: the one place it was implicit, the uploads were lost.
+ */
+export function isFolderPhoto(upload: QueuedUpload): boolean {
+  return upload.visitId === null && upload.patientId !== null;
+}
+
 async function read(): Promise<QueuedUpload[]> {
   const raw = await chunkedSecureStore.getItem(QUEUE_KEY);
   if (!raw) return [];
@@ -68,5 +79,22 @@ export const attachmentQueue = {
   /** Uploads still needing work, oldest first. */
   async unfinished(): Promise<QueuedUpload[]> {
     return (await read()).filter((upload) => upload.state !== "uploaded");
+  },
+
+  /**
+   * The photograph waiting to become this animal's folder picture, if any.
+   *
+   * Read by the folder so the vet sees the picture they just took while it is
+   * still on the phone. Without it the only feedback is a line of text, and a
+   * photograph taken with no signal looks like one that was not taken.
+   */
+  async folderPhotoFor(patientId: string): Promise<QueuedUpload | null> {
+    const waiting = (await read()).filter(
+      (upload) =>
+        isFolderPhoto(upload) && upload.patientId === patientId && upload.state !== "uploaded"
+    );
+    // The most recent wins: taking another picture before the first has gone
+    // means the second is the one the vet meant to keep.
+    return waiting[waiting.length - 1] ?? null;
   }
 };

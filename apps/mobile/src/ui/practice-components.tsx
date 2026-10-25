@@ -10,6 +10,7 @@ import {
   radiusPill,
   shadowCard,
   space,
+  tabBarHeight,
   touchTarget,
   type
 } from "./tokens";
@@ -33,10 +34,17 @@ export { palette } from "./tokens";
  */
 export function ScrollScreen({
   children,
-  topInset = false
+  topInset = false,
+  tabBarInset = false
 }: {
   children: ReactNode;
   topInset?: boolean;
+  /**
+   * Set on screens inside the tab navigator. The bar floats over the content,
+   * and a ScrollView knows nothing about it, so without this the last row of a
+   * list ends underneath it — visible only on a real phone.
+   */
+  tabBarInset?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   return (
@@ -45,7 +53,7 @@ export function ScrollScreen({
       contentContainerStyle={[
         styles.scrollContent,
         topInset ? { paddingTop: insets.top + space.lg } : null,
-        { paddingBottom: insets.bottom + space.xxxl }
+        { paddingBottom: insets.bottom + space.xxxl + (tabBarInset ? tabBarHeight : 0) }
       ]}
       keyboardShouldPersistTaps="handled"
       // A number pad has no return key, so a field like "minutes" or "head

@@ -91,6 +91,17 @@ export const shadowRaised = {
  */
 export const touchTarget = 52;
 
+/**
+ * The bottom tab bar, above the device's own inset.
+ *
+ * Declared here rather than left to the navigator's default because scrolling
+ * screens have to reserve it: a ScrollView knows nothing about the bar floating
+ * over it, and the last row of a list ending underneath it is the kind of thing
+ * that only shows up on a real phone. Tall enough to clear the touch-target
+ * floor with a label under the icon.
+ */
+export const tabBarHeight = 58;
+
 export const fonts = {
   regular: "Geist_400Regular",
   medium: "Geist_500Medium",

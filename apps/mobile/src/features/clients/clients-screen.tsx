@@ -2,11 +2,14 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { callWithFreshCode, generateClientCode } from "@vetkeep/domain";
+import { generateClientCode } from "@vetkeep/domain";
 import { definedArgs, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
+import { queuedClients, withQueued } from "@/features/practice/queued-records";
+import { useSync } from "@/sync/sync-provider";
 import { ScrollScreen, FieldLabel } from "@/ui/practice-components";
+import { ScreenTopBar } from "@/ui/screen-top-bar";
 import { Collapsible, EmptyState, ListHeader, PersonRow, SearchField } from "@/ui/elements";
 import { ErrorText, Field, PrimaryButton } from "@/ui/components";
 import { palette, space, type } from "@/ui/tokens";
@@ -19,7 +22,7 @@ type ClientRow = {
   address: string | null;
 };
 
-export default function ClientsScreen() {
+export function ClientsScreen() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [name, setName] = useState("");
@@ -30,6 +33,7 @@ export default function ClientsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const { record: queueWrite, pending } = useSync();
 
   const {
     data,
@@ -47,7 +51,9 @@ export default function ClientsScreen() {
   }, []);
 
   const term = search.trim().toLowerCase();
-  const all = data ?? [];
+  // Server rows plus anyone added while waiting to send, so a client added
+  // with no signal is still there to add an animal under.
+  const all = withQueued(data ?? [], queuedClients(pending));
   const visible = all.filter(
     (client) =>
       term === "" ||
@@ -59,34 +65,39 @@ export default function ClientsScreen() {
   async function addClient() {
     setBusy(true);
     setError(null);
-    // Sent straight to the server, so this needs a connection. The id and code
-    // are minted here, which is what offline creation would require, but the
-    // call is not queued and there is no local store to create into — see §15
-    // in the brief, where that gap is recorded.
+    // Queued. The id and the code are minted here, which is what makes that
+    // possible: the client has an identity and a reference before the server
+    // has seen either.
     //
-    // The code is retried on the rare chance it is already taken. Safe here and
-    // nowhere else: this one has existed for a few milliseconds and been shown
-    // to nobody, so replacing it is invisible.
+    // The code is not retried in a loop any more, because offline there is
+    // nobody to say it is taken. One is generated and sent with the write; if
+    // the server does reject it as a duplicate the queue dead-letters it with
+    // a remedy the sync screen offers — which is the better place for that
+    // decision anyway, since by then the vet may have written the reference on
+    // something.
     const clientId = globalThis.crypto.randomUUID();
-    const { error: rpcError } = await callWithFreshCode(generateClientCode, (code) =>
-      supabase.rpc(
-        "create_client",
-        definedArgs({
+    try {
+      await queueWrite({
+        entityType: "client",
+        entityId: clientId,
+        operation: "create",
+        rpcName: "create_client",
+        payload: definedArgs({
           p_id: clientId,
-          p_client_code: code,
+          p_client_code: generateClientCode(),
           p_name: name,
           p_phone_display: phoneDisplay,
           p_phone_e164: phoneE164,
           p_address: optionalText(address),
           p_communication_consent: consent
         })
-      )
-    );
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+      });
+    } catch (thrown: unknown) {
+      setBusy(false);
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
       return;
     }
+    setBusy(false);
     setName("");
     setPhoneDisplay("");
     setPhoneE164("");
@@ -100,7 +111,10 @@ export default function ClientsScreen() {
   }
 
   return (
-    <ScrollScreen>
+    <ScrollScreen topInset tabBarInset>
+      {/* Menu on the left, as on every tab. The search here is this list's own
+          filter; the control on the home screen searches animals too. */}
+      <ScreenTopBar title="Clients" />
       <SearchField value={search} onChangeText={setSearch} placeholder="Name, code or phone" />
 
       <Collapsible title="Add a client" icon="person-add" open={addOpen} onOpenChange={setAddOpen}>

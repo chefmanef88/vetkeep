@@ -1,0 +1,22 @@
+{
+  // The tests, which run in node under vitest rather than in Hermes on a phone.
+  //
+  // Their own project because they need node's types and the app must not have
+  // them: with "node" in the app's types, Buffer.from(...) and __dirname
+  // typecheck happily and then crash on a device. The app and its tests run on
+  // genuinely different platforms, so they get genuinely different lib and
+  // types — which is also what makes `import { DatabaseSync } from "node:sqlite"`
+  // resolve here and nowhere else.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    // DOM stays: the app code these tests import branches on `document` to
+    // choose between the native and web secure stores, so dropping it would
+    // fail on the source rather than on the test.
+    "lib": ["ES2022", "DOM"],
+    "customConditions": []
+  },
+  "include": ["**/*.test.ts", "**/*.test.tsx", "**/*.test-support.ts", "vitest.config.mts"],
+  // Overrides the inherited exclude, which names exactly these files.
+  "exclude": ["node_modules"]
+}

@@ -14,6 +14,13 @@ import { definedArgs, optionalNumber, optionalText } from "@vetkeep/contracts";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@/features/practice/use-query";
 import { ConsentBlock, type ConsentRow } from "@/features/practice/consent-block";
+import {
+  applyQueuedWithdrawals,
+  queuedConsents,
+  queuedEuthanasia,
+  withQueued
+} from "@/features/practice/queued-records";
+import { useSync } from "@/sync/sync-provider";
 import { confirmWithDevice } from "@/security/confirm-with-device";
 import { FieldLabel } from "@/ui/practice-components";
 import { OptionChips } from "@/ui/elements";
@@ -80,6 +87,8 @@ export function EuthanasiaSection({
   const [disposal, setDisposal] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Renamed: `record` below is the euthanasia being displayed, not the verb.
+  const { record: queueWrite, pending } = useSync();
 
   const { data, reload } = useQuery<{
     record: EuthanasiaRow | null;
@@ -112,8 +121,14 @@ export function EuthanasiaSection({
     };
   }, [visitId]);
 
-  const record = data?.record ?? null;
-  const consents = data?.consents ?? [];
+  // The server's row if it has one, otherwise the one waiting in the queue.
+  // Without the fallback a vet with no signal records a euthanasia, this
+  // re-reads, finds nothing, and offers to record one again.
+  const record = data?.record ?? queuedEuthanasia(pending, visitId);
+  const consents = applyQueuedWithdrawals(
+    withQueued(data?.consents ?? [], queuedConsents(pending, visitId, "euthanasia")),
+    pending
+  );
   const problem = euthanasiaProblem({
     reasonDetail: detail,
     method,
@@ -130,26 +145,41 @@ export function EuthanasiaSection({
     if (!ok) return;
 
     setBusy(true);
-    const { error: rpcError } = await supabase.rpc(
-      "record_euthanasia",
-      definedArgs({
-        p_id: globalThis.crypto.randomUUID(),
-        p_visit_id: visitId,
-        p_reason: reason,
-        p_reason_detail: detail.trim(),
-        p_method: method,
-        p_agent: optionalText(agent),
-        p_death_confirmed: confirmed,
-        p_death_confirmed_by: optionalText(confirmedBy),
-        p_animals_count: isGroup ? optionalNumber(count) : undefined,
-        p_carcass_disposal: optionalText(disposal)
-      })
-    );
-    setBusy(false);
-    if (rpcError) {
-      setError(rpcError.message);
+    // Through the queue rather than straight at the server. A euthanasia is
+    // recorded in the one place a vet is least likely to have signal, and it is
+    // the record they may later have to defend — so it is written locally first
+    // and sent when it can be, instead of failing in front of an owner.
+    //
+    // The id is minted here, as it always was, which is what makes that
+    // possible: the record has an identity before the server has seen it.
+    const id = globalThis.crypto.randomUUID();
+    try {
+      await queueWrite({
+        entityType: "euthanasia_record",
+        entityId: id,
+        operation: "create",
+        rpcName: "record_euthanasia",
+        payload: definedArgs({
+          p_id: id,
+          p_visit_id: visitId,
+          p_reason: reason,
+          p_reason_detail: detail.trim(),
+          p_method: method,
+          p_agent: optionalText(agent),
+          p_death_confirmed: confirmed,
+          p_death_confirmed_by: optionalText(confirmedBy),
+          p_animals_count: isGroup ? optionalNumber(count) : undefined,
+          p_carcass_disposal: optionalText(disposal)
+        })
+      });
+    } catch (thrown: unknown) {
+      // Only a failure to queue lands here. A failure to send does not: it
+      // stays queued and the sync screen owns it.
+      setError(thrown instanceof Error ? thrown.message : "Could not save on this phone.");
+      setBusy(false);
       return;
     }
+    setBusy(false);
     setOpen(false);
     reload();
   }

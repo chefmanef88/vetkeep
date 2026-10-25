@@ -1,9 +1,9 @@
+import { Redirect } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "@/auth/session-provider";
 import { AuthScreen } from "@/features/auth/auth-screen";
-import { HomeScreen } from "@/features/home/home-screen";
 import { MfaChallengeScreen } from "@/features/mfa/mfa-challenge-screen";
 import { MfaEnrollScreen } from "@/features/mfa/mfa-enroll-screen";
 import { OnboardingScreen } from "@/features/onboarding/onboarding-screen";
@@ -25,7 +25,12 @@ export default function IndexPage() {
   if (sessionState.mfaState === "enroll") return <MfaEnrollScreen />;
   if (sessionState.mfaState === "challenge") return <MfaChallengeScreen />;
   if (!sessionState.profile) return <OnboardingScreen />;
-  return <HomeScreen />;
+
+  // Everything before this point is a screen with no tab bar: there is nothing
+  // to move between until there is a practice to move around in. Once there is,
+  // the tab group takes over — and it checks the same three conditions itself,
+  // so arriving there by any other route cannot skip them.
+  return <Redirect href="/home" />;
 }
 
 /**

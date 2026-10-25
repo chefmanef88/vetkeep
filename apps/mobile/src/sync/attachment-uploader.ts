@@ -48,7 +48,12 @@ export async function advanceUpload(
           p_original_filename: upload.filename,
           p_mime_type: upload.mimeType,
           p_size_bytes: upload.sizeBytes,
-          p_attachment_type: "photo",
+          // Derived rather than hardcoded. Registering a clip as a photograph
+          // would put it in the wrong place in every list that groups by kind,
+          // and set_patient_photo decides on this field — a video accepted as
+          // a folder picture renders as a broken image everywhere the folder
+          // appears.
+          p_attachment_type: upload.mimeType.startsWith("video/") ? "video" : "photo",
           ...(context.patientId ? { p_patient_id: context.patientId } : {}),
           ...(context.visitId ? { p_visit_id: context.visitId } : {}),
           ...(context.deviceId ? { p_device_id: context.deviceId } : {})
