@@ -3,6 +3,8 @@ import { Alert, Image, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { createUpload, remainingBytes, type AttachmentUpload } from "@vetkeep/sync";
 import { attachmentQueue, type QueuedUpload } from "@/sync/attachment-queue";
+import { AttachmentGrid } from "./attachment-viewer";
+import { useStoredAttachments } from "./use-stored-attachments";
 import { advanceUpload, releaseLocalCopyIfSafe } from "@/sync/attachment-uploader";
 import { ErrorText, PrimaryButton, SecondaryButton } from "@/ui/components";
 import { Card, Muted, Pill, SectionTitle, palette } from "@/ui/practice-components";
@@ -39,6 +41,11 @@ export function AttachmentsSection({
   editable: boolean;
 }) {
   const [uploads, setUploads] = useState<QueuedUpload[]>([]);
+  const {
+    attachments: stored,
+    error: storedError,
+    reload: reloadStored
+  } = useStoredAttachments({ visitId });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,10 +74,14 @@ export function AttachmentsSection({
 
       if (current.state === "uploaded") {
         await releaseLocalCopyIfSafe(current);
+        // The local copy has just been deleted, so the stored list is now the
+        // only thing that can show this file. Without this the photograph
+        // vanishes at the moment it succeeds.
+        reloadStored();
       }
       await refresh();
     },
-    [patientId, refresh, visitId]
+    [patientId, refresh, reloadStored, visitId]
   );
 
   const capture = useCallback(
@@ -92,8 +103,17 @@ export function AttachmentsSection({
       }
 
       const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ["images"],
+        // A photograph cannot show a gait, and gait is what a second opinion is
+        // most often asked about. Lameness, a seizure, the movement of a
+        // bloated rumen, a calf's breathing: all of them are a clip or nothing.
+        mediaTypes: ["images", "videos"],
         quality: CAPTURE_QUALITY,
+        // A minute is longer than any gait assessment needs, and the ceiling
+        // matters more than usual here: this is uploaded over a Ghanaian mobile
+        // network, and a clip too long to send is worse than one never offered,
+        // because by then the vet has already pointed the phone at the animal.
+        videoMaxDuration: 60,
+        videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
         exif: false
       };
 
@@ -108,23 +128,33 @@ export function AttachmentsSection({
       setBusy(true);
       try {
         const attachmentId = globalThis.crypto.randomUUID();
+        // The picker reports the kind; the fallbacks only cover a null, and a
+        // video falling back to image/jpeg would be refused by the bucket.
+        const video = asset.type === "video";
+        const mimeType = asset.mimeType ?? (video ? "video/mp4" : "image/jpeg");
         const queued: QueuedUpload = {
           ...createUpload({
             attachmentId,
             localUri: asset.uri,
-            filename: asset.fileName ?? `photo-${Date.now()}.jpg`,
-            mimeType: asset.mimeType ?? "image/jpeg",
+            filename:
+              asset.fileName ??
+              `${video ? "clip" : "photo"}-${Date.now()}.${video ? "mp4" : "jpg"}`,
+            mimeType,
             sizeBytes: asset.fileSize ?? 0
           }),
           patientId,
           visitId,
-          label: asset.fileName ?? "Photograph"
+          label: asset.fileName ?? (video ? "Video" : "Photograph")
         };
 
         if (queued.sizeBytes <= 0) {
           // The server rejects a zero size, and guessing one would be a lie
           // about a clinical file.
-          setError("Could not read the size of that image. Try taking it again.");
+          setError(
+            video
+              ? "Could not read the size of that clip. Try recording it again."
+              : "Could not read the size of that image. Try taking it again."
+          );
           return;
         }
 
@@ -177,41 +207,52 @@ export function AttachmentsSection({
 
   return (
     <Card>
-      <SectionTitle>Photographs</SectionTitle>
+      <SectionTitle>Photographs and video</SectionTitle>
 
-      {uploads.length === 0 ? (
-        <Muted>Nothing attached to this visit.</Muted>
-      ) : (
-        uploads.map((upload) => (
-          <View key={upload.attachmentId} style={styles.row}>
-            <Image source={{ uri: upload.localUri }} style={styles.thumb} resizeMode="cover" />
-            <View style={styles.rowBody}>
-              <Text style={styles.name} numberOfLines={1}>
-                {upload.label}
-              </Text>
-              <UploadStatus upload={upload} />
-              {upload.state === "failed" ? (
-                <View style={styles.actions}>
-                  <SecondaryButton label="Try again" onPress={() => void retry(upload)} />
-                  <SecondaryButton label="Remove" onPress={() => forget(upload)} />
-                </View>
-              ) : null}
+      {/* What has reached the server. This card used to show only what was
+          still in the upload queue, rendered from the copy on the phone — and
+          that copy is deleted once the bytes are confirmed, so anything that
+          uploaded successfully disappeared. */}
+      <AttachmentGrid
+        attachments={stored}
+        emptyHint={
+          uploads.length > 0 ? "Nothing sent yet." : "Nothing attached to this consultation."
+        }
+      />
+
+      {storedError ? <Muted>{storedError}</Muted> : null}
+
+      {uploads.length === 0
+        ? null
+        : uploads.map((upload) => (
+            <View key={upload.attachmentId} style={styles.row}>
+              <Image source={{ uri: upload.localUri }} style={styles.thumb} resizeMode="cover" />
+              <View style={styles.rowBody}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {upload.label}
+                </Text>
+                <UploadStatus upload={upload} />
+                {upload.state === "failed" ? (
+                  <View style={styles.actions}>
+                    <SecondaryButton label="Try again" onPress={() => void retry(upload)} />
+                    <SecondaryButton label="Remove" onPress={() => forget(upload)} />
+                  </View>
+                ) : null}
+              </View>
             </View>
-          </View>
-        ))
-      )}
+          ))}
 
       {error ? <ErrorText>{error}</ErrorText> : null}
 
       {editable ? (
         <>
           <PrimaryButton
-            label={busy ? "Working…" : "Take a photograph"}
+            label={busy ? "Working…" : "Take a photograph or video"}
             disabled={busy}
             onPress={() => void capture("camera")}
           />
           <SecondaryButton
-            label="Choose an existing photo"
+            label="Choose a photo or video"
             onPress={() => void capture("library")}
           />
           <Muted>

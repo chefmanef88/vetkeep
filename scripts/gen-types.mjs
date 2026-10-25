@@ -48,5 +48,30 @@ process.stdin.on("end", () => {
     process.exit(1);
   }
 
+  // The CLI formats its own output, and on some platforms it cannot. When it
+  // does not, every key comes back quoted and the whole file is laid out
+  // differently — valid TypeScript, identical types, and a diff of several
+  // thousand lines that CI then rejects, because CI regenerated it on a machine
+  // where the formatter worked.
+  //
+  // Writing it anyway is the dangerous outcome: the file looks plausible, the
+  // repository still compiles, and the breakage surfaces as a types check
+  // failing on a pull request that did not touch the schema. Same shape of
+  // problem as the backtick above — something that works on the machine it was
+  // run on and nowhere else.
+  if (/^\s*"(public|graphql_public)":\s*\{/m.test(body)) {
+    process.stderr.write(
+      `Refusing to write ${TARGET}: the CLI returned unformatted output.\n\n` +
+        `Its own formatter did not run, which happens on platforms where the\n` +
+        `bundled formatter is unavailable. The types would be correct but laid\n` +
+        `out differently from the committed file, and the database workflow\n` +
+        `would fail the diff.\n\n` +
+        `Generate this on Linux or WSL, or let CI regenerate it. Note that a\n` +
+        `migration changing only constraints, grants or a function body needs\n` +
+        `no regeneration at all: none of those appear in the generated types.\n`
+    );
+    process.exit(1);
+  }
+
   writeFileSync(TARGET, `${body}\n`);
 });
