@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -94,7 +95,10 @@ const SLIDES: Slide[] = [
 export function WelcomeScreen({ onDone }: { onDone: () => void }) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const scroller = useRef<ScrollView>(null);
+  // ScrollViewInstance rather than ScrollView: React Native 0.88 makes
+  // ScrollView a function component, so the component type is no longer the
+  // thing a ref points at. The instance type is what carries scrollTo.
+  const scroller = useRef<ScrollViewInstance>(null);
   const [index, setIndex] = useState(0);
 
   // Pages are laid out at the current width, so a width change leaves the

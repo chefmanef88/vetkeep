@@ -1,10 +1,21 @@
 import { Redirect, Tabs } from "expo-router";
-import { ActivityIndicator, StyleSheet } from "react-native";
+import { ActivityIndicator, StyleSheet, type ColorValue } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/auth/session-provider";
 import { fonts, hairline, palette, tabBarHeight } from "@/ui/tokens";
+
+/**
+ * React Native 0.88 widened ColorValue to include null and a processed colour
+ * integer; the icon set takes neither. The navigator passes a string in
+ * practice, so this narrows rather than asserts: anything the icons cannot
+ * render becomes undefined and they fall back to their own default, which is
+ * what a tab with no colour should look like.
+ */
+function iconColor(color: ColorValue): Exclude<ColorValue, null | number> | undefined {
+  return color === null || typeof color === "number" ? undefined : color;
+}
 
 /**
  * The four places a veterinarian moves between, and the gate in front of them.
@@ -64,21 +75,27 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={iconColor(color)} />
+          )
         }}
       />
       <Tabs.Screen
         name="clients"
         options={{
           title: "Clients",
-          tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={iconColor(color)} />
+          )
         }}
       />
       <Tabs.Screen
         name="animals"
         options={{
           title: "Animals",
-          tabBarIcon: ({ color, size }) => <Ionicons name="paw" size={size} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="paw" size={size} color={iconColor(color)} />
+          )
         }}
       />
       <Tabs.Screen
@@ -86,7 +103,7 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle" size={size} color={color} />
+            <Ionicons name="person-circle" size={size} color={iconColor(color)} />
           )
         }}
       />

@@ -4,6 +4,7 @@ import {
   Image,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   Text,
   View,
@@ -88,7 +89,10 @@ export const SHOWCASE: Slide[] = [
 ];
 
 export function Showcase({ slides = SHOWCASE }: { slides?: Slide[] }) {
-  const scroller = useRef<ScrollView>(null);
+  // ScrollViewInstance rather than ScrollView: React Native 0.88 makes
+  // ScrollView a function component, so the component type is no longer the
+  // thing a ref points at. The instance type is what carries scrollTo.
+  const scroller = useRef<ScrollViewInstance>(null);
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
   const [held, setHeld] = useState(false);
