@@ -1,11 +1,11 @@
 import { Redirect, Tabs } from "expo-router";
 import { ActivityIndicator, StyleSheet, type ColorValue } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/auth/session-provider";
 import { TabBarBackground } from "@/ui/tab-bar-background";
-import { fonts, palette, tabBarHeight } from "@/ui/tokens";
+import { fonts, palette, space, tabBarHeight, tabBarMargin, tabBarRadius } from "@/ui/tokens";
 
 /**
  * React Native 0.88 widened ColorValue to include null and a processed colour
@@ -41,6 +41,7 @@ function iconColor(color: ColorValue): Exclude<ColorValue, null | number> | unde
  */
 export default function TabsLayout() {
   const { loading, session, mfaState, profile } = useSession();
+  const insets = useSafeAreaInsets();
 
   if (loading) {
     return (
@@ -65,24 +66,47 @@ export default function TabsLayout() {
         // asked for reduced transparency.
         tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
-          // Floating, so the page runs underneath it rather than stopping at a
-          // band cut out of the screen. ScrollScreen's tabBarInset reserves the
-          // room so the last row of a list still clears it.
+          // A floating object, not a band across the bottom of the screen.
+          // Inset from all three edges so the page is visible around it and it
+          // reads as resting above the content rather than bounding it.
           position: "absolute",
+          left: tabBarMargin,
+          right: tabBarMargin,
+          bottom: Math.max(insets.bottom, tabBarMargin),
+          height: tabBarHeight,
           backgroundColor: "transparent",
-          // The bright top edge belongs to the material, not to the navigator;
-          // a second border here would draw a line across the glass.
           borderTopWidth: 0,
           elevation: 0,
-          height: tabBarHeight,
-          paddingTop: 6,
-          paddingBottom: 6
+          // Matches the material's clip so the shadow follows the pill. The
+          // rounding itself is on the background, because a view cannot both
+          // clip its children and cast a shadow.
+          borderRadius: tabBarRadius,
+          paddingHorizontal: space.xs,
+          paddingTop: 0,
+          paddingBottom: 0,
+          // A bigger surface reads as further off the page, so this is deeper
+          // than a card's shadow rather than the same one reused.
+          shadowColor: "#0B1A10",
+          shadowOpacity: 0.14,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 8 }
         },
         // Heavier than it would be on a solid bar. Over a translucent surface
         // the background is always moving, and flat light-weight text stops
         // holding against it — weight is what keeps a label legible there.
-        tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 0.1 },
-        tabBarItemStyle: { paddingTop: 2 },
+        tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 10, letterSpacing: 0.1 },
+        // The selected tab gets its own capsule inside the bar: a raised pill
+        // catching the light, which says where you are without relying on
+        // colour alone. Inset vertically so it floats within the glass rather
+        // than filling it edge to edge.
+        tabBarActiveBackgroundColor: "rgba(255,255,255,0.92)",
+        tabBarItemStyle: {
+          borderRadius: tabBarRadius - 8,
+          marginVertical: 8,
+          marginHorizontal: 4,
+          paddingTop: 6,
+          paddingBottom: 4
+        },
         sceneStyle: { backgroundColor: palette.ground }
       }}
     >

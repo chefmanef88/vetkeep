@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AccessibilityInfo, Platform, StyleSheet, View } from "react-native";
 import { BlurView } from "expo-blur";
 
-import { hairline, palette } from "./tokens";
+import { hairline, palette, tabBarRadius } from "./tokens";
 
 /**
  * The material the tab bar is made of.
@@ -47,35 +47,38 @@ export function TabBarBackground() {
   }, []);
 
   if (reduceTransparency || Platform.OS === "web") {
-    return <View style={[StyleSheet.absoluteFill, styles.solid]} />;
+    return <View style={[StyleSheet.absoluteFill, styles.clip, styles.solid]} />;
   }
 
   return (
-    <View style={StyleSheet.absoluteFill}>
+    // Clipped to the pill. The blur is a child rather than the bar itself, so
+    // the rounding lives here and the shadow can live on the bar — a single
+    // view cannot both clip its contents and cast a shadow on iOS.
+    <View style={[StyleSheet.absoluteFill, styles.clip]}>
       {/* A large surface should read as thicker than a small chip, so the blur
           is deliberately heavy rather than a suggestion of one. */}
       <BlurView intensity={72} tint="light" style={StyleSheet.absoluteFill} />
       {/* A wash over the blur, because pure blur over a dark photograph turns
           the bar dark and the labels stop reading against it. */}
       <View style={[StyleSheet.absoluteFill, styles.wash]} />
-      <View style={styles.edge} />
+      {/* The light catching the rim, all the way round now that the bar is a
+          floating object rather than a band attached to the bottom edge. */}
+      <View style={[StyleSheet.absoluteFill, styles.rim]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  clip: { borderRadius: tabBarRadius, overflow: "hidden" },
   solid: {
     backgroundColor: palette.surface,
-    borderTopWidth: hairline,
-    borderTopColor: palette.line
+    borderWidth: hairline,
+    borderColor: palette.line
   },
-  wash: { backgroundColor: "rgba(247,248,245,0.55)" },
-  edge: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: hairline,
-    backgroundColor: "rgba(255,255,255,0.75)"
+  wash: { backgroundColor: "rgba(247,248,245,0.62)" },
+  rim: {
+    borderRadius: tabBarRadius,
+    borderWidth: hairline,
+    borderColor: "rgba(255,255,255,0.8)"
   }
 });

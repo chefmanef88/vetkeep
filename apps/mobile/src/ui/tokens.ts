@@ -100,7 +100,23 @@ export const touchTarget = 52;
  * that only shows up on a real phone. Tall enough to clear the touch-target
  * floor with a label under the icon.
  */
-export const tabBarHeight = 58;
+export const tabBarHeight = 64;
+
+/**
+ * Fully rounded, so the bar reads as one floating object rather than a band
+ * attached to the bottom edge of the screen. Half the height is what makes the
+ * ends semicircular; anything less reads as a rounded rectangle.
+ */
+export const tabBarRadius = tabBarHeight / 2;
+
+/**
+ * How far the floating bar sits in from the screen edges and the home area.
+ *
+ * Named for the margin rather than "inset", because ScrollScreen already has a
+ * tabBarInset prop meaning the opposite thing: the room a page reserves so its
+ * last row clears the bar.
+ */
+export const tabBarMargin = 16;
 
 export const fonts = {
   regular: "Geist_400Regular",
