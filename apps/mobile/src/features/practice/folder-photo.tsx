@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import { ensureMediaPermission } from "./media-permission";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -52,19 +53,9 @@ export function FolderPhoto({
 
   async function choose(source: "camera" | "library") {
     setError(null);
-    const permission =
-      source === "camera"
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      setError(
-        source === "camera"
-          ? "VetKeep needs camera access to photograph the animal."
-          : "VetKeep needs access to your photos to use one."
-      );
-      return;
-    }
+    // Same as the attachments card: iOS prompts once, so a decline that was
+    // never revisited has to lead somewhere rather than to a dead button.
+    if (!(await ensureMediaPermission(source))) return;
 
     const result =
       source === "camera"

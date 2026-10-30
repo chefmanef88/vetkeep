@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useVideoPlayer, VideoView } from "expo-video";
 
@@ -21,10 +21,17 @@ import { fonts, hairline, palette, radius, radiusControl, space, type } from "@/
 
 export function AttachmentGrid({
   attachments,
-  emptyHint
+  emptyHint,
+  onRemove
 }: {
   attachments: StoredAttachment[];
   emptyHint: string;
+  /**
+   * Omitted where removal is not allowed — a signed consultation, or a record
+   * being read rather than written. The control is absent rather than present
+   * and refusing, because an option that always fails is worse than none.
+   */
+  onRemove?: (attachment: StoredAttachment) => void;
 }) {
   const [open, setOpen] = useState<StoredAttachment | null>(null);
 
@@ -46,7 +53,21 @@ export function AttachmentGrid({
         presentationStyle="overFullScreen"
         transparent
       >
-        {open ? <Viewer attachment={open} onClose={() => setOpen(null)} /> : null}
+        {open ? (
+          <Viewer
+            attachment={open}
+            onClose={() => setOpen(null)}
+            {...(onRemove
+              ? {
+                  onRemove: () => {
+                    const removing = open;
+                    setOpen(null);
+                    onRemove(removing);
+                  }
+                }
+              : {})}
+          />
+        ) : null}
       </Modal>
     </>
   );
@@ -82,7 +103,33 @@ function Thumb({ attachment, onPress }: { attachment: StoredAttachment; onPress:
   );
 }
 
-function Viewer({ attachment, onClose }: { attachment: StoredAttachment; onClose: () => void }) {
+function Viewer({
+  attachment,
+  onClose,
+  onRemove
+}: {
+  attachment: StoredAttachment;
+  onClose: () => void;
+  onRemove?: () => void;
+}) {
+  const video = isVideo(attachment.mimeType);
+
+  function confirmRemove() {
+    if (!onRemove) return;
+    // Named for what it does. The file is withdrawn from the record and kept
+    // under the retention policy, which is not what "delete" promises — and a
+    // vet who believed it had been destroyed would be wrong about a clinical
+    // file.
+    Alert.alert(
+      video ? "Remove this video?" : "Remove this photograph?",
+      "It comes off this record. The file itself is retained and the removal is recorded.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: onRemove }
+      ]
+    );
+  }
+
   return (
     <View style={styles.viewer}>
       <Pressable
@@ -93,6 +140,17 @@ function Viewer({ attachment, onClose }: { attachment: StoredAttachment; onClose
       >
         <Ionicons name="close" size={24} color={palette.surface} />
       </Pressable>
+
+      {onRemove ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={video ? "Remove this video" : "Remove this photograph"}
+          onPress={confirmRemove}
+          style={styles.remove}
+        >
+          <Ionicons name="trash-outline" size={22} color={palette.surface} />
+        </Pressable>
+      ) : null}
 
       {attachment.url === null ? (
         <Text style={styles.viewerNote}>
@@ -169,6 +227,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: space.lg,
     padding: space.lg
+  },
+  remove: {
+    position: "absolute",
+    top: space.xxl,
+    left: space.lg,
+    width: 44,
+    height: 44,
+    borderRadius: radius,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(143,29,29,0.55)"
   },
   close: {
     position: "absolute",

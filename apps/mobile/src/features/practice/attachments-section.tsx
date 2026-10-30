@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { ensureMediaPermission } from "./media-permission";
 import { createUpload, remainingBytes, type AttachmentUpload } from "@vetkeep/sync";
+import { supabase } from "@/lib/supabase";
 import { attachmentQueue, type QueuedUpload } from "@/sync/attachment-queue";
 import { AttachmentGrid } from "./attachment-viewer";
-import { useStoredAttachments } from "./use-stored-attachments";
+import { useStoredAttachments, type StoredAttachment } from "./use-stored-attachments";
 import { advanceUpload, releaseLocalCopyIfSafe } from "@/sync/attachment-uploader";
 import { ErrorText, PrimaryButton, SecondaryButton } from "@/ui/components";
 import { Card, Muted, Pill, SectionTitle, palette } from "@/ui/practice-components";
@@ -88,19 +90,9 @@ export function AttachmentsSection({
     async (source: "camera" | "library") => {
       setError(null);
 
-      const permission =
-        source === "camera"
-          ? await ImagePicker.requestCameraPermissionsAsync()
-          : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (!permission.granted) {
-        setError(
-          source === "camera"
-            ? "VetKeep needs camera access to photograph the patient."
-            : "VetKeep needs access to your photos to attach one."
-        );
-        return;
-      }
+      // Handles the case iOS makes invisible: once declined it never prompts
+      // again, so without this the button simply does nothing.
+      if (!(await ensureMediaPermission(source))) return;
 
       const options: ImagePicker.ImagePickerOptions = {
         // A photograph cannot show a gait, and gait is what a second opinion is
@@ -182,6 +174,23 @@ export function AttachmentsSection({
     [drive]
   );
 
+  const removeStored = useCallback(
+    async (attachment: StoredAttachment) => {
+      setError(null);
+      // Straight to the server rather than queued: the attachment exists only
+      // because its bytes already reached the server, so there is no offline
+      // case to carry here.
+      const { error: rpcError } = await supabase.rpc("delete_attachment", {
+        p_id: attachment.id
+      });
+      if (rpcError) {
+        setError(rpcError.message);
+        return;
+      }
+      reloadStored();
+    },
+    [reloadStored]
+  );
   const forget = useCallback(
     (upload: QueuedUpload) => {
       // Removing the queue entry does not delete the photograph. Saying so
@@ -218,6 +227,10 @@ export function AttachmentsSection({
         emptyHint={
           uploads.length > 0 ? "Nothing sent yet." : "Nothing attached to this consultation."
         }
+        // Only while the consultation is still being written. The server
+        // refuses once it is signed, and offering a control that always fails
+        // is worse than not offering one.
+        {...(editable ? { onRemove: removeStored } : {})}
       />
 
       {storedError ? <Muted>{storedError}</Muted> : null}

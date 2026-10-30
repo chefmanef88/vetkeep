@@ -4,7 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/auth/session-provider";
-import { fonts, hairline, palette, tabBarHeight } from "@/ui/tokens";
+import { TabBarBackground } from "@/ui/tab-bar-background";
+import { fonts, palette, tabBarHeight } from "@/ui/tokens";
 
 /**
  * React Native 0.88 widened ColorValue to include null and a processed colour
@@ -57,17 +58,31 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: palette.green,
+        tabBarActiveTintColor: palette.brandInk,
         tabBarInactiveTintColor: palette.quiet,
+        // The material, drawn behind the bar. See tab-bar-background for why it
+        // is a layer rather than a colour, and what it does when someone has
+        // asked for reduced transparency.
+        tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
-          backgroundColor: palette.surface,
-          borderTopWidth: hairline,
-          borderTopColor: palette.line,
+          // Floating, so the page runs underneath it rather than stopping at a
+          // band cut out of the screen. ScrollScreen's tabBarInset reserves the
+          // room so the last row of a list still clears it.
+          position: "absolute",
+          backgroundColor: "transparent",
+          // The bright top edge belongs to the material, not to the navigator;
+          // a second border here would draw a line across the glass.
+          borderTopWidth: 0,
+          elevation: 0,
           height: tabBarHeight,
           paddingTop: 6,
           paddingBottom: 6
         },
-        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 11 },
+        // Heavier than it would be on a solid bar. Over a translucent surface
+        // the background is always moving, and flat light-weight text stops
+        // holding against it — weight is what keeps a label legible there.
+        tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 0.1 },
+        tabBarItemStyle: { paddingTop: 2 },
         sceneStyle: { backgroundColor: palette.ground }
       }}
     >
@@ -75,8 +90,12 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={iconColor(color)} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={focused ? size + 1 : size}
+              color={iconColor(color)}
+            />
           )
         }}
       />
@@ -84,8 +103,12 @@ export default function TabsLayout() {
         name="clients"
         options={{
           title: "Clients",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={iconColor(color)} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "people" : "people-outline"}
+              size={focused ? size + 1 : size}
+              color={iconColor(color)}
+            />
           )
         }}
       />
@@ -93,8 +116,12 @@ export default function TabsLayout() {
         name="animals"
         options={{
           title: "Animals",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="paw" size={size} color={iconColor(color)} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "paw" : "paw-outline"}
+              size={focused ? size + 1 : size}
+              color={iconColor(color)}
+            />
           )
         }}
       />
@@ -102,8 +129,12 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle" size={size} color={iconColor(color)} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "person-circle" : "person-circle-outline"}
+              size={focused ? size + 1 : size}
+              color={iconColor(color)}
+            />
           )
         }}
       />

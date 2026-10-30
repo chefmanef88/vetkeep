@@ -2260,6 +2260,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_attachment: {
+        Args: { p_device_id?: string; p_id: string; p_reason?: string }
+        Returns: undefined
+      }
       delete_client: {
         Args: { p_device_id?: string; p_id: string; p_reason: string }
         Returns: undefined
