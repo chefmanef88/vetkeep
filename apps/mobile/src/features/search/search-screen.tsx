@@ -108,7 +108,7 @@ export function SearchScreen() {
 
   return (
     <ScrollScreen topInset tabBarInset>
-      <ScreenTopBar title="Search" />
+      <ScreenTopBar title="Search" lead="back" />
       <SearchField
         value={term}
         onChangeText={setTerm}

@@ -2,27 +2,27 @@ import { useEffect, useState } from "react";
 import { AccessibilityInfo, Platform, StyleSheet, View } from "react-native";
 import { BlurView } from "expo-blur";
 
-import { hairline, palette, tabBarRadius } from "./tokens";
+import { hairline, palette } from "./tokens";
 
 /**
  * The material the tab bar is made of.
  *
- * A floating translucent layer rather than an opaque strip, with the page
- * scrolling underneath it. That is the whole point of the treatment: the bar
- * reads as something resting above the content rather than a band cut out of
- * the screen, and the blur of whatever is passing beneath is what makes it look
- * like a material instead of a colour.
+ * Sits flush against the bottom of the screen and runs the full width,
+ * including the home-indicator area, so that content scrolling past is blurred
+ * underneath it rather than appearing in a gap below it. A floating pill left a
+ * strip of live page visible beneath the bar, which read as two competing
+ * surfaces instead of one.
  *
- * The top edge is a bright hairline, which is the light catching the near edge
- * of a piece of glass. It is doing the work a divider would otherwise do, and
- * doing it without drawing a line across the page.
+ * The top edge is a bright hairline — light catching the near edge of the
+ * glass, doing the work a divider would do without drawing a line.
  *
- * Two things it refuses to do. It does not stack translucency on translucency —
- * anything the bar sits on is page content, never another frosted surface,
- * because two of them together stop being legible. And it turns solid for
- * anyone who has asked for reduced transparency: that setting exists precisely
- * because a blurred background behind small text is hard to read, and honouring
- * it matters more on a tool used outdoors at midday than almost anywhere else.
+ * It does not stack translucency on translucency: whatever is behind the bar is
+ * page content, never another frosted surface, because two together stop being
+ * legible.
+ *
+ * Reduced transparency turns it solid. That setting exists because blurred
+ * backgrounds behind small text are hard to read, which matters more on a tool
+ * used outdoors at midday than in most places.
  */
 export function TabBarBackground() {
   const [reduceTransparency, setReduceTransparency] = useState(false);
@@ -30,7 +30,8 @@ export function TabBarBackground() {
   useEffect(() => {
     let cancelled = false;
 
-    // iOS only; Android resolves false and keeps the blur.
+    // iOS only; Android resolves false, which is fine because Android does not
+    // get a blur in the first place.
     void AccessibilityInfo.isReduceTransparencyEnabled?.().then((on) => {
       if (!cancelled) setReduceTransparency(Boolean(on));
     });
@@ -46,39 +47,51 @@ export function TabBarBackground() {
     };
   }, []);
 
-  if (reduceTransparency || Platform.OS === "web") {
-    return <View style={[StyleSheet.absoluteFill, styles.clip, styles.solid]} />;
+  /**
+   * Android does not get the glass, and that is a decision rather than a gap.
+   *
+   * expo-blur defaults to no blur on Android at all — the prop that enables a
+   * real one is marked experimental and redraws the blurred region continuously,
+   * which is a poor trade on the inexpensive hardware this app is most likely to
+   * run on in the field. A translucent panel with no blur behind it is not a
+   * softer version of the effect, it is a smeared one.
+   *
+   * So Android gets a near-opaque surface with elevation, which is what a
+   * Material bottom bar is supposed to look like anyway. Each platform gets the
+   * thing it already knows rather than one idiom forced onto both.
+   */
+  const solid = reduceTransparency || Platform.OS !== "ios";
+
+  if (solid) {
+    return (
+      <View style={[StyleSheet.absoluteFill, styles.solid]}>
+        <View style={styles.topEdge} />
+      </View>
+    );
   }
 
   return (
-    // Clipped to the pill. The blur is a child rather than the bar itself, so
-    // the rounding lives here and the shadow can live on the bar — a single
-    // view cannot both clip its contents and cast a shadow on iOS.
-    <View style={[StyleSheet.absoluteFill, styles.clip]}>
+    <View style={StyleSheet.absoluteFill}>
       {/* A large surface should read as thicker than a small chip, so the blur
           is deliberately heavy rather than a suggestion of one. */}
-      <BlurView intensity={72} tint="light" style={StyleSheet.absoluteFill} />
-      {/* A wash over the blur, because pure blur over a dark photograph turns
-          the bar dark and the labels stop reading against it. */}
+      <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+      {/* A wash over the blur. Pure blur over a dark photograph turns the bar
+          dark and the labels stop holding against it. */}
       <View style={[StyleSheet.absoluteFill, styles.wash]} />
-      {/* The light catching the rim, all the way round now that the bar is a
-          floating object rather than a band attached to the bottom edge. */}
-      <View style={[StyleSheet.absoluteFill, styles.rim]} />
+      <View style={styles.topEdge} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  clip: { borderRadius: tabBarRadius, overflow: "hidden" },
-  solid: {
-    backgroundColor: palette.surface,
-    borderWidth: hairline,
-    borderColor: palette.line
-  },
+  solid: { backgroundColor: palette.surface },
   wash: { backgroundColor: "rgba(247,248,245,0.62)" },
-  rim: {
-    borderRadius: tabBarRadius,
-    borderWidth: hairline,
-    borderColor: "rgba(255,255,255,0.8)"
+  topEdge: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: hairline,
+    backgroundColor: "rgba(255,255,255,0.85)"
   }
 });

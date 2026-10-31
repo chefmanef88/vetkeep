@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "@/auth/session-provider";
 import { MenuButton } from "@/ui/app-menu";
+import { HeaderBack } from "@/ui/back-button";
 import { palette, type } from "@/ui/tokens";
 
 /**
@@ -37,6 +38,12 @@ export default function PracticeLayout() {
         headerShadowVisible: false,
         headerTitleStyle: { ...type.heading, color: palette.ink },
         contentStyle: { backgroundColor: palette.ground },
+        // Drawn here rather than left to the navigator. Reaching one of these
+        // screens from a tab makes it the first screen of this stack, so
+        // React Navigation has nothing to go back to within the stack and
+        // draws no arrow — leaving the system gesture as the only way out,
+        // which is invisible and which Android does not share.
+        headerLeft: () => <HeaderBack />,
         // Reachable from every practice screen, so the things a vet needs
         // occasionally never have to live on the screens they use constantly.
         headerRight: () => <MenuButton />

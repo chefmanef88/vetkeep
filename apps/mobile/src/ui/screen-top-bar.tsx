@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { MenuButton } from "./app-menu";
+import { BackButton } from "./back-button";
 import { hairline, palette, radiusPill, space, touchTarget, type } from "./tokens";
 
 /**
@@ -17,19 +18,25 @@ import { hairline, palette, radiusPill, space, touchTarget, type } from "./token
  */
 export function ScreenTopBar({
   title,
-  action
+  action,
+  lead = "menu"
 }: {
   /** Optional: home says good morning instead, in a heading below this. */
   title?: string;
   action?: React.JSX.Element;
+  /**
+   * What the leading edge carries. A tab carries the menu, because the menu is
+   * the application's and a tab is where you live. A screen pushed on top of a
+   * tab carries the way back out of it — search is reached from home and would
+   * otherwise strand you with nothing but the invisible system gesture.
+   */
+  lead?: "menu" | "back";
 }) {
   return (
     <View style={styles.bar}>
       {/* Negative margin so the icon's own padding does not push it off the
           page's left edge — the glyph lines up with the text below it. */}
-      <View style={styles.lead}>
-        <MenuButton />
-      </View>
+      <View style={styles.lead}>{lead === "back" ? <BackButton /> : <MenuButton />}</View>
 
       {title ? (
         <Text style={styles.title} numberOfLines={1}>

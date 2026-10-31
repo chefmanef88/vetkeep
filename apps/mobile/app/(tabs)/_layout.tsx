@@ -1,11 +1,11 @@
 import { Redirect, Tabs } from "expo-router";
-import { ActivityIndicator, StyleSheet, type ColorValue } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, type ColorValue } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useSession } from "@/auth/session-provider";
 import { TabBarBackground } from "@/ui/tab-bar-background";
-import { fonts, palette, space, tabBarHeight, tabBarMargin, tabBarRadius } from "@/ui/tokens";
+import { fonts, palette, radiusPill, space, tabBarHeight } from "@/ui/tokens";
 
 /**
  * React Native 0.88 widened ColorValue to include null and a processed colour
@@ -66,44 +66,50 @@ export default function TabsLayout() {
         // asked for reduced transparency.
         tabBarBackground: () => <TabBarBackground />,
         tabBarStyle: {
-          // A floating object, not a band across the bottom of the screen.
-          // Inset from all three edges so the page is visible around it and it
-          // reads as resting above the content rather than bounding it.
+          // Flush to the bottom and the full width, covering the home-indicator
+          // area too. Floating it left a strip of live page visible underneath,
+          // which read as two surfaces arguing rather than one — and scrolling
+          // content through that gap was the confusing part. Now everything
+          // passing beneath goes under the material.
           position: "absolute",
-          left: tabBarMargin,
-          right: tabBarMargin,
-          bottom: Math.max(insets.bottom, tabBarMargin),
-          height: tabBarHeight,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: tabBarHeight + insets.bottom,
+          paddingBottom: insets.bottom,
           backgroundColor: "transparent",
+          // The bright top edge belongs to the material; a second border here
+          // would draw a line across the glass.
           borderTopWidth: 0,
-          elevation: 0,
-          // Matches the material's clip so the shadow follows the pill. The
-          // rounding itself is on the background, because a view cannot both
-          // clip its children and cast a shadow.
-          borderRadius: tabBarRadius,
           paddingHorizontal: space.xs,
-          paddingTop: 0,
-          paddingBottom: 0,
-          // A bigger surface reads as further off the page, so this is deeper
-          // than a card's shadow rather than the same one reused.
-          shadowColor: "#0B1A10",
-          shadowOpacity: 0.14,
-          shadowRadius: 18,
-          shadowOffset: { width: 0, height: 8 }
+          paddingTop: 6,
+          // Android draws depth with elevation and ignores the shadow
+          // properties entirely; iOS is the other way round. Giving both the
+          // same values would have meant no shadow at all on Android.
+          ...Platform.select({
+            ios: {
+              shadowColor: "#0B1A10",
+              shadowOpacity: 0.1,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: -2 }
+            },
+            android: { elevation: 12 },
+            default: {}
+          })
         },
         // Heavier than it would be on a solid bar. Over a translucent surface
         // the background is always moving, and flat light-weight text stops
         // holding against it — weight is what keeps a label legible there.
         tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 10, letterSpacing: 0.1 },
-        // The selected tab gets its own capsule inside the bar: a raised pill
-        // catching the light, which says where you are without relying on
-        // colour alone. Inset vertically so it floats within the glass rather
-        // than filling it edge to edge.
-        tabBarActiveBackgroundColor: "rgba(255,255,255,0.92)",
+        // The selected tab's capsule. Tinted rather than white-on-white: a pale
+        // white pill on pale glass is the thing that disappeared, and brand
+        // green is both visible and says which application you are in.
+        tabBarActiveBackgroundColor: palette.greenSoft,
         tabBarItemStyle: {
-          borderRadius: tabBarRadius - 8,
-          marginVertical: 8,
-          marginHorizontal: 4,
+          borderRadius: radiusPill,
+          marginTop: 4,
+          marginBottom: 4,
+          marginHorizontal: 6,
           paddingTop: 6,
           paddingBottom: 4
         },
